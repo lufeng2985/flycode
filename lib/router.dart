@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'pages/home_page.dart';
 import 'pages/settings_page.dart';
+import 'pages/server_config_page.dart';
 import 'widgets/scaffold_with_nav_bar.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(
@@ -39,6 +40,11 @@ final GoRouter appRouter = GoRouter(
           ],
         ),
       ],
+    ),
+    GoRoute(
+      path: '/settings/server',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const ServerConfigPage(),
     ),
   ],
 );

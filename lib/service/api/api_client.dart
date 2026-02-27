@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'api_constants.dart';
+import '../../providers/server_config_provider.dart';
+import '../../models/server_config.dart';
 
 part 'api_client.g.dart';
 
@@ -24,12 +25,30 @@ class ApiException implements Exception {
 
 @riverpod
 ApiClient apiClient(Ref ref) {
-  return ApiClient();
+  final asyncConfig = ref.watch(serverConfigProvider);
+  final config = asyncConfig.value ?? ServerConfig.defaultValue();
+  return ApiClient(
+    baseUrl: config.baseUrl,
+    username: config.username,
+    password: config.password,
+  );
 }
 
 class ApiClient {
-  final String _baseUrl = ApiConstants.baseUrl;
-  final http.Client _client = http.Client();
+  final String _baseUrl;
+  final String? _username;
+  final String? _password;
+  final http.Client _client;
+
+  ApiClient({
+    required String baseUrl,
+    String? username,
+    String? password,
+    http.Client? client,
+  }) : _baseUrl = baseUrl,
+       _username = username,
+       _password = password,
+       _client = client ?? http.Client();
 
   Uri _getUri(String path, {Map<String, String>? queryParameters}) {
     return Uri.parse(
@@ -38,10 +57,12 @@ class ApiClient {
   }
 
   Map<String, String> _getHeaders() {
-    return {
-      'Content-Type': 'application/json',
-      // 后续可以在这里添加鉴权 Headers
-    };
+    final headers = <String, String>{'Content-Type': 'application/json'};
+    if (_username != null && _username.isNotEmpty) {
+      final credentials = base64Encode(utf8.encode('$_username:$_password'));
+      headers['Authorization'] = 'Basic $credentials';
+    }
+    return headers;
   }
 
   dynamic _handleResponse(http.Response response) {

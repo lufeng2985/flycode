@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../providers/server_config_provider.dart';
 
-class SettingsPage extends StatelessWidget {
+class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncServerConfig = ref.watch(serverConfigProvider);
+    final serverUrl =
+        asyncServerConfig.value?.baseUrl ?? 'http://localhost:4096';
+
     return Scaffold(
       appBar: AppBar(title: const Text('设置'), centerTitle: true),
       body: ListView(
@@ -34,7 +41,8 @@ class SettingsPage extends StatelessWidget {
             icon: Icons.dns_outlined,
             iconColor: Colors.cyan,
             title: '服务器',
-            onTap: () {},
+            subtitle: serverUrl,
+            onTap: () => context.push('/settings/server'),
           ),
           _buildSettingsItem(
             icon: Icons.business,
@@ -85,20 +93,28 @@ class SettingsPage extends StatelessWidget {
     required IconData icon,
     required Color iconColor,
     required String title,
+    String? subtitle,
     required VoidCallback onTap,
-    Widget? trailing,
   }) {
     return ListTile(
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: iconColor.withOpacity(0.1),
+          color: iconColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon, color: iconColor, size: 20),
       ),
       title: Text(title, style: const TextStyle(fontSize: 16)),
-      trailing: trailing ?? const Icon(Icons.chevron_right, color: Colors.grey),
+      subtitle: subtitle != null
+          ? Text(
+              subtitle,
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            )
+          : null,
+      trailing: const Icon(Icons.chevron_right, color: Colors.grey),
       onTap: onTap,
     );
   }
