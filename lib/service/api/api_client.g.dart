@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'session_api.dart';
+part of 'api_client.dart';
 
 // **************************************************************************
 // RiverpodGenerator
@@ -9,43 +9,43 @@ part of 'session_api.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 
-@ProviderFor(sessionApi)
-final sessionApiProvider = SessionApiProvider._();
+@ProviderFor(apiClient)
+final apiClientProvider = ApiClientProvider._();
 
-final class SessionApiProvider
-    extends $FunctionalProvider<SessionApi, SessionApi, SessionApi>
-    with $Provider<SessionApi> {
-  SessionApiProvider._()
+final class ApiClientProvider
+    extends $FunctionalProvider<ApiClient, ApiClient, ApiClient>
+    with $Provider<ApiClient> {
+  ApiClientProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'sessionApiProvider',
+        name: r'apiClientProvider',
         isAutoDispose: true,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
 
   @override
-  String debugGetCreateSourceHash() => _$sessionApiHash();
+  String debugGetCreateSourceHash() => _$apiClientHash();
 
   @$internal
   @override
-  $ProviderElement<SessionApi> $createElement($ProviderPointer pointer) =>
+  $ProviderElement<ApiClient> $createElement($ProviderPointer pointer) =>
       $ProviderElement(pointer);
 
   @override
-  SessionApi create(Ref ref) {
-    return sessionApi(ref);
+  ApiClient create(Ref ref) {
+    return apiClient(ref);
   }
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(SessionApi value) {
+  Override overrideWithValue(ApiClient value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<SessionApi>(value),
+      providerOverride: $SyncValueProvider<ApiClient>(value),
     );
   }
 }
 
-String _$sessionApiHash() => r'537a6205534b6d5ce8a751ebdc4f0cfa9a97220e';
+String _$apiClientHash() => r'a0eb8837fc3cfc2ac414f9bdd23761e2186e929e';

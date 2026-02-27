@@ -1,7 +1,5 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'api_constants.dart';
+import 'api_client.dart';
 import 'models/session.dart';
 import 'models/message.dart';
 
@@ -9,17 +7,14 @@ part 'session_api.g.dart';
 
 @riverpod
 SessionApi sessionApi(Ref ref) {
-  return SessionApi();
+  final client = ref.watch(apiClientProvider);
+  return SessionApi(client);
 }
 
 class SessionApi {
-  final String _baseUrl = ApiConstants.baseUrl;
+  final ApiClient _client;
 
-  Uri _getUri(String path, {Map<String, String>? queryParameters}) {
-    return Uri.parse(
-      '$_baseUrl$path',
-    ).replace(queryParameters: queryParameters);
-  }
+  SessionApi(this._client);
 
   Future<List<Session>> getSessions({
     String? directory,
@@ -35,18 +30,11 @@ class SessionApi {
     if (search != null) queryParams['search'] = search;
     if (limit != null) queryParams['limit'] = limit.toString();
 
-    final response = await http.get(
-      _getUri('/session', queryParameters: queryParams),
+    final List<dynamic> json = await _client.get(
+      '/session',
+      queryParameters: queryParams,
     );
-
-    if (response.statusCode == 200) {
-      final List<dynamic> json = jsonDecode(response.body);
-      return json.map((e) => Session.fromJson(e)).toList();
-    } else {
-      throw Exception(
-        'Failed to list sessions: ${response.statusCode} - ${response.body}',
-      );
-    }
+    return json.map((e) => Session.fromJson(e)).toList();
   }
 
   Future<Session> createSession({
@@ -56,51 +44,30 @@ class SessionApi {
     final queryParams = <String, String>{};
     if (directory != null) queryParams['directory'] = directory;
 
-    final response = await http.post(
-      _getUri('/session', queryParameters: queryParams),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(data ?? {}),
+    final json = await _client.post(
+      '/session',
+      queryParameters: queryParams,
+      body: data,
     );
-
-    if (response.statusCode == 200) {
-      return Session.fromJson(jsonDecode(response.body));
-    } else {
-      throw Exception(
-        'Failed to create session: ${response.statusCode} - ${response.body}',
-      );
-    }
+    return Session.fromJson(json);
   }
 
   Future<Session> getSession(String id, {String? directory}) async {
     final queryParams = <String, String>{};
     if (directory != null) queryParams['directory'] = directory;
 
-    final response = await http.get(
-      _getUri('/session/$id', queryParameters: queryParams),
+    final json = await _client.get(
+      '/session/$id',
+      queryParameters: queryParams,
     );
-
-    if (response.statusCode == 200) {
-      return Session.fromJson(jsonDecode(response.body));
-    } else {
-      throw Exception(
-        'Failed to get session: ${response.statusCode} - ${response.body}',
-      );
-    }
+    return Session.fromJson(json);
   }
 
   Future<void> deleteSession(String id, {String? directory}) async {
     final queryParams = <String, String>{};
     if (directory != null) queryParams['directory'] = directory;
 
-    final response = await http.delete(
-      _getUri('/session/$id', queryParameters: queryParams),
-    );
-
-    if (response.statusCode != 200) {
-      throw Exception(
-        'Failed to delete session: ${response.statusCode} - ${response.body}',
-      );
-    }
+    await _client.delete('/session/$id', queryParameters: queryParams);
   }
 
   Future<Session> updateSession(
@@ -111,34 +78,19 @@ class SessionApi {
     final queryParams = <String, String>{};
     if (directory != null) queryParams['directory'] = directory;
 
-    final response = await http.patch(
-      _getUri('/session/$id', queryParameters: queryParams),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(data ?? {}),
+    final json = await _client.patch(
+      '/session/$id',
+      queryParameters: queryParams,
+      body: data,
     );
-
-    if (response.statusCode == 200) {
-      return Session.fromJson(jsonDecode(response.body));
-    } else {
-      throw Exception(
-        'Failed to update session: ${response.statusCode} - ${response.body}',
-      );
-    }
+    return Session.fromJson(json);
   }
 
   Future<void> abortSession(String id, {String? directory}) async {
     final queryParams = <String, String>{};
     if (directory != null) queryParams['directory'] = directory;
 
-    final response = await http.post(
-      _getUri('/session/$id/abort', queryParameters: queryParams),
-    );
-
-    if (response.statusCode != 200) {
-      throw Exception(
-        'Failed to abort session: ${response.statusCode} - ${response.body}',
-      );
-    }
+    await _client.post('/session/$id/abort', queryParameters: queryParams);
   }
 
   Future<List<Session>> getSessionChildren(
@@ -148,18 +100,11 @@ class SessionApi {
     final queryParams = <String, String>{};
     if (directory != null) queryParams['directory'] = directory;
 
-    final response = await http.get(
-      _getUri('/session/$id/children', queryParameters: queryParams),
+    final List<dynamic> json = await _client.get(
+      '/session/$id/children',
+      queryParameters: queryParams,
     );
-
-    if (response.statusCode == 200) {
-      final List<dynamic> json = jsonDecode(response.body);
-      return json.map((e) => Session.fromJson(e)).toList();
-    } else {
-      throw Exception(
-        'Failed to get session children: ${response.statusCode} - ${response.body}',
-      );
-    }
+    return json.map((e) => Session.fromJson(e)).toList();
   }
 
   Future<List<Message>> getSessionMessages(
@@ -171,18 +116,11 @@ class SessionApi {
     if (directory != null) queryParams['directory'] = directory;
     if (limit != null) queryParams['limit'] = limit.toString();
 
-    final response = await http.get(
-      _getUri('/session/$id/message', queryParameters: queryParams),
+    final List<dynamic> json = await _client.get(
+      '/session/$id/message',
+      queryParameters: queryParams,
     );
-
-    if (response.statusCode == 200) {
-      final List<dynamic> json = jsonDecode(response.body);
-      return json.map((e) => Message.fromJson(e)).toList();
-    } else {
-      throw Exception(
-        'Failed to get session messages: ${response.statusCode} - ${response.body}',
-      );
-    }
+    return json.map((e) => Message.fromJson(e)).toList();
   }
 
   Future<void> sendMessage(
@@ -193,17 +131,11 @@ class SessionApi {
     final queryParams = <String, String>{};
     if (directory != null) queryParams['directory'] = directory;
 
-    final response = await http.post(
-      _getUri('/session/$id/message', queryParameters: queryParams),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(data ?? {}),
+    await _client.post(
+      '/session/$id/message',
+      queryParameters: queryParams,
+      body: data,
     );
-
-    if (response.statusCode != 200) {
-      throw Exception(
-        'Failed to send message: ${response.statusCode} - ${response.body}',
-      );
-    }
   }
 
   Future<void> sendCommand(
@@ -214,17 +146,11 @@ class SessionApi {
     final queryParams = <String, String>{};
     if (directory != null) queryParams['directory'] = directory;
 
-    final response = await http.post(
-      _getUri('/session/$id/command', queryParameters: queryParams),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(data ?? {}),
+    await _client.post(
+      '/session/$id/command',
+      queryParameters: queryParams,
+      body: data,
     );
-
-    if (response.statusCode != 200) {
-      throw Exception(
-        'Failed to send command: ${response.statusCode} - ${response.body}',
-      );
-    }
   }
 
   Future<void> summarizeSession(
@@ -235,17 +161,11 @@ class SessionApi {
     final queryParams = <String, String>{};
     if (directory != null) queryParams['directory'] = directory;
 
-    final response = await http.post(
-      _getUri('/session/$id/summarize', queryParameters: queryParams),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(data ?? {}),
+    await _client.post(
+      '/session/$id/summarize',
+      queryParameters: queryParams,
+      body: data,
     );
-
-    if (response.statusCode != 200) {
-      throw Exception(
-        'Failed to summarize session: ${response.statusCode} - ${response.body}',
-      );
-    }
   }
 
   Future<Map<String, dynamic>> getMessageDiff(
@@ -257,17 +177,7 @@ class SessionApi {
     if (directory != null) queryParams['directory'] = directory;
     if (messageID != null) queryParams['messageID'] = messageID;
 
-    final response = await http.get(
-      _getUri('/session/$id/diff', queryParameters: queryParams),
-    );
-
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception(
-        'Failed to get message diff: ${response.statusCode} - ${response.body}',
-      );
-    }
+    return await _client.get('/session/$id/diff', queryParameters: queryParams);
   }
 
   Future<void> forkSession(
@@ -278,17 +188,11 @@ class SessionApi {
     final queryParams = <String, String>{};
     if (directory != null) queryParams['directory'] = directory;
 
-    final response = await http.post(
-      _getUri('/session/$id/fork', queryParameters: queryParams),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(data ?? {}),
+    await _client.post(
+      '/session/$id/fork',
+      queryParameters: queryParams,
+      body: data,
     );
-
-    if (response.statusCode != 200) {
-      throw Exception(
-        'Failed to fork session: ${response.statusCode} - ${response.body}',
-      );
-    }
   }
 
   Future<void> initSession(
@@ -299,17 +203,11 @@ class SessionApi {
     final queryParams = <String, String>{};
     if (directory != null) queryParams['directory'] = directory;
 
-    final response = await http.post(
-      _getUri('/session/$id/init', queryParameters: queryParams),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(data ?? {}),
+    await _client.post(
+      '/session/$id/init',
+      queryParameters: queryParams,
+      body: data,
     );
-
-    if (response.statusCode != 200) {
-      throw Exception(
-        'Failed to init session: ${response.statusCode} - ${response.body}',
-      );
-    }
   }
 
   Future<Message> getMessage(
@@ -320,17 +218,11 @@ class SessionApi {
     final queryParams = <String, String>{};
     if (directory != null) queryParams['directory'] = directory;
 
-    final response = await http.get(
-      _getUri('/session/$id/message/$messageID', queryParameters: queryParams),
+    final json = await _client.get(
+      '/session/$id/message/$messageID',
+      queryParameters: queryParams,
     );
-
-    if (response.statusCode == 200) {
-      return Message.fromJson(jsonDecode(response.body));
-    } else {
-      throw Exception(
-        'Failed to get message: ${response.statusCode} - ${response.body}',
-      );
-    }
+    return Message.fromJson(json);
   }
 
   Future<void> revertMessage(
@@ -341,47 +233,25 @@ class SessionApi {
     final queryParams = <String, String>{};
     if (directory != null) queryParams['directory'] = directory;
 
-    final response = await http.post(
-      _getUri('/session/$id/revert', queryParameters: queryParams),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(data ?? {}),
+    await _client.post(
+      '/session/$id/revert',
+      queryParameters: queryParams,
+      body: data,
     );
-
-    if (response.statusCode != 200) {
-      throw Exception(
-        'Failed to revert message: ${response.statusCode} - ${response.body}',
-      );
-    }
   }
 
   Future<void> shareSession(String id, {String? directory}) async {
     final queryParams = <String, String>{};
     if (directory != null) queryParams['directory'] = directory;
 
-    final response = await http.post(
-      _getUri('/session/$id/share', queryParameters: queryParams),
-    );
-
-    if (response.statusCode != 200) {
-      throw Exception(
-        'Failed to share session: ${response.statusCode} - ${response.body}',
-      );
-    }
+    await _client.post('/session/$id/share', queryParameters: queryParams);
   }
 
   Future<void> unshareSession(String id, {String? directory}) async {
     final queryParams = <String, String>{};
     if (directory != null) queryParams['directory'] = directory;
 
-    final response = await http.delete(
-      _getUri('/session/$id/share', queryParameters: queryParams),
-    );
-
-    if (response.statusCode != 200) {
-      throw Exception(
-        'Failed to unshare session: ${response.statusCode} - ${response.body}',
-      );
-    }
+    await _client.delete('/session/$id/share', queryParameters: queryParams);
   }
 
   Future<Map<String, dynamic>> getSessionTodos(
@@ -391,16 +261,6 @@ class SessionApi {
     final queryParams = <String, String>{};
     if (directory != null) queryParams['directory'] = directory;
 
-    final response = await http.get(
-      _getUri('/session/$id/todo', queryParameters: queryParams),
-    );
-
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception(
-        'Failed to get session todos: ${response.statusCode} - ${response.body}',
-      );
-    }
+    return await _client.get('/session/$id/todo', queryParameters: queryParams);
   }
 }

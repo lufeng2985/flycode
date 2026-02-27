@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'session_api.dart';
+part of 'global_api.dart';
 
 // **************************************************************************
 // RiverpodGenerator
@@ -9,43 +9,43 @@ part of 'session_api.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 
-@ProviderFor(sessionApi)
-final sessionApiProvider = SessionApiProvider._();
+@ProviderFor(globalApi)
+final globalApiProvider = GlobalApiProvider._();
 
-final class SessionApiProvider
-    extends $FunctionalProvider<SessionApi, SessionApi, SessionApi>
-    with $Provider<SessionApi> {
-  SessionApiProvider._()
+final class GlobalApiProvider
+    extends $FunctionalProvider<GlobalApi, GlobalApi, GlobalApi>
+    with $Provider<GlobalApi> {
+  GlobalApiProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'sessionApiProvider',
+        name: r'globalApiProvider',
         isAutoDispose: true,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
 
   @override
-  String debugGetCreateSourceHash() => _$sessionApiHash();
+  String debugGetCreateSourceHash() => _$globalApiHash();
 
   @$internal
   @override
-  $ProviderElement<SessionApi> $createElement($ProviderPointer pointer) =>
+  $ProviderElement<GlobalApi> $createElement($ProviderPointer pointer) =>
       $ProviderElement(pointer);
 
   @override
-  SessionApi create(Ref ref) {
-    return sessionApi(ref);
+  GlobalApi create(Ref ref) {
+    return globalApi(ref);
   }
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(SessionApi value) {
+  Override overrideWithValue(GlobalApi value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<SessionApi>(value),
+      providerOverride: $SyncValueProvider<GlobalApi>(value),
     );
   }
 }
 
-String _$sessionApiHash() => r'537a6205534b6d5ce8a751ebdc4f0cfa9a97220e';
+String _$globalApiHash() => r'19145192d2bd8ac1692e99b618189694aa0bd6fd';
