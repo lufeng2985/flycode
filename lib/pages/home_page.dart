@@ -73,11 +73,18 @@ class _MessageList extends ConsumerWidget {
           );
         }
         return ListView.builder(
+          reverse: true,
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
           itemCount: messages.length,
           itemBuilder: (context, index) {
-            final messageWithParts = messages[index];
-            return _MessageBubble(messageWithParts: messageWithParts);
+            final messageWithParts = messages[messages.length - 1 - index];
+            final prevIndex = messages.length - 2 - index;
+            final prevMessage = prevIndex >= 0 ? messages[prevIndex] : null;
+            final prevIsUser = prevMessage?.info is UserMessage;
+            return _MessageBubble(
+              messageWithParts: messageWithParts,
+              prevIsUser: prevIsUser,
+            );
           },
         );
       },
@@ -98,8 +105,12 @@ class _MessageList extends ConsumerWidget {
 
 class _MessageBubble extends StatelessWidget {
   final MessageWithParts messageWithParts;
+  final bool prevIsUser;
 
-  const _MessageBubble({required this.messageWithParts});
+  const _MessageBubble({
+    required this.messageWithParts,
+    required this.prevIsUser,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -111,63 +122,48 @@ class _MessageBubble extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
-      child: Row(
-        mainAxisAlignment: isUser
-            ? MainAxisAlignment.end
-            : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (!isUser) ...[
-            _Avatar(isAssistant: true),
-            const SizedBox(width: 8),
-          ],
-          Flexible(
-            child: Container(
-              constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.75,
-              ),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isUser
-                    ? Theme.of(
-                        context,
-                      ).colorScheme.primary.withValues(alpha: 0.1)
-                    : Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(16),
-                  topRight: const Radius.circular(16),
-                  bottomLeft: Radius.circular(isUser ? 16 : 4),
-                  bottomRight: Radius.circular(isUser ? 4 : 16),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _MessageHeader(
-                    isUser: isUser,
-                    userMessage: userMessage,
-                    assistantMessage: assistantMessage,
-                  ),
-                  const SizedBox(height: 8),
-                  ...messageWithParts.parts.map(
-                    (part) => _MessagePart(part: part, isUser: isUser),
-                  ),
-                ],
-              ),
-            ),
+      child: Align(
+        alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+        child: Container(
+          constraints: BoxConstraints(
+            maxWidth: isUser
+                ? MediaQuery.of(context).size.width * 0.75
+                : MediaQuery.of(context).size.width,
           ),
-          if (isUser) ...[
-            const SizedBox(width: 8),
-            _Avatar(isAssistant: false),
-          ],
-        ],
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isUser
+                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
+                : Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(16),
+              topRight: const Radius.circular(16),
+              bottomLeft: Radius.circular(isUser ? 16 : 4),
+              bottomRight: Radius.circular(isUser ? 4 : 16),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _MessageHeader(
+                isUser: isUser,
+                userMessage: userMessage,
+                assistantMessage: assistantMessage,
+              ),
+              const SizedBox(height: 8),
+              ...messageWithParts.parts.map(
+                (part) => _MessagePart(part: part, isUser: isUser),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -263,7 +259,7 @@ class _ToolUseWidget extends StatefulWidget {
 }
 
 class _ToolUseWidgetState extends State<_ToolUseWidget> {
-  bool _isExpanded = true;
+  bool _isExpanded = false;
 
   @override
   Widget build(BuildContext context) {
