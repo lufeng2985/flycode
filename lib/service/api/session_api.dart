@@ -3,6 +3,7 @@ import 'api_client.dart';
 import 'models/session.dart';
 import 'models/message.dart';
 import '../../providers/server_config_provider.dart';
+import '../../pages/home_page.dart';
 
 part 'session_api.g.dart';
 
@@ -17,6 +18,16 @@ Future<List<Session>> sessions(Ref ref) async {
   ref.watch(serverConfigProvider);
   final api = ref.watch(sessionApiProvider);
   return api.getSessions();
+}
+
+@riverpod
+Future<List<MessageWithParts>> sessionMessages(Ref ref) async {
+  final selectedSession = ref.watch(selectedSessionProvider);
+  if (selectedSession == null) return [];
+
+  ref.watch(serverConfigProvider);
+  final api = ref.watch(sessionApiProvider);
+  return api.getSessionMessages(selectedSession.id);
 }
 
 class SessionApi {
@@ -115,7 +126,7 @@ class SessionApi {
     return json.map((e) => Session.fromJson(e)).toList();
   }
 
-  Future<List<Message>> getSessionMessages(
+  Future<List<MessageWithParts>> getSessionMessages(
     String id, {
     String? directory,
     int? limit,
@@ -128,10 +139,12 @@ class SessionApi {
       '/session/$id/message',
       queryParameters: queryParams,
     );
-    return json.map((e) => Message.fromJson(e)).toList();
+    return json
+        .map((e) => MessageWithParts.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
-  Future<void> sendMessage(
+  Future<void> sendPrompt(
     String id, {
     String? directory,
     Map<String, dynamic>? data,
@@ -218,7 +231,7 @@ class SessionApi {
     );
   }
 
-  Future<Message> getMessage(
+  Future<MessageWithParts> getMessage(
     String id,
     String messageID, {
     String? directory,
@@ -230,7 +243,7 @@ class SessionApi {
       '/session/$id/message/$messageID',
       queryParameters: queryParams,
     );
-    return Message.fromJson(json);
+    return MessageWithParts.fromJson(json as Map<String, dynamic>);
   }
 
   Future<void> revertMessage(
@@ -270,5 +283,79 @@ class SessionApi {
     if (directory != null) queryParams['directory'] = directory;
 
     return await _client.get('/session/$id/todo', queryParameters: queryParams);
+  }
+
+  Future<Map<String, dynamic>> getSessionStatus({String? directory}) async {
+    final queryParams = <String, String>{};
+    if (directory != null) queryParams['directory'] = directory;
+
+    return await _client.get('/session/status', queryParameters: queryParams);
+  }
+
+  Future<void> deleteMessage(
+    String id,
+    String messageID, {
+    String? directory,
+  }) async {
+    final queryParams = <String, String>{};
+    if (directory != null) queryParams['directory'] = directory;
+
+    await _client.delete(
+      '/session/$id/message/$messageID',
+      queryParameters: queryParams,
+    );
+  }
+
+  Future<void> sendPromptAsync(
+    String id, {
+    String? directory,
+    Map<String, dynamic>? data,
+  }) async {
+    final queryParams = <String, String>{};
+    if (directory != null) queryParams['directory'] = directory;
+
+    await _client.post(
+      '/session/$id/prompt_async',
+      queryParameters: queryParams,
+      body: data,
+    );
+  }
+
+  Future<void> runShell(
+    String id, {
+    String? directory,
+    Map<String, dynamic>? data,
+  }) async {
+    final queryParams = <String, String>{};
+    if (directory != null) queryParams['directory'] = directory;
+
+    await _client.post(
+      '/session/$id/shell',
+      queryParameters: queryParams,
+      body: data,
+    );
+  }
+
+  Future<void> unrevertSession(String id, {String? directory}) async {
+    final queryParams = <String, String>{};
+    if (directory != null) queryParams['directory'] = directory;
+
+    await _client.post('/session/$id/unrevert', queryParameters: queryParams);
+  }
+
+  Future<void> respondToPermission(
+    String id,
+    String permissionID, {
+    String? directory,
+    Map<String, dynamic>? data,
+  }) async {
+    final queryParams = <String, String>{};
+    if (directory != null) queryParams['directory'] = directory;
+
+    await _client.post(
+      '/session/$id/permissions/$permissionID',
+      queryParameters: queryParams,
+      body: data,
+    );
   }
 }
