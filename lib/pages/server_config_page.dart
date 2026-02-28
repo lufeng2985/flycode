@@ -5,7 +5,9 @@ import '../service/api/api_client.dart';
 import '../models/server_config.dart';
 
 class ServerConfigPage extends ConsumerStatefulWidget {
-  const ServerConfigPage({super.key});
+  final ServerConfig? initialConfig;
+
+  const ServerConfigPage({super.key, this.initialConfig});
 
   @override
   ConsumerState<ServerConfigPage> createState() => _ServerConfigPageState();
@@ -23,11 +25,10 @@ class _ServerConfigPageState extends ConsumerState<ServerConfigPage> {
   @override
   void initState() {
     super.initState();
-    final asyncConfig = ref.read(serverConfigProvider);
-    final config = asyncConfig.value ?? ServerConfig.defaultValue();
-    _baseUrlController = TextEditingController(text: config.baseUrl);
-    _usernameController = TextEditingController(text: config.username ?? '');
-    _passwordController = TextEditingController(text: config.password ?? '');
+    final config = widget.initialConfig;
+    _baseUrlController = TextEditingController(text: config?.baseUrl ?? '');
+    _usernameController = TextEditingController(text: config?.username ?? '');
+    _passwordController = TextEditingController(text: config?.password ?? '');
   }
 
   @override

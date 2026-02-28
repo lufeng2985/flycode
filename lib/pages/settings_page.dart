@@ -42,7 +42,14 @@ class SettingsPage extends ConsumerWidget {
             iconColor: Colors.cyan,
             title: '服务器',
             subtitle: serverUrl,
-            onTap: () => context.push('/settings/server'),
+            onTap: () {
+              final config = asyncServerConfig.value;
+              if (config != null) {
+                context.push('/settings/server', extra: config);
+              } else {
+                context.push('/settings/server');
+              }
+            },
           ),
           _buildSettingsItem(
             icon: Icons.business,

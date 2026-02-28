@@ -49,3 +49,42 @@ final class SessionApiProvider
 }
 
 String _$sessionApiHash() => r'537a6205534b6d5ce8a751ebdc4f0cfa9a97220e';
+
+@ProviderFor(sessions)
+final sessionsProvider = SessionsProvider._();
+
+final class SessionsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<Session>>,
+          List<Session>,
+          FutureOr<List<Session>>
+        >
+    with $FutureModifier<List<Session>>, $FutureProvider<List<Session>> {
+  SessionsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'sessionsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$sessionsHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<List<Session>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<Session>> create(Ref ref) {
+    return sessions(ref);
+  }
+}
+
+String _$sessionsHash() => r'ef7f8843a29c34f27cfe0ca8af770383e1862cd1';

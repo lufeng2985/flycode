@@ -5,6 +5,7 @@ import 'pages/home_page.dart';
 import 'pages/settings_page.dart';
 import 'pages/server_config_page.dart';
 import 'widgets/scaffold_with_nav_bar.dart';
+import 'models/server_config.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(
   debugLabel: 'root',
@@ -44,7 +45,10 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/settings/server',
       parentNavigatorKey: _rootNavigatorKey,
-      builder: (context, state) => const ServerConfigPage(),
+      builder: (context, state) {
+        final config = state.extra as ServerConfig?;
+        return ServerConfigPage(initialConfig: config);
+      },
     ),
   ],
 );
