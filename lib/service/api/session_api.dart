@@ -2,7 +2,9 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'api_client.dart';
 import 'models/session.dart';
 import 'models/message.dart';
+import 'models/prompt_input.dart';
 import '../../providers/server_config_provider.dart';
+import '../../providers/message_cache_provider.dart';
 import '../../pages/home_page.dart';
 
 part 'session_api.g.dart';
@@ -21,13 +23,24 @@ Future<List<Session>> sessions(Ref ref) async {
 }
 
 @riverpod
-Future<List<MessageWithParts>> sessionMessages(Ref ref) async {
+Future<void> sessionMessages(Ref ref) async {
   final selectedSession = ref.watch(selectedSessionProvider);
-  if (selectedSession == null) return [];
+  if (selectedSession == null) {
+    ref.read(messageCacheProvider.notifier).clearSession('');
+    return;
+  }
 
   ref.watch(serverConfigProvider);
   final api = ref.watch(sessionApiProvider);
-  return api.getSessionMessages(selectedSession.id);
+  final messages = await api.getSessionMessages(selectedSession.id);
+
+  // Reset cache for this session with freshly fetched data
+  ref.read(messageCacheProvider.notifier).clearSession(selectedSession.id);
+  for (final message in messages) {
+    ref
+        .read(messageCacheProvider.notifier)
+        .updateMessage(selectedSession.id, message);
+  }
 }
 
 class SessionApi {
@@ -309,7 +322,7 @@ class SessionApi {
   Future<void> sendPromptAsync(
     String id, {
     String? directory,
-    Map<String, dynamic>? data,
+    PromptAsyncInput? data,
   }) async {
     final queryParams = <String, String>{};
     if (directory != null) queryParams['directory'] = directory;
@@ -317,7 +330,7 @@ class SessionApi {
     await _client.post(
       '/session/$id/prompt_async',
       queryParameters: queryParams,
-      body: data,
+      body: data?.toJson(),
     );
   }
 

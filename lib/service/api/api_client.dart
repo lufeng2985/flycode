@@ -143,4 +143,52 @@ class ApiClient {
     );
     return _handleResponse(response);
   }
+
+  Stream<String> streamGet(
+    String path, {
+    Map<String, String>? queryParameters,
+  }) async* {
+    final uri = _getUri(path, queryParameters: queryParameters);
+    final request = http.Request('GET', uri);
+    request.headers.addAll(_getHeaders()..['Accept'] = 'text/event-stream');
+
+    final streamedResponse = await _client.send(request);
+
+    if (streamedResponse.statusCode < 200 ||
+        streamedResponse.statusCode >= 300) {
+      throw ApiException(
+        statusCode: streamedResponse.statusCode,
+        message: 'Stream request failed',
+      );
+    }
+
+    final buffer = StringBuffer();
+    var lineBuffer = StringBuffer();
+
+    await for (final chunk in streamedResponse.stream) {
+      final text = utf8.decode(chunk);
+      for (var i = 0; i < text.length; i++) {
+        final char = text[i];
+        if (char == '\n') {
+          final line = lineBuffer.toString();
+          lineBuffer.clear();
+
+          if (line.startsWith('data:')) {
+            buffer.write(line.substring(5).trim());
+          } else if (line.isEmpty && buffer.isNotEmpty) {
+            yield buffer.toString();
+            buffer.clear();
+          }
+          // ignore 'event:' and other SSE fields
+        } else {
+          lineBuffer.write(char);
+        }
+      }
+    }
+
+    // Flush any remaining buffered data
+    if (buffer.isNotEmpty) {
+      yield buffer.toString();
+    }
+  }
 }

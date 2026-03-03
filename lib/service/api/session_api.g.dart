@@ -93,15 +93,8 @@ String _$sessionsHash() => r'43b4f10173b8b65eec6e2aec73d0416dd584f926';
 final sessionMessagesProvider = SessionMessagesProvider._();
 
 final class SessionMessagesProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<List<MessageWithParts>>,
-          List<MessageWithParts>,
-          FutureOr<List<MessageWithParts>>
-        >
-    with
-        $FutureModifier<List<MessageWithParts>>,
-        $FutureProvider<List<MessageWithParts>> {
+    extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
+    with $FutureModifier<void>, $FutureProvider<void> {
   SessionMessagesProvider._()
     : super(
         from: null,
@@ -118,14 +111,13 @@ final class SessionMessagesProvider
 
   @$internal
   @override
-  $FutureProviderElement<List<MessageWithParts>> $createElement(
-    $ProviderPointer pointer,
-  ) => $FutureProviderElement(pointer);
+  $FutureProviderElement<void> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
 
   @override
-  FutureOr<List<MessageWithParts>> create(Ref ref) {
+  FutureOr<void> create(Ref ref) {
     return sessionMessages(ref);
   }
 }
 
-String _$sessionMessagesHash() => r'6659adbf3f1dd59d66e64c3ad72fa434d10b526c';
+String _$sessionMessagesHash() => r'e4163544cd8ac582451a5f309baefb72f3cc33cf';

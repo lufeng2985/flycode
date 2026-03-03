@@ -14,6 +14,23 @@ class ToolUseWidget extends StatefulWidget {
 class _ToolUseWidgetState extends State<ToolUseWidget> {
   bool _isExpanded = false;
 
+  String _getToolSummary() {
+    final state = widget.toolPart.state;
+    Map<String, dynamic>? input;
+    if (state is ToolStateRunning) {
+      input = state.input;
+    } else if (state is ToolStateCompleted) {
+      input = state.input;
+    } else if (state is ToolStateError) {
+      input = state.input;
+    }
+
+    if (input != null && input.containsKey('command')) {
+      return input['command'].toString();
+    }
+    return '';
+  }
+
   @override
   Widget build(BuildContext context) {
     final toolName = widget.toolPart.tool;
@@ -37,18 +54,22 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
               padding: const EdgeInsets.all(10),
               child: Row(
                 children: [
-                  Icon(Icons.build, size: 14, color: Colors.orange[700]),
-                  const SizedBox(width: 6),
                   Text(
                     toolName,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.orange[700],
-                      fontFamily: 'monospace',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
                     ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      _getToolSummary(),
+                      style: const TextStyle(fontSize: 14, color: Colors.grey),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                   Icon(
                     _isExpanded ? Icons.expand_less : Icons.expand_more,
                     size: 16,
