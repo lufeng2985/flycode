@@ -54,16 +54,12 @@ class SettingsPage extends ConsumerWidget {
             },
           ),
           SettingsItem(
-            icon: Icons.business,
-            iconColor: Colors.indigo,
-            title: '模型提供商',
-            onTap: () {},
-          ),
-          SettingsItem(
             icon: Icons.smart_toy_outlined,
             iconColor: Colors.purple,
             title: '模型',
-            onTap: () {},
+            onTap: () {
+              context.push('/settings/model');
+            },
           ),
           const Divider(),
           const SettingsSectionTitle(title: '关于'),

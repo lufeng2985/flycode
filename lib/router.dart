@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'pages/home_page.dart';
 import 'pages/settings_page.dart';
 import 'pages/server_config_page.dart';
+import 'pages/model_config_page.dart';
 import 'widgets/scaffold_with_nav_bar.dart';
 import 'models/server_config.dart';
 
@@ -49,6 +50,11 @@ final GoRouter appRouter = GoRouter(
         final config = state.extra as ServerConfig?;
         return ServerConfigPage(initialConfig: config);
       },
+    ),
+    GoRoute(
+      path: '/settings/model',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const ModelConfigPage(),
     ),
   ],
 );
