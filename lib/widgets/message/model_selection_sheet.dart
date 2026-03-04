@@ -6,12 +6,36 @@ import '../../service/api/models/message.dart';
 import '../../providers/model_config_provider.dart';
 import '../../providers/chat_config_provider.dart';
 
-class ModelSelectionSheet extends ConsumerWidget {
+class ModelSelectionSheet extends ConsumerStatefulWidget {
   const ModelSelectionSheet({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // We recreate the future provider here to fetch the list fresh each time the sheet opens
+  ConsumerState<ModelSelectionSheet> createState() =>
+      _ModelSelectionSheetState();
+}
+
+class _ModelSelectionSheetState extends ConsumerState<ModelSelectionSheet> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final providerListAsync = ref.watch(_providerListFutureProvider);
     final configsAsync = ref.watch(modelConfigProvider);
 
@@ -53,6 +77,49 @@ class ModelSelectionSheet extends ConsumerWidget {
               ],
             ),
           ),
+          // Search bar
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: TextField(
+              controller: _searchController,
+              autofocus: false,
+              style: const TextStyle(fontSize: 14),
+              decoration: InputDecoration(
+                hintText: '搜索模型',
+                hintStyle: TextStyle(fontSize: 14, color: Colors.grey[400]),
+                prefixIcon: Icon(
+                  Icons.search,
+                  size: 20,
+                  color: Colors.grey[400],
+                ),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? GestureDetector(
+                        onTap: () => _searchController.clear(),
+                        child: Icon(
+                          Icons.cancel,
+                          size: 18,
+                          color: Colors.grey[400],
+                        ),
+                      )
+                    : null,
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                filled: true,
+                fillColor: Colors.grey[100],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
+                ),
+              ),
+            ),
+          ),
           const Divider(height: 1),
           // List
           Expanded(
@@ -60,7 +127,7 @@ class ModelSelectionSheet extends ConsumerWidget {
               data: (providerList) {
                 return configsAsync.when(
                   data: (configs) =>
-                      _buildList(context, ref, providerList, configs),
+                      _buildList(context, providerList, configs, _searchQuery),
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
                   error: (e, s) =>
@@ -79,10 +146,12 @@ class ModelSelectionSheet extends ConsumerWidget {
 
   Widget _buildList(
     BuildContext context,
-    WidgetRef ref,
     ProviderListResponse providerList,
     Map<String, Map<String, bool>> configs,
+    String searchQuery,
   ) {
+    final query = searchQuery.trim().toLowerCase();
+
     final connectedProviders = providerList.all
         .where((p) => providerList.connected.contains(p.id))
         .toList();
@@ -96,19 +165,25 @@ class ModelSelectionSheet extends ConsumerWidget {
     for (final provider in connectedProviders) {
       final providerConfigs = configs[provider.id] ?? {};
 
-      // Filter models
-      final availableModels = provider.models.entries.where((entry) {
+      // Filter by enabled config / recently released
+      var availableModels = provider.models.entries.where((entry) {
         final modelId = entry.key;
         final model = entry.value;
 
-        // Check if enabled in config
         if (providerConfigs.containsKey(modelId)) {
           return providerConfigs[modelId]!;
         }
-
-        // Fallback to recently released
         return _isRecentlyReleased(model.releaseDate);
       }).toList();
+
+      // Apply local search filter
+      if (query.isNotEmpty) {
+        availableModels = availableModels.where((entry) {
+          final model = entry.value;
+          return model.name.toLowerCase().contains(query) ||
+              model.id.toLowerCase().contains(query);
+        }).toList();
+      }
 
       if (availableModels.isEmpty) continue;
 
@@ -138,7 +213,12 @@ class ModelSelectionSheet extends ConsumerWidget {
     }
 
     if (listItems.isEmpty) {
-      return const Center(child: Text('没有可用的模型'));
+      return Center(
+        child: Text(
+          query.isNotEmpty ? '没有匹配的模型' : '没有可用的模型',
+          style: TextStyle(color: Colors.grey[500], fontSize: 14),
+        ),
+      );
     }
 
     return ListView.builder(
