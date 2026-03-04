@@ -30,9 +30,11 @@ class ChatConfigNotifier extends _$ChatConfigNotifier {
   @override
   Future<ChatConfig> build() async {
     // Step 1: find the last UserMessage in the current session.
-    final messagesAsync = ref.watch(sessionMessagesProvider);
-    final messages = messagesAsync.asData?.value;
-    if (messages != null && messages.isNotEmpty) {
+    // Use .future to properly await the messages, avoiding a race condition
+    // where the watch subscription is established after an intermediate await,
+    // which causes Riverpod's pausedActiveSubscriptionCount assertion to fail.
+    final messages = await ref.watch(sessionMessagesProvider.future);
+    if (messages.isNotEmpty) {
       final lastUser = messages.lastWhere(
         (m) => m.info is UserMessage,
         orElse: () => throw StateError('no user message'),
