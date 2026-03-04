@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'home_page.dart';
+part of 'session_provider.dart';
 
 // **************************************************************************
 // RiverpodGenerator
@@ -55,6 +55,61 @@ abstract class _$SelectedSessionNotifier extends $Notifier<Session?> {
             as $ClassProviderElement<
               AnyNotifier<Session?, Session?>,
               Session?,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
+@ProviderFor(SessionMessagesNotifier)
+final sessionMessagesProvider = SessionMessagesNotifierProvider._();
+
+final class SessionMessagesNotifierProvider
+    extends
+        $AsyncNotifierProvider<
+          SessionMessagesNotifier,
+          List<MessageWithParts>
+        > {
+  SessionMessagesNotifierProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'sessionMessagesProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$sessionMessagesNotifierHash();
+
+  @$internal
+  @override
+  SessionMessagesNotifier create() => SessionMessagesNotifier();
+}
+
+String _$sessionMessagesNotifierHash() =>
+    r'65db3145a5ff1cafc8a49355a5045cfd4c15c6e4';
+
+abstract class _$SessionMessagesNotifier
+    extends $AsyncNotifier<List<MessageWithParts>> {
+  FutureOr<List<MessageWithParts>> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref =
+        this.ref
+            as $Ref<AsyncValue<List<MessageWithParts>>, List<MessageWithParts>>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<
+                AsyncValue<List<MessageWithParts>>,
+                List<MessageWithParts>
+              >,
+              AsyncValue<List<MessageWithParts>>,
               Object?,
               Object?
             >;

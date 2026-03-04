@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../service/api/session_api.dart';
 import '../../service/api/models/message.dart';
 import '../../service/api/models/prompt_input.dart';
-import '../../pages/home_page.dart';
+import '../../providers/session_provider.dart';
 
 class ChatInput extends ConsumerStatefulWidget {
   const ChatInput({super.key});
@@ -42,8 +42,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
             ),
           );
       _controller.clear();
-      // Refresh the message list
-      ref.invalidate(sessionMessagesProvider);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(

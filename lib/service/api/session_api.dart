@@ -4,8 +4,6 @@ import 'models/session.dart';
 import 'models/message.dart';
 import 'models/prompt_input.dart';
 import '../../providers/server_config_provider.dart';
-import '../../providers/message_cache_provider.dart';
-import '../../pages/home_page.dart';
 
 part 'session_api.g.dart';
 
@@ -20,27 +18,6 @@ Future<List<Session>> sessions(Ref ref) async {
   ref.watch(serverConfigProvider);
   final api = ref.watch(sessionApiProvider);
   return api.getSessions();
-}
-
-@riverpod
-Future<void> sessionMessages(Ref ref) async {
-  final selectedSession = ref.watch(selectedSessionProvider);
-  if (selectedSession == null) {
-    ref.read(messageCacheProvider.notifier).clearSession('');
-    return;
-  }
-
-  ref.watch(serverConfigProvider);
-  final api = ref.watch(sessionApiProvider);
-  final messages = await api.getSessionMessages(selectedSession.id);
-
-  // Reset cache for this session with freshly fetched data
-  ref.read(messageCacheProvider.notifier).clearSession(selectedSession.id);
-  for (final message in messages) {
-    ref
-        .read(messageCacheProvider.notifier)
-        .updateMessage(selectedSession.id, message);
-  }
 }
 
 class SessionApi {

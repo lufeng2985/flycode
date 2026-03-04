@@ -1,24 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-import '../service/api/models/session.dart';
 import '../service/api/session_api.dart';
 import '../providers/global_event_provider.dart';
+import '../providers/session_provider.dart';
 import '../widgets/message/message_list.dart';
 import '../widgets/message/chat_input.dart';
 import '../widgets/session/session_drawer.dart';
-
-part 'home_page.g.dart';
-
-@riverpod
-class SelectedSessionNotifier extends _$SelectedSessionNotifier {
-  @override
-  Session? build() => null;
-
-  void select(Session? session) {
-    state = session;
-  }
-}
 
 class MyHomePage extends ConsumerWidget {
   const MyHomePage({super.key, required this.title});

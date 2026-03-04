@@ -88,36 +88,3 @@ final class SessionsProvider
 }
 
 String _$sessionsHash() => r'43b4f10173b8b65eec6e2aec73d0416dd584f926';
-
-@ProviderFor(sessionMessages)
-final sessionMessagesProvider = SessionMessagesProvider._();
-
-final class SessionMessagesProvider
-    extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
-    with $FutureModifier<void>, $FutureProvider<void> {
-  SessionMessagesProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'sessionMessagesProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$sessionMessagesHash();
-
-  @$internal
-  @override
-  $FutureProviderElement<void> $createElement($ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
-
-  @override
-  FutureOr<void> create(Ref ref) {
-    return sessionMessages(ref);
-  }
-}
-
-String _$sessionMessagesHash() => r'e4163544cd8ac582451a5f309baefb72f3cc33cf';
