@@ -4,6 +4,7 @@ import '../../service/api/session_api.dart';
 import '../../service/api/models/prompt_input.dart';
 import '../../providers/session_provider.dart';
 import '../../providers/chat_config_provider.dart';
+import 'model_selection_sheet.dart';
 
 class ChatInput extends ConsumerStatefulWidget {
   const ChatInput({super.key});
@@ -54,6 +55,23 @@ class _ChatInputState extends ConsumerState<ChatInput> {
         });
       }
     }
+  }
+
+  void _toggleAgent() {
+    final config = ref.read(chatConfigProvider).asData?.value;
+    if (config == null) return;
+
+    final newAgent = config.agent == 'build' ? 'plan' : 'build';
+    ref.read(chatConfigProvider.notifier).setAgent(newAgent);
+  }
+
+  void _showModelSelector() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const ModelSelectionSheet(),
+    );
   }
 
   @override
@@ -139,16 +157,22 @@ class _ChatInputState extends ConsumerState<ChatInput> {
             const SizedBox(height: 8),
             Row(
               children: [
-                _buildDropdown(
-                  chatConfig != null
-                      ? '${chatConfig.agent[0].toUpperCase()}'
-                            '${chatConfig.agent.substring(1)}'
-                      : '...',
+                GestureDetector(
+                  onTap: _toggleAgent,
+                  child: _buildDropdown(
+                    chatConfig != null
+                        ? '${chatConfig.agent[0].toUpperCase()}'
+                              '${chatConfig.agent.substring(1)}'
+                        : '...',
+                  ),
                 ),
                 const SizedBox(width: 8),
-                _buildDropdown(
-                  chatConfig?.model.modelID ?? '...',
-                  icon: Icons.share_outlined,
+                GestureDetector(
+                  onTap: _showModelSelector,
+                  child: _buildDropdown(
+                    chatConfig?.model.modelID ?? '...',
+                    icon: Icons.share_outlined,
+                  ),
                 ),
                 const SizedBox(width: 8),
                 _buildDropdown('默认'),
