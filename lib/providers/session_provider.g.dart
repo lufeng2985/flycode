@@ -91,7 +91,7 @@ final class SessionMessagesNotifierProvider
 }
 
 String _$sessionMessagesNotifierHash() =>
-    r'65db3145a5ff1cafc8a49355a5045cfd4c15c6e4';
+    r'1fc0f4488f21b16e23aa6c994efd965f20e1a82e';
 
 abstract class _$SessionMessagesNotifier
     extends $AsyncNotifier<List<MessageWithParts>> {

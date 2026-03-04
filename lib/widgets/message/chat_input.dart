@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../service/api/session_api.dart';
-import '../../service/api/models/message.dart';
 import '../../service/api/models/prompt_input.dart';
 import '../../providers/session_provider.dart';
+import '../../providers/chat_config_provider.dart';
 
 class ChatInput extends ConsumerStatefulWidget {
   const ChatInput({super.key});
@@ -27,17 +27,16 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       _isLoading = true;
     });
 
+    final chatConfig = ref.read(chatConfigProvider).asData?.value;
+
     try {
       await ref
           .read(sessionApiProvider)
           .sendPromptAsync(
             selectedSession.id,
             data: PromptAsyncInput(
-              agent: 'build',
-              model: MessageModel(
-                providerID: 'openrouter',
-                modelID: 'minimax/minimax-m2.5',
-              ),
+              agent: chatConfig?.agent,
+              model: chatConfig?.model,
               parts: [TextPartInput(text: text)],
             ),
           );
@@ -59,6 +58,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   @override
   Widget build(BuildContext context) {
+    final chatConfig = ref.watch(chatConfigProvider).asData?.value;
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -138,9 +139,17 @@ class _ChatInputState extends ConsumerState<ChatInput> {
             const SizedBox(height: 8),
             Row(
               children: [
-                _buildDropdown('Build'),
+                _buildDropdown(
+                  chatConfig != null
+                      ? '${chatConfig.agent[0].toUpperCase()}'
+                            '${chatConfig.agent.substring(1)}'
+                      : '...',
+                ),
                 const SizedBox(width: 8),
-                _buildDropdown('MiniMax M2.5', icon: Icons.share_outlined),
+                _buildDropdown(
+                  chatConfig?.model.modelID ?? '...',
+                  icon: Icons.share_outlined,
+                ),
                 const SizedBox(width: 8),
                 _buildDropdown('默认'),
                 const Spacer(),
