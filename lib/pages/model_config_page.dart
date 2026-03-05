@@ -7,7 +7,7 @@ import '../providers/model_config_provider.dart';
 final _providerListFutureProvider = FutureProvider<ProviderListResponse>((
   ref,
 ) async {
-  final api = ref.watch(providerApiProvider);
+  final api = await ref.watch(providerApiProvider.future);
   return await api.list();
 });
 

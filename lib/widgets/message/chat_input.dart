@@ -31,16 +31,15 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     final chatConfig = ref.read(chatConfigProvider).asData?.value;
 
     try {
-      await ref
-          .read(sessionApiProvider)
-          .sendPromptAsync(
-            selectedSession.id,
-            data: PromptAsyncInput(
-              agent: chatConfig?.agent,
-              model: chatConfig?.model,
-              parts: [TextPartInput(text: text)],
-            ),
-          );
+      final api = await ref.read(sessionApiProvider.future);
+      await api.sendPromptAsync(
+        selectedSession.id,
+        data: PromptAsyncInput(
+          agent: chatConfig?.agent,
+          model: chatConfig?.model,
+          parts: [TextPartInput(text: text)],
+        ),
+      );
       _controller.clear();
     } catch (e) {
       if (mounted) {

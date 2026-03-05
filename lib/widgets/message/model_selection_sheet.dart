@@ -305,6 +305,6 @@ class _ModelTile extends ConsumerWidget {
 final _providerListFutureProvider = FutureProvider<ProviderListResponse>((
   ref,
 ) async {
-  final api = ref.watch(providerApiProvider);
+  final api = await ref.watch(providerApiProvider.future);
   return await api.list();
 });

@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../providers/server_config_provider.dart';
-import '../../models/server_config.dart';
 
 part 'api_client.g.dart';
 
@@ -24,9 +23,8 @@ class ApiException implements Exception {
 }
 
 @riverpod
-ApiClient apiClient(Ref ref) {
-  final asyncConfig = ref.watch(serverConfigProvider);
-  final config = asyncConfig.value ?? ServerConfig.defaultValue();
+Future<ApiClient> apiClient(Ref ref) async {
+  final config = await ref.watch(serverConfigProvider.future);
   return ApiClient(
     baseUrl: config.baseUrl,
     username: config.username,

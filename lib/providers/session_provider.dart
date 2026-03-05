@@ -23,7 +23,7 @@ class SessionMessagesNotifier extends _$SessionMessagesNotifier {
     final session = ref.watch(selectedSessionProvider);
     if (session == null) return [];
 
-    final api = ref.watch(sessionApiProvider);
+    final api = await ref.watch(sessionApiProvider.future);
     return api.getSessionMessages(session.id);
   }
 

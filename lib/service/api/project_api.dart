@@ -5,14 +5,14 @@ import 'models/project.dart';
 part 'project_api.g.dart';
 
 @riverpod
-ProjectApi projectApi(Ref ref) {
-  final client = ref.watch(apiClientProvider);
+Future<ProjectApi> projectApi(Ref ref) async {
+  final client = await ref.watch(apiClientProvider.future);
   return ProjectApi(client);
 }
 
 @riverpod
 Future<List<Project>> projects(Ref ref) async {
-  final api = ref.watch(projectApiProvider);
+  final api = await ref.watch(projectApiProvider.future);
   return api.getProjects();
 }
 

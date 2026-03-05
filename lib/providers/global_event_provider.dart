@@ -11,15 +11,15 @@ part 'global_event_provider.g.dart';
 @riverpod
 class GlobalEventListener extends _$GlobalEventListener {
   @override
-  Stream<GlobalEvent> build() {
-    final api = ref.watch(globalApiProvider);
+  Stream<GlobalEvent> build() async* {
+    final api = await ref.watch(globalApiProvider.future);
 
     // 用 listenSelf 监听自身 stream state 来处理副作用，避免直接 stream.listen() 导致双重订阅
     listenSelf((_, next) {
       next.whenData(_handleEvent);
     });
 
-    return api.subscribeToGlobalEvents();
+    yield* api.subscribeToGlobalEvents();
   }
 
   void _handleEvent(GlobalEvent event) {

@@ -5,8 +5,8 @@ import 'models/provider.dart';
 part 'provider_api.g.dart';
 
 @riverpod
-ProviderApi providerApi(Ref ref) {
-  final client = ref.watch(apiClientProvider);
+Future<ProviderApi> providerApi(Ref ref) async {
+  final client = await ref.watch(apiClientProvider.future);
   return ProviderApi(client);
 }
 

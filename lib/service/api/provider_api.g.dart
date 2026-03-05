@@ -13,8 +13,13 @@ part of 'provider_api.dart';
 final providerApiProvider = ProviderApiProvider._();
 
 final class ProviderApiProvider
-    extends $FunctionalProvider<ProviderApi, ProviderApi, ProviderApi>
-    with $Provider<ProviderApi> {
+    extends
+        $FunctionalProvider<
+          AsyncValue<ProviderApi>,
+          ProviderApi,
+          FutureOr<ProviderApi>
+        >
+    with $FutureModifier<ProviderApi>, $FutureProvider<ProviderApi> {
   ProviderApiProvider._()
     : super(
         from: null,
@@ -31,21 +36,14 @@ final class ProviderApiProvider
 
   @$internal
   @override
-  $ProviderElement<ProviderApi> $createElement($ProviderPointer pointer) =>
-      $ProviderElement(pointer);
+  $FutureProviderElement<ProviderApi> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
 
   @override
-  ProviderApi create(Ref ref) {
+  FutureOr<ProviderApi> create(Ref ref) {
     return providerApi(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(ProviderApi value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<ProviderApi>(value),
-    );
   }
 }
 
-String _$providerApiHash() => r'494b8194ab2bbb09674ab9084074625195d0a01a';
+String _$providerApiHash() => r'aefa6a2c613acd1256a079068d015a6a5716648a';

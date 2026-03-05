@@ -8,8 +8,8 @@ import 'models/health.dart';
 part 'global_api.g.dart';
 
 @riverpod
-GlobalApi globalApi(Ref ref) {
-  final client = ref.watch(apiClientProvider);
+Future<GlobalApi> globalApi(Ref ref) async {
+  final client = await ref.watch(apiClientProvider.future);
   return GlobalApi(client);
 }
 

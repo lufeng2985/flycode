@@ -34,7 +34,7 @@ final class ServerConfigNotifierProvider
 }
 
 String _$serverConfigNotifierHash() =>
-    r'70b2e3ecae91e7a5b1abf2950aaf02126d5c70ba';
+    r'dda3008a2cccceb542e89b32819e824d06674e71';
 
 abstract class _$ServerConfigNotifier extends $AsyncNotifier<ServerConfig> {
   FutureOr<ServerConfig> build();

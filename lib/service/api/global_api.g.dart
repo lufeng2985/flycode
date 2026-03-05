@@ -13,8 +13,13 @@ part of 'global_api.dart';
 final globalApiProvider = GlobalApiProvider._();
 
 final class GlobalApiProvider
-    extends $FunctionalProvider<GlobalApi, GlobalApi, GlobalApi>
-    with $Provider<GlobalApi> {
+    extends
+        $FunctionalProvider<
+          AsyncValue<GlobalApi>,
+          GlobalApi,
+          FutureOr<GlobalApi>
+        >
+    with $FutureModifier<GlobalApi>, $FutureProvider<GlobalApi> {
   GlobalApiProvider._()
     : super(
         from: null,
@@ -31,21 +36,13 @@ final class GlobalApiProvider
 
   @$internal
   @override
-  $ProviderElement<GlobalApi> $createElement($ProviderPointer pointer) =>
-      $ProviderElement(pointer);
+  $FutureProviderElement<GlobalApi> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
 
   @override
-  GlobalApi create(Ref ref) {
+  FutureOr<GlobalApi> create(Ref ref) {
     return globalApi(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(GlobalApi value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<GlobalApi>(value),
-    );
   }
 }
 
-String _$globalApiHash() => r'19145192d2bd8ac1692e99b618189694aa0bd6fd';
+String _$globalApiHash() => r'f01ce5f2e197fda4736282ca300a5216df0f00f6';

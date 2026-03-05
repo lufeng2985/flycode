@@ -13,8 +13,13 @@ part of 'project_api.dart';
 final projectApiProvider = ProjectApiProvider._();
 
 final class ProjectApiProvider
-    extends $FunctionalProvider<ProjectApi, ProjectApi, ProjectApi>
-    with $Provider<ProjectApi> {
+    extends
+        $FunctionalProvider<
+          AsyncValue<ProjectApi>,
+          ProjectApi,
+          FutureOr<ProjectApi>
+        >
+    with $FutureModifier<ProjectApi>, $FutureProvider<ProjectApi> {
   ProjectApiProvider._()
     : super(
         from: null,
@@ -31,24 +36,16 @@ final class ProjectApiProvider
 
   @$internal
   @override
-  $ProviderElement<ProjectApi> $createElement($ProviderPointer pointer) =>
-      $ProviderElement(pointer);
+  $FutureProviderElement<ProjectApi> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
 
   @override
-  ProjectApi create(Ref ref) {
+  FutureOr<ProjectApi> create(Ref ref) {
     return projectApi(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(ProjectApi value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<ProjectApi>(value),
-    );
   }
 }
 
-String _$projectApiHash() => r'd3c5bbab00396d4868d1ee73983dd543b076786e';
+String _$projectApiHash() => r'aa718dc825630bb1802dff1ca98b9d006ca7901b';
 
 @ProviderFor(projects)
 final projectsProvider = ProjectsProvider._();
@@ -87,4 +84,4 @@ final class ProjectsProvider
   }
 }
 
-String _$projectsHash() => r'a58fba78610bbaacdfe56b143db2650e6283e588';
+String _$projectsHash() => r'7ec3b7420577e64be695162262641ca5b920e6cb';

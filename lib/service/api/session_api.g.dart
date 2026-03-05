@@ -13,8 +13,13 @@ part of 'session_api.dart';
 final sessionApiProvider = SessionApiProvider._();
 
 final class SessionApiProvider
-    extends $FunctionalProvider<SessionApi, SessionApi, SessionApi>
-    with $Provider<SessionApi> {
+    extends
+        $FunctionalProvider<
+          AsyncValue<SessionApi>,
+          SessionApi,
+          FutureOr<SessionApi>
+        >
+    with $FutureModifier<SessionApi>, $FutureProvider<SessionApi> {
   SessionApiProvider._()
     : super(
         from: null,
@@ -31,24 +36,16 @@ final class SessionApiProvider
 
   @$internal
   @override
-  $ProviderElement<SessionApi> $createElement($ProviderPointer pointer) =>
-      $ProviderElement(pointer);
+  $FutureProviderElement<SessionApi> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
 
   @override
-  SessionApi create(Ref ref) {
+  FutureOr<SessionApi> create(Ref ref) {
     return sessionApi(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(SessionApi value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<SessionApi>(value),
-    );
   }
 }
 
-String _$sessionApiHash() => r'537a6205534b6d5ce8a751ebdc4f0cfa9a97220e';
+String _$sessionApiHash() => r'cf372e7230aec866c688bb1c8f18a677c07e755c';
 
 @ProviderFor(sessions)
 final sessionsProvider = SessionsProvider._();
@@ -87,4 +84,4 @@ final class SessionsProvider
   }
 }
 
-String _$sessionsHash() => r'22882f59078b5721ddf461c3e2899b3416c64e80';
+String _$sessionsHash() => r'288257b794e18e2520561d1ab28fac373b0e6a35';

@@ -8,14 +8,14 @@ import 'models/prompt_input.dart';
 part 'session_api.g.dart';
 
 @riverpod
-SessionApi sessionApi(Ref ref) {
-  final client = ref.watch(apiClientProvider);
+Future<SessionApi> sessionApi(Ref ref) async {
+  final client = await ref.watch(apiClientProvider.future);
   return SessionApi(client);
 }
 
 @riverpod
 Future<List<Session>> sessions(Ref ref) async {
-  final api = ref.watch(sessionApiProvider);
+  final api = await ref.watch(sessionApiProvider.future);
   final project = await ref.watch(selectedProjectProvider.future);
   return api.getSessions(directory: project?.worktree);
 }

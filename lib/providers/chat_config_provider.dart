@@ -47,7 +47,7 @@ class ChatConfigNotifier extends _$ChatConfigNotifier {
     // Step 2: call /provider to find the first connected provider and its
     // default model.
     try {
-      final api = ref.read(providerApiProvider);
+      final api = await ref.read(providerApiProvider.future);
       final response = await api.list();
 
       if (response.connected.isNotEmpty) {
