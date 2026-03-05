@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 
 import 'pages/home_page.dart';
+import 'pages/project_list_page.dart';
 import 'pages/settings_page.dart';
 import 'pages/server_config_page.dart';
 import 'pages/model_config_page.dart';
@@ -55,6 +56,11 @@ final GoRouter appRouter = GoRouter(
       path: '/settings/model',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const ModelConfigPage(),
+    ),
+    GoRoute(
+      path: '/projects',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const ProjectListPage(),
     ),
   ],
 );

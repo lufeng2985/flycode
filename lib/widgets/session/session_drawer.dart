@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../service/api/models/session.dart';
+import '../../providers/project_provider.dart';
 
-class SessionDrawer extends StatelessWidget {
+String _projectDisplayName(String worktree) {
+  final parts = worktree.replaceAll('\\', '/').split('/');
+  return parts.lastWhere((p) => p.isNotEmpty, orElse: () => worktree);
+}
+
+class SessionDrawer extends ConsumerWidget {
   final AsyncValue<List<Session>> sessionsAsync;
   final Session? selectedSession;
   final void Function(Session) onSessionSelected;
@@ -15,13 +22,116 @@ class SessionDrawer extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedProjectAsync = ref.watch(selectedProjectProvider);
+
     return Drawer(
       child: SafeArea(
-        child: sessionsAsync.when(
-          data: (sessions) => _buildSessionList(sessions),
-          error: (error, stack) => Center(child: Text('$error')),
-          loading: () => const Center(child: CircularProgressIndicator()),
+        child: Column(
+          children: [
+            _buildProjectHeader(context, selectedProjectAsync),
+            const Divider(height: 1),
+            Expanded(
+              child: sessionsAsync.when(
+                data: (sessions) => _buildSessionList(sessions),
+                error: (error, stack) => Center(child: Text('$error')),
+                loading: () => const Center(child: CircularProgressIndicator()),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProjectHeader(
+    BuildContext context,
+    AsyncValue selectedProjectAsync,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => context.push('/projects'),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: colorScheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.folder_rounded,
+                  color: colorScheme.primary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: selectedProjectAsync.when(
+                  loading: () => Text(
+                    '加载中...',
+                    style: TextStyle(fontSize: 14, color: Colors.grey[400]),
+                  ),
+                  error: (error, stack) => Text(
+                    '项目加载失败',
+                    style: TextStyle(fontSize: 14, color: Colors.grey[400]),
+                  ),
+                  data: (project) => project == null
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '选择项目',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.grey[500],
+                              ),
+                            ),
+                          ],
+                        )
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _projectDisplayName(project.worktree),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              project.worktree,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey[450],
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ),
+              Icon(
+                Icons.unfold_more_rounded,
+                color: Colors.grey[400],
+                size: 18,
+              ),
+            ],
+          ),
         ),
       ),
     );

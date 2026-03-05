@@ -1,9 +1,9 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import '../../providers/project_provider.dart';
 import 'api_client.dart';
 import 'models/session.dart';
 import 'models/message.dart';
 import 'models/prompt_input.dart';
-import '../../providers/server_config_provider.dart';
 
 part 'session_api.g.dart';
 
@@ -15,9 +15,9 @@ SessionApi sessionApi(Ref ref) {
 
 @riverpod
 Future<List<Session>> sessions(Ref ref) async {
-  ref.watch(serverConfigProvider);
   final api = ref.watch(sessionApiProvider);
-  return api.getSessions();
+  final project = await ref.watch(selectedProjectProvider.future);
+  return api.getSessions(directory: project?.worktree);
 }
 
 class SessionApi {
