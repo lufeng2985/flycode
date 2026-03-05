@@ -3,13 +3,17 @@ import '../service/api/models/message.dart';
 import '../service/api/models/parts.dart';
 import '../service/api/models/session.dart';
 import '../service/api/session_api.dart';
+import 'project_provider.dart';
 
 part 'session_provider.g.dart';
 
 @riverpod
 class SelectedSessionNotifier extends _$SelectedSessionNotifier {
   @override
-  Session? build() => null;
+  Session? build() {
+    ref.watch(selectedProjectProvider);
+    return null;
+  }
 
   void select(Session? session) {
     state = session;

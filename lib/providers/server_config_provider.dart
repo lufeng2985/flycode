@@ -27,15 +27,11 @@ class ServerConfigNotifier extends _$ServerConfigNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_serverConfigKey, jsonEncode(config.toJson()));
     state = AsyncData(config);
-    // 重置选中项目，以便在新服务器下重新初始化默认值
-    ref.invalidate(selectedProjectProvider);
   }
 
   Future<void> clear() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_serverConfigKey);
     state = AsyncData(ServerConfig.defaultValue());
-    // 重置选中项目
-    ref.invalidate(selectedProjectProvider);
   }
 }
