@@ -13,12 +13,14 @@ class SessionDrawer extends ConsumerWidget {
   final AsyncValue<List<Session>> sessionsAsync;
   final Session? selectedSession;
   final void Function(Session) onSessionSelected;
+  final VoidCallback onNewSession;
 
   const SessionDrawer({
     super.key,
     required this.sessionsAsync,
     required this.selectedSession,
     required this.onSessionSelected,
+    required this.onNewSession,
   });
 
   @override
@@ -37,6 +39,12 @@ class SessionDrawer extends ConsumerWidget {
                 error: (error, stack) => Center(child: Text('$error')),
                 loading: () => const Center(child: CircularProgressIndicator()),
               ),
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(Icons.add_comment_outlined),
+              title: const Text('新建会话'),
+              onTap: onNewSession,
             ),
           ],
         ),

@@ -166,6 +166,21 @@ class PermissionRule {
 
 typedef PermissionRuleset = List<PermissionRule>;
 
+class CreateSessionRequest {
+  final String? parentID;
+  final String? title;
+  final PermissionRuleset? permission;
+
+  CreateSessionRequest({this.parentID, this.title, this.permission});
+
+  Map<String, dynamic> toJson() => {
+    if (parentID != null) 'parentID': parentID,
+    if (title != null) 'title': title,
+    if (permission != null)
+      'permission': permission!.map((e) => e.toJson()).toList(),
+  };
+}
+
 @JsonSerializable()
 class Session {
   final String id;

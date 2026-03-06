@@ -16,7 +16,38 @@ class MyHomePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(globalEventListenerProvider);
     final sessionsAsync = ref.watch(sessionsProvider);
-    final selectedSession = ref.watch(selectedSessionProvider);
+    final selectedState = ref.watch(selectedSessionProvider);
+    final selectedSession = selectedState.session;
+    final isPending = selectedState.isPending;
+
+    Widget buildNewSessionWelcome() {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.chat_bubble_outline_rounded,
+              size: 64,
+              color: Colors.grey[300],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              '开始一段新会话',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '在下方输入消息，发送后将自动创建会话',
+              style: TextStyle(fontSize: 13, color: Colors.grey[400]),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -124,12 +155,18 @@ class MyHomePage extends ConsumerWidget {
           ref.read(selectedSessionProvider.notifier).select(session);
           Navigator.pop(context);
         },
+        onNewSession: () {
+          ref.read(selectedSessionProvider.notifier).startNew();
+          Navigator.pop(context);
+        },
       ),
       body: Column(
         children: [
           Expanded(
             child: selectedSession != null
                 ? const MessageList()
+                : isPending
+                ? buildNewSessionWelcome()
                 : sessionsAsync.when(
                     data: (sessions) => sessions.isEmpty
                         ? const Center(child: Text('No sessions'))
@@ -142,7 +179,7 @@ class MyHomePage extends ConsumerWidget {
                         const Center(child: CircularProgressIndicator()),
                   ),
           ),
-          if (selectedSession != null) const ChatInput(),
+          if (selectedSession != null || isPending) const ChatInput(),
         ],
       ),
     );

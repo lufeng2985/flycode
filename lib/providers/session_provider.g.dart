@@ -13,7 +13,7 @@ part of 'session_provider.dart';
 final selectedSessionProvider = SelectedSessionNotifierProvider._();
 
 final class SelectedSessionNotifierProvider
-    extends $NotifierProvider<SelectedSessionNotifier, Session?> {
+    extends $NotifierProvider<SelectedSessionNotifier, SelectedSessionState> {
   SelectedSessionNotifierProvider._()
     : super(
         from: null,
@@ -33,28 +33,29 @@ final class SelectedSessionNotifierProvider
   SelectedSessionNotifier create() => SelectedSessionNotifier();
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(Session? value) {
+  Override overrideWithValue(SelectedSessionState value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<Session?>(value),
+      providerOverride: $SyncValueProvider<SelectedSessionState>(value),
     );
   }
 }
 
 String _$selectedSessionNotifierHash() =>
-    r'13ff4f29b1bf7e8c0e9530619bbc092f78d398ce';
+    r'c513ccffecbc1b7dbe683fa7bd0bf1b3a77ad55f';
 
-abstract class _$SelectedSessionNotifier extends $Notifier<Session?> {
-  Session? build();
+abstract class _$SelectedSessionNotifier
+    extends $Notifier<SelectedSessionState> {
+  SelectedSessionState build();
   @$mustCallSuper
   @override
   void runBuild() {
-    final ref = this.ref as $Ref<Session?, Session?>;
+    final ref = this.ref as $Ref<SelectedSessionState, SelectedSessionState>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<Session?, Session?>,
-              Session?,
+              AnyNotifier<SelectedSessionState, SelectedSessionState>,
+              SelectedSessionState,
               Object?,
               Object?
             >;
@@ -91,7 +92,7 @@ final class SessionMessagesNotifierProvider
 }
 
 String _$sessionMessagesNotifierHash() =>
-    r'59e77df9814f5187e77a78e33894324066da2d11';
+    r'd1bcb69d402c50aeb2a9fd3b5a219f20e850167b';
 
 abstract class _$SessionMessagesNotifier
     extends $AsyncNotifier<List<MessageWithParts>> {

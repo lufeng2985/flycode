@@ -48,15 +48,25 @@ class SessionApi {
 
   Future<Session> createSession({
     String? directory,
-    Map<String, dynamic>? data,
+    String? parentID,
+    String? title,
+    PermissionRuleset? permission,
   }) async {
-    final queryParams = <String, String>{};
-    if (directory != null) queryParams['directory'] = directory;
+    final extraHeaders = <String, String>{};
+    if (directory != null) {
+      extraHeaders['x-opencode-directory'] = directory;
+    }
+
+    final body = CreateSessionRequest(
+      parentID: parentID,
+      title: title,
+      permission: permission,
+    );
 
     final json = await _client.post(
       '/session',
-      queryParameters: queryParams,
-      body: data,
+      body: body.toJson(),
+      extraHeaders: extraHeaders,
     );
     return Session.fromJson(json);
   }

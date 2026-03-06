@@ -7,16 +7,26 @@ import 'project_provider.dart';
 
 part 'session_provider.g.dart';
 
+/// 当前选中会话的状态：
+/// - session=null, isPending=false → 未选中任何会话
+/// - session=null, isPending=true  → 用户点了"新建会话"，等待首次发送消息时再创建
+/// - session!=null, isPending=false → 已选中一个真实会话
+typedef SelectedSessionState = ({Session? session, bool isPending});
+
 @riverpod
 class SelectedSessionNotifier extends _$SelectedSessionNotifier {
   @override
-  Session? build() {
+  SelectedSessionState build() {
     ref.watch(selectedProjectProvider);
-    return null;
+    return (session: null, isPending: false);
   }
 
   void select(Session? session) {
-    state = session;
+    state = (session: session, isPending: false);
+  }
+
+  void startNew() {
+    state = (session: null, isPending: true);
   }
 }
 
@@ -24,7 +34,8 @@ class SelectedSessionNotifier extends _$SelectedSessionNotifier {
 class SessionMessagesNotifier extends _$SessionMessagesNotifier {
   @override
   Future<List<MessageWithParts>> build() async {
-    final session = ref.watch(selectedSessionProvider);
+    final selectedState = ref.watch(selectedSessionProvider);
+    final session = selectedState.session;
     if (session == null) return [];
 
     final api = await ref.watch(sessionApiProvider.future);
@@ -33,7 +44,7 @@ class SessionMessagesNotifier extends _$SessionMessagesNotifier {
 
   /// SSE: message.updated — 新增或更新一条消息（保留已有 parts）
   void updateMessage(String sessionID, MessageWithParts message) {
-    final session = ref.read(selectedSessionProvider);
+    final session = ref.read(selectedSessionProvider).session;
     if (session == null || session.id != sessionID) return;
 
     final current = state.asData?.value ?? [];
@@ -52,7 +63,7 @@ class SessionMessagesNotifier extends _$SessionMessagesNotifier {
 
   /// SSE: message.removed — 删除一条消息
   void removeMessage(String sessionID, String messageID) {
-    final session = ref.read(selectedSessionProvider);
+    final session = ref.read(selectedSessionProvider).session;
     if (session == null || session.id != sessionID) return;
 
     final current = state.asData?.value ?? [];
@@ -62,7 +73,7 @@ class SessionMessagesNotifier extends _$SessionMessagesNotifier {
 
   /// SSE: message.part.updated — 新增或更新某条消息的一个 part
   void updatePart(String sessionID, String messageID, Object newPart) {
-    final session = ref.read(selectedSessionProvider);
+    final session = ref.read(selectedSessionProvider).session;
     if (session == null || session.id != sessionID) return;
 
     final current = state.asData?.value ?? [];
@@ -88,7 +99,7 @@ class SessionMessagesNotifier extends _$SessionMessagesNotifier {
 
   /// SSE: message.part.removed — 删除某条消息的一个 part
   void removePart(String sessionID, String messageID, String partID) {
-    final session = ref.read(selectedSessionProvider);
+    final session = ref.read(selectedSessionProvider).session;
     if (session == null || session.id != sessionID) return;
 
     final current = state.asData?.value ?? [];

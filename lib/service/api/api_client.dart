@@ -109,10 +109,13 @@ class ApiClient {
     String path, {
     dynamic body,
     Map<String, String>? queryParameters,
+    Map<String, String>? extraHeaders,
   }) async {
+    final headers = _getHeaders();
+    if (extraHeaders != null) headers.addAll(extraHeaders);
     final response = await _client.post(
       _getUri(path, queryParameters: queryParameters),
-      headers: _getHeaders(),
+      headers: headers,
       body: body != null ? jsonEncode(body) : null,
     );
     return _handleResponse(response);

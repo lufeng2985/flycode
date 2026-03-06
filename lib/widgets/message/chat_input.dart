@@ -4,6 +4,7 @@ import '../../service/api/session_api.dart';
 import '../../service/api/models/prompt_input.dart';
 import '../../providers/session_provider.dart';
 import '../../providers/chat_config_provider.dart';
+import '../../providers/project_provider.dart';
 import 'model_selection_sheet.dart';
 
 class ChatInput extends ConsumerStatefulWidget {
@@ -21,8 +22,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     final text = _controller.text.trim();
     if (text.isEmpty || _isLoading) return;
 
-    final selectedSession = ref.read(selectedSessionProvider);
-    if (selectedSession == null) return;
+    final selectedState = ref.read(selectedSessionProvider);
+    // 未选中且非待创建状态，不处理
+    if (selectedState.session == null && !selectedState.isPending) return;
 
     setState(() {
       _isLoading = true;
@@ -32,8 +34,17 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
     try {
       final api = await ref.read(sessionApiProvider.future);
+
+      // 待创建新会话：先调用接口创建，再用返回的 session id 发送
+      var session = selectedState.session;
+      if (session == null && selectedState.isPending) {
+        final project = await ref.read(selectedProjectProvider.future);
+        session = await api.createSession(directory: project?.worktree);
+        ref.read(selectedSessionProvider.notifier).select(session);
+      }
+
       await api.sendPromptAsync(
-        selectedSession.id,
+        session!.id,
         data: PromptAsyncInput(
           agent: chatConfig?.agent,
           model: chatConfig?.model,
@@ -97,6 +108,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                 children: [
                   TextField(
                     controller: _controller,
+                    autofocus: false,
                     maxLines: 5,
                     minLines: 1,
                     decoration: const InputDecoration(
