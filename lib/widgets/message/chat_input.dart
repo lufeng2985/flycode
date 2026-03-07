@@ -1,11 +1,26 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:mime/mime.dart';
 import '../../service/api/session_api.dart';
 import '../../service/api/models/prompt_input.dart';
 import '../../providers/session_provider.dart';
 import '../../providers/chat_config_provider.dart';
 import '../../providers/project_provider.dart';
 import 'model_selection_sheet.dart';
+
+class _ImageAttachment {
+  final String filename;
+  final String mime;
+  final String dataUrl; // "data:image/jpeg;base64,..."
+
+  _ImageAttachment({
+    required this.filename,
+    required this.mime,
+    required this.dataUrl,
+  });
+}
 
 class ChatInput extends ConsumerStatefulWidget {
   const ChatInput({super.key});
@@ -17,13 +32,73 @@ class ChatInput extends ConsumerStatefulWidget {
 class _ChatInputState extends ConsumerState<ChatInput> {
   final TextEditingController _controller = TextEditingController();
   bool _isLoading = false;
+  final List<_ImageAttachment> _attachments = [];
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final List<XFile> files = await picker.pickMultiImage();
+    if (files.isEmpty) return;
+
+    for (final file in files) {
+      final bytes = await file.readAsBytes();
+      final base64Str = base64Encode(bytes);
+      final mimeType =
+          lookupMimeType(file.name, headerBytes: bytes) ?? 'image/jpeg';
+      final dataUrl = 'data:$mimeType;base64,$base64Str';
+      if (mounted) {
+        setState(() {
+          _attachments.add(
+            _ImageAttachment(
+              filename: file.name,
+              mime: mimeType,
+              dataUrl: dataUrl,
+            ),
+          );
+        });
+      }
+    }
+  }
+
+  void _removeAttachment(int index) {
+    setState(() {
+      _attachments.removeAt(index);
+    });
+  }
+
+  void _showImagePreview(BuildContext context, _ImageAttachment attachment) {
+    final bytes = base64Decode(attachment.dataUrl.split(',').last);
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.black,
+        insetPadding: EdgeInsets.zero,
+        child: Stack(
+          children: [
+            Center(
+              child: InteractiveViewer(
+                child: Image.memory(bytes, fit: BoxFit.contain),
+              ),
+            ),
+            Positioned(
+              top: 16,
+              right: 16,
+              child: IconButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                icon: const Icon(Icons.close, color: Colors.white, size: 28),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Future<void> _handleSend() async {
     final text = _controller.text.trim();
-    if (text.isEmpty || _isLoading) return;
+    if (text.isEmpty && _attachments.isEmpty) return;
+    if (_isLoading) return;
 
     final selectedState = ref.read(selectedSessionProvider);
-    // 未选中且非待创建状态，不处理
     if (selectedState.session == null && !selectedState.isPending) return;
 
     setState(() {
@@ -35,7 +110,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     try {
       final api = await ref.read(sessionApiProvider.future);
 
-      // 待创建新会话：先调用接口创建，再用返回的 session id 发送
       var session = selectedState.session;
       if (session == null && selectedState.isPending) {
         final project = await ref.read(selectedProjectProvider.future);
@@ -43,15 +117,31 @@ class _ChatInputState extends ConsumerState<ChatInput> {
         ref.read(selectedSessionProvider.notifier).select(session);
       }
 
+      // 构造 parts：先文字（若有），再图片附件
+      final List<Object> parts = [
+        if (text.isNotEmpty) TextPartInput(text: text),
+        ..._attachments.map(
+          (att) => FilePartInput(
+            mime: att.mime,
+            filename: att.filename,
+            url: att.dataUrl,
+          ),
+        ),
+      ];
+
       await api.sendPromptAsync(
         session!.id,
         data: PromptAsyncInput(
           agent: chatConfig?.agent,
           model: chatConfig?.model,
-          parts: [TextPartInput(text: text)],
+          parts: parts,
         ),
       );
+
       _controller.clear();
+      setState(() {
+        _attachments.clear();
+      });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -105,7 +195,65 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                 border: Border.all(color: Colors.grey[300]!),
               ),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // 图片预览区（仅在有附件时显示）
+                  if (_attachments.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: List.generate(_attachments.length, (i) {
+                            final att = _attachments[i];
+                            final bytes = base64Decode(
+                              att.dataUrl.split(',').last,
+                            );
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  GestureDetector(
+                                    onTap: () =>
+                                        _showImagePreview(context, att),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(6),
+                                      child: Image.memory(
+                                        bytes,
+                                        width: 64,
+                                        height: 64,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: -6,
+                                    right: -6,
+                                    child: GestureDetector(
+                                      onTap: () => _removeAttachment(i),
+                                      child: Container(
+                                        width: 18,
+                                        height: 18,
+                                        decoration: const BoxDecoration(
+                                          color: Colors.black54,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(
+                                          Icons.close,
+                                          size: 12,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
+                        ),
+                      ),
+                    ),
                   TextField(
                     controller: _controller,
                     autofocus: false,
@@ -135,7 +283,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                         ),
                         const Spacer(),
                         IconButton(
-                          onPressed: () {},
+                          onPressed: _isLoading ? null : _pickImage,
                           icon: const Icon(
                             Icons.add,
                             size: 20,
