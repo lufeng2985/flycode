@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../service/api/models/message.dart';
+import '../../service/api/models/parts.dart';
 import 'message_header.dart';
 import 'message_part.dart';
 
-class MessageBubble extends StatelessWidget {
+class MessageBubble extends StatefulWidget {
   final MessageWithParts messageWithParts;
   final bool prevIsUser;
 
@@ -14,11 +16,42 @@ class MessageBubble extends StatelessWidget {
   });
 
   @override
+  State<MessageBubble> createState() => _MessageBubbleState();
+}
+
+class _MessageBubbleState extends State<MessageBubble> {
+  bool _copied = false;
+
+  String _extractText() {
+    final buffer = StringBuffer();
+    for (final part in widget.messageWithParts.parts) {
+      if (part is TextPart) {
+        if (buffer.isNotEmpty) buffer.write('\n');
+        buffer.write(part.text);
+      }
+    }
+    return buffer.toString();
+  }
+
+  Future<void> _copyMessage() async {
+    final text = _extractText();
+    if (text.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: text));
+    if (!mounted) return;
+    setState(() => _copied = true);
+    await Future<void>.delayed(const Duration(seconds: 2));
+    if (!mounted) return;
+    setState(() => _copied = false);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final isUser = messageWithParts.info is UserMessage;
-    final userMessage = isUser ? messageWithParts.info as UserMessage : null;
+    final isUser = widget.messageWithParts.info is UserMessage;
+    final userMessage = isUser
+        ? widget.messageWithParts.info as UserMessage
+        : null;
     final assistantMessage = !isUser
-        ? messageWithParts.info as AssistantMessage
+        ? widget.messageWithParts.info as AssistantMessage
         : null;
 
     return Padding(
@@ -53,13 +86,38 @@ class MessageBubble extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              MessageHeader(
-                isUser: isUser,
-                userMessage: userMessage,
-                assistantMessage: assistantMessage,
+              Row(
+                children: [
+                  Expanded(
+                    child: MessageHeader(
+                      isUser: isUser,
+                      userMessage: userMessage,
+                      assistantMessage: assistantMessage,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: _copyMessage,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 200),
+                      child: _copied
+                          ? Icon(
+                              Icons.check,
+                              key: const ValueKey('check'),
+                              size: 14,
+                              color: Colors.green[600],
+                            )
+                          : Icon(
+                              Icons.copy,
+                              key: const ValueKey('copy'),
+                              size: 14,
+                              color: Colors.grey[400],
+                            ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
-              ...messageWithParts.parts.map(
+              ...widget.messageWithParts.parts.map(
                 (part) => MessagePart(part: part, isUser: isUser),
               ),
             ],

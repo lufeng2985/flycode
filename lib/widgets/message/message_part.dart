@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import '../../service/api/models/parts.dart';
+import 'code_block_widget.dart';
 import 'tool_use_widget.dart';
 import 'reasoning_widget.dart';
 
@@ -20,6 +21,7 @@ class MessagePart extends StatelessWidget {
         child: MarkdownBody(
           data: textPart.text,
           selectable: true,
+          builders: {'code': CodeBlockBuilder()},
           styleSheet: MarkdownStyleSheet(
             p: const TextStyle(fontSize: 14, height: 1.5),
             code: TextStyle(
@@ -27,10 +29,7 @@ class MessagePart extends StatelessWidget {
               fontFamily: 'monospace',
               fontSize: 13,
             ),
-            codeblockDecoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(4),
-            ),
+            codeblockDecoration: const BoxDecoration(),
           ),
         ),
       );
