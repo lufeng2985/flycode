@@ -4,6 +4,7 @@ import 'api_client.dart';
 import 'models/session.dart';
 import 'models/message.dart';
 import 'models/prompt_input.dart';
+import 'models/command_input.dart';
 
 part 'session_api.g.dart';
 
@@ -162,7 +163,7 @@ class SessionApi {
   Future<void> sendCommand(
     String id, {
     String? directory,
-    Map<String, dynamic>? data,
+    CommandInput? data,
   }) async {
     final queryParams = <String, String>{};
     if (directory != null) queryParams['directory'] = directory;
@@ -170,7 +171,7 @@ class SessionApi {
     await _client.post(
       '/session/$id/command',
       queryParameters: queryParams,
-      body: data,
+      body: data?.toJson(),
     );
   }
 

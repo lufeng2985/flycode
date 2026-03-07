@@ -34,7 +34,7 @@ final class ChatConfigNotifierProvider
 }
 
 String _$chatConfigNotifierHash() =>
-    r'ee2eaa2b1d393b5b822bd020be5d3e15ff955f5e';
+    r'7e16ac2e3046260868001ee71a0281e188e8b5fb';
 
 abstract class _$ChatConfigNotifier extends $AsyncNotifier<ChatConfig> {
   FutureOr<ChatConfig> build();
