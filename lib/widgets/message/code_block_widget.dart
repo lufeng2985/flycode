@@ -16,15 +16,21 @@ class CodeBlockBuilder extends MarkdownElementBuilder {
     TextStyle? preferredStyle,
     TextStyle? parentStyle,
   ) {
-    if (element.tag != 'code') return null;
+    if (element.tag != 'pre') return null;
 
-    final rawLanguage = element.attributes['class'] ?? '';
+    // Fenced code blocks are <pre><code class="language-xxx">...</code></pre>
+    final codeElement = element.children
+        ?.whereType<md.Element>()
+        .where((e) => e.tag == 'code')
+        .firstOrNull;
+
+    final rawLanguage = codeElement?.attributes['class'] ?? '';
     // markdown encodes language as "language-dart", "language-python", etc.
     final language = rawLanguage.startsWith('language-')
         ? rawLanguage.substring('language-'.length)
         : rawLanguage;
 
-    final code = element.textContent;
+    final code = codeElement?.textContent ?? element.textContent;
 
     return _CodeBlockWidget(language: language, code: code);
   }

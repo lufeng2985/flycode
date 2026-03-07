@@ -21,7 +21,7 @@ class MessagePart extends StatelessWidget {
         child: MarkdownBody(
           data: textPart.text,
           selectable: true,
-          builders: {'code': CodeBlockBuilder()},
+          builders: {'pre': CodeBlockBuilder()},
           styleSheet: MarkdownStyleSheet(
             p: const TextStyle(fontSize: 14, height: 1.5),
             code: TextStyle(
