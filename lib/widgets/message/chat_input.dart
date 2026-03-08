@@ -94,18 +94,21 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   void _showCommandOverlay() {
     final overlay = Overlay.of(context);
+    final screenSize = MediaQuery.of(context).size;
+    final maxHeight = screenSize.height * 0.5;
     _commandOverlay = OverlayEntry(
       builder: (ctx) => CompositedTransformFollower(
         link: _layerLink,
         showWhenUnlinked: false,
         targetAnchor: Alignment.topLeft,
         followerAnchor: Alignment.bottomLeft,
-        offset: const Offset(0, -4),
+        offset: const Offset(12, -4),
         child: SizedBox(
-          width: MediaQuery.of(context).size.width - 24,
+          width: screenSize.width - 24,
           child: _CommandSuggestionList(
             commands: _filteredCommands,
             onSelect: _onCommandSelected,
+            maxHeight: maxHeight,
           ),
         ),
       ),
@@ -542,10 +545,12 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 class _CommandSuggestionList extends StatelessWidget {
   final List<Command> commands;
   final ValueChanged<Command> onSelect;
+  final double maxHeight;
 
   const _CommandSuggestionList({
     required this.commands,
     required this.onSelect,
+    required this.maxHeight,
   });
 
   @override
@@ -555,7 +560,7 @@ class _CommandSuggestionList extends StatelessWidget {
       borderRadius: BorderRadius.circular(10),
       color: Colors.white,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxHeight: 240),
+        constraints: BoxConstraints(maxHeight: maxHeight),
         child: ListView.separated(
           padding: const EdgeInsets.symmetric(vertical: 6),
           shrinkWrap: true,
