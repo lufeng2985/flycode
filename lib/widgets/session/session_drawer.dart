@@ -41,13 +41,33 @@ class SessionDrawer extends ConsumerWidget {
               ),
             ),
             const Divider(height: 1),
-            ListTile(
-              leading: const Icon(Icons.add_comment_outlined),
-              title: const Text('新建会话'),
-              onTap: onNewSession,
-            ),
+            _buildBottomActions(context),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildBottomActions(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.add_comment_outlined),
+            onPressed: onNewSession,
+            tooltip: '新建会话',
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () {
+              Navigator.pop(context);
+              context.push('/settings');
+            },
+            tooltip: '设置',
+          ),
+        ],
       ),
     );
   }
