@@ -2,7 +2,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../providers/project_provider.dart';
 import 'api_client.dart';
 import 'models/session.dart';
-import 'models/message.dart';
+import 'models/message.dart' hide FileDiff;
 import 'models/prompt_input.dart';
 import 'models/command_input.dart';
 
@@ -190,16 +190,17 @@ class SessionApi {
     );
   }
 
-  Future<Map<String, dynamic>> getMessageDiff(
-    String id, {
-    String? directory,
-    String? messageID,
-  }) async {
+  Future<List<FileDiff>> getSessionDiff(String id, {String? directory}) async {
     final queryParams = <String, String>{};
     if (directory != null) queryParams['directory'] = directory;
-    if (messageID != null) queryParams['messageID'] = messageID;
 
-    return await _client.get('/session/$id/diff', queryParameters: queryParams);
+    final List<dynamic> json = await _client.get(
+      '/session/$id/diff',
+      queryParameters: queryParams,
+    );
+    return json
+        .map((e) => FileDiff.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<void> forkSession(

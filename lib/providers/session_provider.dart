@@ -1,5 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import '../service/api/models/message.dart';
+import '../service/api/models/message.dart' hide FileDiff;
 import '../service/api/models/parts.dart';
 import '../service/api/models/session.dart';
 import '../service/api/session_api.dart';
@@ -126,4 +126,10 @@ String? _partId(Object part) {
   if (part is ToolPart) return part.id;
   if (part is TextPart) return part.id;
   return null;
+}
+
+@riverpod
+Future<List<FileDiff>> sessionDiff(Ref ref, String sessionID) async {
+  final api = await ref.watch(sessionApiProvider.future);
+  return api.getSessionDiff(sessionID);
 }

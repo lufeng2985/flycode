@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'pages/home_page.dart';
 import 'pages/project_list_page.dart';
+import 'pages/session_diff_page.dart';
 import 'pages/settings_page.dart';
 import 'pages/server_config_page.dart';
 import 'pages/model_config_page.dart';
@@ -41,6 +42,14 @@ final GoRouter appRouter = GoRouter(
       path: '/projects',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const ProjectListPage(),
+    ),
+    GoRoute(
+      path: '/diff',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) {
+        final sessionID = state.extra as String;
+        return SessionDiffPage(sessionID: sessionID);
+      },
     ),
   ],
 );

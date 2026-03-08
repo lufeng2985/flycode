@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../service/api/session_api.dart';
 import '../providers/global_event_provider.dart';
 import '../providers/session_provider.dart';
@@ -59,6 +60,14 @@ class MyHomePage extends ConsumerWidget {
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
         ),
+        actions: [
+          if (selectedSession != null)
+            IconButton(
+              icon: const Icon(Icons.difference_outlined, color: Colors.grey),
+              tooltip: '文件变更',
+              onPressed: () => context.push('/diff', extra: selectedSession.id),
+            ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
           child: Container(
