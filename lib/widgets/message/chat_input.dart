@@ -204,73 +204,32 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     final selectedState = ref.read(selectedSessionProvider);
     if (selectedState.session == null && !selectedState.isPending) return;
 
-    setState(() {
-      _isLoading = true;
-    });
-
-    final chatConfig = ref.read(chatConfigProvider).asData?.value;
+    setState(() => _isLoading = true);
 
     try {
       final api = await ref.read(sessionApiProvider.future);
+      final project = await ref.read(selectedProjectProvider.future);
+      final chatConfig = ref.read(chatConfigProvider).asData?.value;
 
-      var session = selectedState.session;
-      if (session == null && selectedState.isPending) {
-        final project = await ref.read(selectedProjectProvider.future);
-        session = await api.createSession(directory: project?.worktree);
-        ref.read(selectedSessionProvider.notifier).select(session);
-      }
+      final session = await _ensureSession(api, project, selectedState);
+      if (session == null) return;
 
-      // 判断是否为自定义命令
       final matchedCommand = _parseCommand(text);
-
       if (matchedCommand != null) {
-        // 提取 arguments："/review main.dart" → "main.dart"
-        final afterSlash = text.substring(1);
-        final spaceIdx = afterSlash.indexOf(' ');
-        final arguments = spaceIdx == -1
-            ? ''
-            : afterSlash.substring(spaceIdx + 1).trim();
-
-        final modelStr = chatConfig != null
-            ? '${chatConfig.model.providerID}/${chatConfig.model.modelID}'
-            : null;
-
-        await api.sendCommand(
-          session!.id,
-          data: CommandInput(
-            command: matchedCommand.name,
-            arguments: arguments,
-            model: modelStr,
-            agent: chatConfig?.agent,
-          ),
+        await _dispatchCommand(
+          api,
+          session,
+          project,
+          chatConfig,
+          matchedCommand,
+          text,
         );
       } else {
-        // 普通消息：现有 sendPromptAsync 逻辑
-        final List<Object> parts = [
-          if (text.isNotEmpty) TextPartInput(text: text),
-          ..._attachments.map(
-            (att) => FilePartInput(
-              mime: att.mime,
-              filename: att.filename,
-              url: att.dataUrl,
-            ),
-          ),
-        ];
-
-        await api.sendPromptAsync(
-          session!.id,
-          data: PromptAsyncInput(
-            agent: chatConfig?.agent,
-            model: chatConfig?.model,
-            parts: parts,
-          ),
-        );
+        await _dispatchPrompt(api, session, project, chatConfig, text);
       }
 
       _controller.clear();
-      setState(() {
-        _attachments.clear();
-      });
+      setState(() => _attachments.clear());
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -279,11 +238,81 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
       }
     }
+  }
+
+  Future<String?> _ensureSession(
+    SessionApi api,
+    dynamic project,
+    SelectedSessionState selectedState,
+  ) async {
+    var session = selectedState.session;
+    if (session == null && selectedState.isPending) {
+      session = await api.createSession(directory: project?.worktree);
+      ref.read(selectedSessionProvider.notifier).select(session);
+    }
+    return session?.id;
+  }
+
+  Future<void> _dispatchCommand(
+    SessionApi api,
+    String sessionId,
+    dynamic project,
+    ChatConfig? chatConfig,
+    Command matchedCommand,
+    String text,
+  ) async {
+    final afterSlash = text.substring(1);
+    final spaceIdx = afterSlash.indexOf(' ');
+    final arguments = spaceIdx == -1
+        ? ''
+        : afterSlash.substring(spaceIdx + 1).trim();
+
+    final modelStr = chatConfig != null
+        ? '${chatConfig.model.providerID}/${chatConfig.model.modelID}'
+        : null;
+
+    await api.sendCommand(
+      sessionId,
+      directory: project?.worktree,
+      data: CommandInput(
+        command: matchedCommand.name,
+        arguments: arguments,
+        model: modelStr,
+        agent: chatConfig?.agent,
+      ),
+    );
+  }
+
+  Future<void> _dispatchPrompt(
+    SessionApi api,
+    String sessionId,
+    dynamic project,
+    ChatConfig? chatConfig,
+    String text,
+  ) async {
+    final List<Object> parts = [
+      if (text.isNotEmpty) TextPartInput(text: text),
+      ..._attachments.map(
+        (att) => FilePartInput(
+          mime: att.mime,
+          filename: att.filename,
+          url: att.dataUrl,
+        ),
+      ),
+    ];
+
+    await api.sendPromptAsync(
+      sessionId,
+      directory: project?.worktree,
+      data: PromptAsyncInput(
+        agent: chatConfig?.agent,
+        model: chatConfig?.model,
+        parts: parts,
+      ),
+    );
   }
 
   // ─── Agent / Model 切换 ───────────────────────────────────────
@@ -310,14 +339,15 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   @override
   Widget build(BuildContext context) {
     final chatConfig = ref.watch(chatConfigProvider).asData?.value;
+    final theme = Theme.of(context);
     // 预加载命令列表，确保 _onTextChanged 里 ref.read 时数据已就绪
     ref.watch(commandsProvider);
 
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
-        border: Border(top: BorderSide(color: Colors.grey[200]!)),
+        color: theme.colorScheme.surface,
+        border: Border(top: BorderSide(color: theme.dividerColor)),
       ),
       child: SafeArea(
         child: Column(
@@ -334,68 +364,18 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 图片预览区（仅在有附件时显示）
                     if (_attachments.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: List.generate(_attachments.length, (i) {
-                              final att = _attachments[i];
-                              final bytes = base64Decode(
-                                att.dataUrl.split(',').last,
-                              );
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: Stack(
-                                  clipBehavior: Clip.none,
-                                  children: [
-                                    GestureDetector(
-                                      onTap: () =>
-                                          _showImagePreview(context, att),
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(6),
-                                        child: Image.memory(
-                                          bytes,
-                                          width: 64,
-                                          height: 64,
-                                          fit: BoxFit.cover,
-                                        ),
-                                      ),
-                                    ),
-                                    Positioned(
-                                      top: -6,
-                                      right: -6,
-                                      child: GestureDetector(
-                                        onTap: () => _removeAttachment(i),
-                                        child: Container(
-                                          width: 18,
-                                          height: 18,
-                                          decoration: const BoxDecoration(
-                                            color: Colors.black54,
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: const Icon(
-                                            Icons.close,
-                                            size: 12,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }),
-                          ),
-                        ),
+                      _AttachmentList(
+                        attachments: _attachments,
+                        onRemove: _removeAttachment,
+                        onPreview: (att) => _showImagePreview(context, att),
                       ),
                     TextField(
                       controller: _controller,
                       autofocus: false,
                       maxLines: 5,
                       minLines: 1,
+                      style: const TextStyle(fontSize: 14),
                       decoration: const InputDecoration(
                         hintText: '随便问点什么...',
                         hintStyle: TextStyle(color: Colors.grey, fontSize: 14),
@@ -404,129 +384,23 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       ),
                       onSubmitted: (_) => _handleSend(),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      child: Row(
-                        children: [
-                          const Text(
-                            '>>',
-                            style: TextStyle(
-                              color: Colors.green,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const Spacer(),
-                          IconButton(
-                            onPressed: _isLoading ? null : _pickImage,
-                            icon: const Icon(
-                              Icons.add,
-                              size: 20,
-                              color: Colors.grey,
-                            ),
-                            visualDensity: VisualDensity.compact,
-                          ),
-                          Container(
-                            margin: const EdgeInsets.only(left: 4),
-                            decoration: BoxDecoration(
-                              color: _isLoading
-                                  ? Colors.grey
-                                  : Colors.grey[400],
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: IconButton(
-                              onPressed: _isLoading ? null : _handleSend,
-                              icon: const Icon(
-                                Icons.arrow_upward,
-                                size: 20,
-                                color: Colors.white,
-                              ),
-                              visualDensity: VisualDensity.compact,
-                            ),
-                          ),
-                        ],
-                      ),
+                    _InputToolBar(
+                      isLoading: _isLoading,
+                      onPickImage: _pickImage,
+                      onSend: _handleSend,
                     ),
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                GestureDetector(
-                  onTap: _toggleAgent,
-                  child: _buildDropdown(
-                    chatConfig != null
-                        ? '${chatConfig.agent[0].toUpperCase()}'
-                              '${chatConfig.agent.substring(1)}'
-                        : '...',
-                  ),
-                ),
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: _showModelSelector,
-                  child: _buildDropdown(
-                    chatConfig?.model.modelID ?? '...',
-                    icon: Icons.share_outlined,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                _buildDropdown('默认'),
-                const Spacer(),
-                IconButton(
-                  onPressed: () {},
-                  icon: const Icon(
-                    Icons.terminal_outlined,
-                    size: 20,
-                    color: Colors.grey,
-                  ),
-                  visualDensity: VisualDensity.compact,
-                ),
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border: Border.all(color: Colors.grey[300]!),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const Icon(
-                    Icons.chat_bubble_outline,
-                    size: 20,
-                    color: Colors.grey,
-                  ),
-                ),
-              ],
+            const SizedBox(height: 12),
+            _ConfigToolBar(
+              chatConfig: chatConfig,
+              onToggleAgent: _toggleAgent,
+              onShowModelSelector: _showModelSelector,
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildDropdown(String label, {IconData? icon}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: Colors.grey[300]!),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: 14, color: Colors.grey),
-            const SizedBox(width: 4),
-          ],
-          Text(
-            label,
-            style: const TextStyle(fontSize: 12, color: Colors.black87),
-          ),
-          const Icon(Icons.keyboard_arrow_down, size: 14, color: Colors.grey),
-        ],
       ),
     );
   }
@@ -537,6 +411,219 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     _controller.removeListener(_onTextChanged);
     _controller.dispose();
     super.dispose();
+  }
+}
+
+// ─── UI 子组件 ─────────────────────────────────────────────────────
+
+class _AttachmentList extends StatelessWidget {
+  final List<_ImageAttachment> attachments;
+  final ValueChanged<int> onRemove;
+  final ValueChanged<_ImageAttachment> onPreview;
+
+  const _AttachmentList({
+    required this.attachments,
+    required this.onRemove,
+    required this.onPreview,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: List.generate(attachments.length, (i) {
+            final att = attachments[i];
+            final bytes = base64Decode(att.dataUrl.split(',').last);
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  GestureDetector(
+                    onTap: () => onPreview(att),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: Image.memory(
+                        bytes,
+                        width: 64,
+                        height: 64,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: -6,
+                    right: -6,
+                    child: GestureDetector(
+                      onTap: () => onRemove(i),
+                      child: Container(
+                        width: 18,
+                        height: 18,
+                        decoration: const BoxDecoration(
+                          color: Colors.black54,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.close,
+                          size: 12,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ),
+      ),
+    );
+  }
+}
+
+class _InputToolBar extends StatelessWidget {
+  final bool isLoading;
+  final VoidCallback onPickImage;
+  final VoidCallback onSend;
+
+  const _InputToolBar({
+    required this.isLoading,
+    required this.onPickImage,
+    required this.onSend,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Row(
+        children: [
+          const Text(
+            '>>',
+            style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+          ),
+          const Spacer(),
+          IconButton(
+            onPressed: isLoading ? null : onPickImage,
+            icon: const Icon(Icons.add, size: 20, color: Colors.grey),
+            visualDensity: VisualDensity.compact,
+          ),
+          Container(
+            margin: const EdgeInsets.only(left: 4),
+            decoration: BoxDecoration(
+              color: isLoading ? Colors.grey : Colors.grey[400],
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: IconButton(
+              onPressed: isLoading ? null : onSend,
+              icon: const Icon(
+                Icons.arrow_upward,
+                size: 20,
+                color: Colors.white,
+              ),
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ConfigToolBar extends StatelessWidget {
+  final ChatConfig? chatConfig;
+  final VoidCallback onToggleAgent;
+  final VoidCallback onShowModelSelector;
+
+  const _ConfigToolBar({
+    this.chatConfig,
+    required this.onToggleAgent,
+    required this.onShowModelSelector,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _SelectionChip(
+          onTap: onToggleAgent,
+          label: chatConfig != null
+              ? '${chatConfig!.agent[0].toUpperCase()}${chatConfig!.agent.substring(1)}'
+              : '...',
+        ),
+        const SizedBox(width: 8),
+        _SelectionChip(
+          onTap: onShowModelSelector,
+          label: chatConfig?.model.modelID ?? '...',
+          icon: Icons.share_outlined,
+        ),
+        const SizedBox(width: 8),
+        const _SelectionChip(label: '默认'),
+        const Spacer(),
+        IconButton(
+          onPressed: () {},
+          icon: const Icon(
+            Icons.terminal_outlined,
+            size: 20,
+            color: Colors.grey,
+          ),
+          visualDensity: VisualDensity.compact,
+        ),
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: Colors.grey[300]!),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: const Icon(
+            Icons.chat_bubble_outline,
+            size: 20,
+            color: Colors.grey,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SelectionChip extends StatelessWidget {
+  final String label;
+  final IconData? icon;
+  final VoidCallback? onTap;
+
+  const _SelectionChip({required this.label, this.icon, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: Colors.grey[300]!),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 14, color: Colors.grey),
+              const SizedBox(width: 4),
+            ],
+            Text(
+              label,
+              style: const TextStyle(fontSize: 12, color: Colors.black87),
+            ),
+            const Icon(Icons.keyboard_arrow_down, size: 14, color: Colors.grey),
+          ],
+        ),
+      ),
+    );
   }
 }
 

@@ -153,10 +153,16 @@ class SessionApi {
     final queryParams = <String, String>{};
     if (directory != null) queryParams['directory'] = directory;
 
+    final extraHeaders = <String, String>{};
+    if (directory != null) {
+      extraHeaders['x-opencode-directory'] = directory;
+    }
+
     await _client.post(
       '/session/$id/message',
       queryParameters: queryParams,
       body: data,
+      extraHeaders: extraHeaders,
     );
   }
 
@@ -168,10 +174,16 @@ class SessionApi {
     final queryParams = <String, String>{};
     if (directory != null) queryParams['directory'] = directory;
 
+    final extraHeaders = <String, String>{};
+    if (directory != null) {
+      extraHeaders['x-opencode-directory'] = directory;
+    }
+
     await _client.post(
       '/session/$id/command',
       queryParameters: queryParams,
       body: data?.toJson(),
+      extraHeaders: extraHeaders,
     );
   }
 
@@ -316,10 +328,16 @@ class SessionApi {
     final queryParams = <String, String>{};
     if (directory != null) queryParams['directory'] = directory;
 
+    final extraHeaders = <String, String>{};
+    if (directory != null) {
+      extraHeaders['x-opencode-directory'] = directory;
+    }
+
     await _client.post(
       '/session/$id/prompt_async',
       queryParameters: queryParams,
       body: data?.toJson(),
+      extraHeaders: extraHeaders,
     );
   }
 
