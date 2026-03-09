@@ -525,20 +525,35 @@ class _DiffLineRow extends StatelessWidget {
 
     return Container(
       color: bg,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-          child: Text(
-            '$prefix ${line.text}',
-            style: TextStyle(
-              fontSize: 12,
-              color: textColor,
-              fontFamily: 'monospace',
-              height: 1.5,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 12,
+            child: Text(
+              prefix,
+              style: TextStyle(
+                fontSize: 12,
+                color: textColor,
+                fontFamily: 'monospace',
+                height: 1.5,
+              ),
             ),
           ),
-        ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              line.text,
+              style: TextStyle(
+                fontSize: 12,
+                color: textColor,
+                fontFamily: 'monospace',
+                height: 1.5,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
