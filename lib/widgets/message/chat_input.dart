@@ -220,7 +220,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
       final matchedCommand = _parseCommand(text);
       if (matchedCommand != null) {
-        await _dispatchCommand(
+        _dispatchCommand(
           api,
           session,
           project,
@@ -232,8 +232,10 @@ class _ChatInputState extends ConsumerState<ChatInput> {
         await _dispatchPrompt(api, session, project, chatConfig, text);
       }
 
-      _controller.clear();
-      setState(() => _attachments.clear());
+      setState(() {
+        _controller.clear();
+        _attachments.clear();
+      });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
