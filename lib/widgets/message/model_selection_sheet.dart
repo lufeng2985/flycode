@@ -249,10 +249,10 @@ class _ModelTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentConfig = ref.watch(chatConfigProvider).asData?.value;
+    final currentConfig = ref.watch(chatConfigProvider);
     final isSelected =
-        currentConfig?.model.providerID == providerId &&
-        currentConfig?.model.modelID == modelInfo.id;
+        currentConfig.model.providerID == providerId &&
+        currentConfig.model.modelID == modelInfo.id;
 
     return InkWell(
       onTap: () {

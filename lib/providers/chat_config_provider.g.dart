@@ -13,14 +13,14 @@ part of 'chat_config_provider.dart';
 final chatConfigProvider = ChatConfigNotifierProvider._();
 
 final class ChatConfigNotifierProvider
-    extends $AsyncNotifierProvider<ChatConfigNotifier, ChatConfig> {
+    extends $NotifierProvider<ChatConfigNotifier, ChatConfig> {
   ChatConfigNotifierProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
         name: r'chatConfigProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -31,22 +31,30 @@ final class ChatConfigNotifierProvider
   @$internal
   @override
   ChatConfigNotifier create() => ChatConfigNotifier();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ChatConfig value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ChatConfig>(value),
+    );
+  }
 }
 
 String _$chatConfigNotifierHash() =>
-    r'7e16ac2e3046260868001ee71a0281e188e8b5fb';
+    r'ac1b35158f8a232e6c9bac6d50a28d7058aa07c3';
 
-abstract class _$ChatConfigNotifier extends $AsyncNotifier<ChatConfig> {
-  FutureOr<ChatConfig> build();
+abstract class _$ChatConfigNotifier extends $Notifier<ChatConfig> {
+  ChatConfig build();
   @$mustCallSuper
   @override
   void runBuild() {
-    final ref = this.ref as $Ref<AsyncValue<ChatConfig>, ChatConfig>;
+    final ref = this.ref as $Ref<ChatConfig, ChatConfig>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<AsyncValue<ChatConfig>, ChatConfig>,
-              AsyncValue<ChatConfig>,
+              AnyNotifier<ChatConfig, ChatConfig>,
+              ChatConfig,
               Object?,
               Object?
             >;

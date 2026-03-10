@@ -1,6 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../service/api/models/message.dart';
-import '../service/api/provider_api.dart';
 import 'session_provider.dart';
 
 part 'chat_config_provider.g.dart';
@@ -25,10 +24,10 @@ class ChatConfig {
       ' modelID: ${model.modelID})';
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 class ChatConfigNotifier extends _$ChatConfigNotifier {
   @override
-  Future<ChatConfig> build() async {
+  ChatConfig build() {
     // Listen for session changes and sync the model when switching to an
     // existing session. Uses listen (not watch) so that message updates never
     // trigger a full rebuild of this notifier.
@@ -46,25 +45,6 @@ class ChatConfigNotifier extends _$ChatConfigNotifier {
       await _syncModelFromSession();
     });
 
-    // Fallback: try the first connected provider's default model.
-    try {
-      final api = await ref.read(providerApiProvider.future);
-      final response = await api.list();
-      if (response.connected.isNotEmpty) {
-        final providerID = response.connected.first;
-        final modelID = response.defaultProvider[providerID];
-        if (modelID != null) {
-          return ChatConfig(
-            agent: _kDefaultAgent,
-            model: MessageModel(providerID: providerID, modelID: modelID),
-          );
-        }
-      }
-    } catch (_) {
-      // Fall through to hardcoded fallback.
-    }
-
-    // Hardcoded fallback.
     return ChatConfig(
       agent: _kDefaultAgent,
       model: MessageModel(
@@ -84,10 +64,7 @@ class ChatConfigNotifier extends _$ChatConfigNotifier {
     try {
       final lastUser = messages.lastWhere((m) => m.info is UserMessage);
       if (lastUser.info case final UserMessage msg) {
-        final current = state.asData?.value;
-        if (current != null) {
-          state = AsyncData(current.copyWith(model: msg.model));
-        }
+        state = state.copyWith(model: msg.model);
       }
     } on StateError {
       // No UserMessage found – preserve current model.
@@ -95,14 +72,10 @@ class ChatConfigNotifier extends _$ChatConfigNotifier {
   }
 
   void setAgent(String agent) {
-    final current = state.asData?.value;
-    if (current == null) return;
-    state = AsyncData(current.copyWith(agent: agent));
+    state = state.copyWith(agent: agent);
   }
 
   void setModel(MessageModel model) {
-    final current = state.asData?.value;
-    if (current == null) return;
-    state = AsyncData(current.copyWith(model: model));
+    state = state.copyWith(model: model);
   }
 }

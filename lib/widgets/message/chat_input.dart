@@ -209,7 +209,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     try {
       final api = await ref.read(sessionApiProvider.future);
       final project = await ref.read(selectedProjectProvider.future);
-      final chatConfig = ref.read(chatConfigProvider).asData?.value;
+      final chatConfig = ref.read(chatConfigProvider);
 
       final session = await _ensureSession(api, project, selectedState);
       if (session == null) return;
@@ -260,7 +260,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     SessionApi api,
     String sessionId,
     dynamic project,
-    ChatConfig? chatConfig,
+    ChatConfig chatConfig,
     Command matchedCommand,
     String text,
   ) async {
@@ -270,9 +270,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
         ? ''
         : afterSlash.substring(spaceIdx + 1).trim();
 
-    final modelStr = chatConfig != null
-        ? '${chatConfig.model.providerID}/${chatConfig.model.modelID}'
-        : null;
+    final modelStr =
+        '${chatConfig.model.providerID}/${chatConfig.model.modelID}';
 
     await api.sendCommand(
       sessionId,
@@ -281,7 +280,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
         command: matchedCommand.name,
         arguments: arguments,
         model: modelStr,
-        agent: chatConfig?.agent,
+        agent: chatConfig.agent,
       ),
     );
   }
@@ -290,7 +289,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     SessionApi api,
     String sessionId,
     dynamic project,
-    ChatConfig? chatConfig,
+    ChatConfig chatConfig,
     String text,
   ) async {
     final List<Object> parts = [
@@ -308,8 +307,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       sessionId,
       directory: project?.worktree,
       data: PromptAsyncInput(
-        agent: chatConfig?.agent,
-        model: chatConfig?.model,
+        agent: chatConfig.agent,
+        model: chatConfig.model,
         parts: parts,
       ),
     );
@@ -318,8 +317,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   // ─── Agent / Model 切换 ───────────────────────────────────────
 
   void _toggleAgent() {
-    final config = ref.read(chatConfigProvider).asData?.value;
-    if (config == null) return;
+    final config = ref.read(chatConfigProvider);
 
     final newAgent = config.agent == 'build' ? 'plan' : 'build';
     ref.read(chatConfigProvider.notifier).setAgent(newAgent);
@@ -338,7 +336,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   @override
   Widget build(BuildContext context) {
-    final chatConfig = ref.watch(chatConfigProvider).asData?.value;
+    final chatConfig = ref.watch(chatConfigProvider);
     final theme = Theme.of(context);
     // 预加载命令列表，确保 _onTextChanged 里 ref.read 时数据已就绪
     ref.watch(commandsProvider);
@@ -534,12 +532,12 @@ class _InputToolBar extends StatelessWidget {
 }
 
 class _ConfigToolBar extends StatelessWidget {
-  final ChatConfig? chatConfig;
+  final ChatConfig chatConfig;
   final VoidCallback onToggleAgent;
   final VoidCallback onShowModelSelector;
 
   const _ConfigToolBar({
-    this.chatConfig,
+    required this.chatConfig,
     required this.onToggleAgent,
     required this.onShowModelSelector,
   });
@@ -550,14 +548,13 @@ class _ConfigToolBar extends StatelessWidget {
       children: [
         _SelectionChip(
           onTap: onToggleAgent,
-          label: chatConfig != null
-              ? '${chatConfig!.agent[0].toUpperCase()}${chatConfig!.agent.substring(1)}'
-              : '...',
+          label:
+              '${chatConfig.agent[0].toUpperCase()}${chatConfig.agent.substring(1)}',
         ),
         const SizedBox(width: 8),
         _SelectionChip(
           onTap: onShowModelSelector,
-          label: chatConfig?.model.modelID ?? '...',
+          label: chatConfig.model.modelID,
           icon: Icons.share_outlined,
         ),
         const SizedBox(width: 8),
