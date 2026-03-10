@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 
+import 'pages/file_content_page.dart';
 import 'pages/home_page.dart';
 import 'pages/project_list_page.dart';
 import 'pages/session_diff_page.dart';
@@ -49,6 +50,14 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final sessionID = state.extra as String;
         return SessionDiffPage(sessionID: sessionID);
+      },
+    ),
+    GoRoute(
+      path: '/file',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) {
+        final filePath = state.extra as String;
+        return FileContentPage(filePath: filePath);
       },
     ),
   ],

@@ -1,6 +1,7 @@
 import 'package:diff_match_patch/diff_match_patch.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../providers/session_provider.dart';
 import '../service/api/models/session.dart';
@@ -272,6 +273,27 @@ class _FileDiffTile extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
+            const SizedBox(width: 6),
+            // 查看文件内容按钮
+            GestureDetector(
+              onTap: () => context.push('/file', extra: diff.file),
+              child: Tooltip(
+                message: '查看文件内容',
+                child: Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Icon(
+                    Icons.visibility_outlined,
+                    size: 15,
+                    color: Colors.grey[500],
+                  ),
+                ),
+              ),
+            ),
             const SizedBox(width: 4),
             Icon(Icons.expand_more_rounded, size: 18, color: Colors.grey[400]),
           ],
