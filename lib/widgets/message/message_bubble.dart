@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../service/api/models/message.dart';
-import '../../service/api/models/parts.dart';
+import '../../service/api/models/parts.dart'
+    hide
+        ProviderAuthError,
+        UnknownError,
+        MessageOutputLengthError,
+        MessageAbortedError,
+        ApiError;
 import 'message_header.dart';
 import 'message_part.dart';
 
@@ -54,6 +60,91 @@ class _MessageBubbleState extends State<MessageBubble> {
         ? widget.messageWithParts.info as AssistantMessage
         : null;
 
+    final error = assistantMessage?.error;
+    if (error != null) {
+      return _buildErrorWidget(context, error);
+    }
+
+    return _buildNormalContent(context, isUser, userMessage, assistantMessage);
+  }
+
+  Widget _buildErrorWidget(BuildContext context, Object error) {
+    final errorMessage = _getErrorMessage(error);
+    final errorName = _getErrorName(error);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Container(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width,
+          ),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.red[50],
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.red[200]!),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.error_outline, size: 16, color: Colors.red[600]),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      errorName,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.red[700],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (errorMessage.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  errorMessage,
+                  style: TextStyle(fontSize: 13, color: Colors.red[700]),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _getErrorMessage(Object error) {
+    if (error is ProviderAuthError) return error.message;
+    if (error is UnknownError) return error.message;
+    if (error is MessageOutputLengthError) {
+      return error.data['message'] as String? ?? '';
+    }
+    if (error is MessageAbortedError) return error.message;
+    if (error is ApiError) return error.message;
+    return '';
+  }
+
+  String _getErrorName(Object error) {
+    if (error is ProviderAuthError) return 'Authentication Failed';
+    if (error is UnknownError) return 'Error';
+    if (error is MessageOutputLengthError) return 'Output Limit Exceeded';
+    if (error is MessageAbortedError) return 'Message Aborted';
+    if (error is ApiError) return 'API Error';
+    return 'Unknown Error';
+  }
+
+  Widget _buildNormalContent(
+    BuildContext context,
+    bool isUser,
+    UserMessage? userMessage,
+    AssistantMessage? assistantMessage,
+  ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Align(
