@@ -97,10 +97,13 @@ class ApiClient {
   Future<dynamic> get(
     String path, {
     Map<String, String>? queryParameters,
+    Map<String, String>? extraHeaders,
   }) async {
+    final headers = _getHeaders();
+    if (extraHeaders != null) headers.addAll(extraHeaders);
     final response = await _client.get(
       _getUri(path, queryParameters: queryParameters),
-      headers: _getHeaders(),
+      headers: headers,
     );
     return _handleResponse(response);
   }
@@ -125,10 +128,13 @@ class ApiClient {
     String path, {
     dynamic body,
     Map<String, String>? queryParameters,
+    Map<String, String>? extraHeaders,
   }) async {
+    final headers = _getHeaders();
+    if (extraHeaders != null) headers.addAll(extraHeaders);
     final response = await _client.patch(
       _getUri(path, queryParameters: queryParameters),
-      headers: _getHeaders(),
+      headers: headers,
       body: body != null ? jsonEncode(body) : null,
     );
     return _handleResponse(response);
@@ -137,10 +143,13 @@ class ApiClient {
   Future<dynamic> delete(
     String path, {
     Map<String, String>? queryParameters,
+    Map<String, String>? extraHeaders,
   }) async {
+    final headers = _getHeaders();
+    if (extraHeaders != null) headers.addAll(extraHeaders);
     final response = await _client.delete(
       _getUri(path, queryParameters: queryParameters),
-      headers: _getHeaders(),
+      headers: headers,
     );
     return _handleResponse(response);
   }
@@ -148,10 +157,13 @@ class ApiClient {
   Stream<String> streamGet(
     String path, {
     Map<String, String>? queryParameters,
+    Map<String, String>? extraHeaders,
   }) async* {
     final uri = _getUri(path, queryParameters: queryParameters);
     final request = http.Request('GET', uri);
-    request.headers.addAll(_getHeaders()..['Accept'] = 'text/event-stream');
+    final headers = _getHeaders()..['Accept'] = 'text/event-stream';
+    if (extraHeaders != null) headers.addAll(extraHeaders);
+    request.headers.addAll(headers);
 
     final streamedResponse = await _client.send(request);
 
