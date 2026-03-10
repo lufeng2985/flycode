@@ -94,22 +94,29 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   void _showCommandOverlay() {
     final overlay = Overlay.of(context);
-    final screenSize = MediaQuery.of(context).size;
-    final maxHeight = screenSize.height * 0.5;
+    final mediaQuery = MediaQuery.of(context);
+    final screenWidth = mediaQuery.size.width;
+    final screenHeight = mediaQuery.size.height;
+    const horizontalPadding = 12.0;
+    final overlayWidth = screenWidth - horizontalPadding * 2;
+    // 最大高度：屏幕高度的 35%
+    final maxHeight = screenHeight * 0.5;
+
+    // 通过 RenderBox 获取输入框容器在屏幕中的绝对位置
+    final renderBox = context.findRenderObject() as RenderBox?;
+    final boxOffset = renderBox?.localToGlobal(Offset.zero) ?? Offset.zero;
+    // overlay 底部紧贴输入框顶部，再上移 4px 间距
+    final bottomY = boxOffset.dy - 4;
+
     _commandOverlay = OverlayEntry(
-      builder: (ctx) => CompositedTransformFollower(
-        link: _layerLink,
-        showWhenUnlinked: false,
-        targetAnchor: Alignment.topLeft,
-        followerAnchor: Alignment.bottomLeft,
-        offset: const Offset(12, -4),
-        child: SizedBox(
-          width: screenSize.width - 24,
-          child: _CommandSuggestionList(
-            commands: _filteredCommands,
-            onSelect: _onCommandSelected,
-            maxHeight: maxHeight,
-          ),
+      builder: (ctx) => Positioned(
+        left: horizontalPadding,
+        bottom: screenHeight - bottomY,
+        width: overlayWidth,
+        child: _CommandSuggestionList(
+          commands: _filteredCommands,
+          onSelect: _onCommandSelected,
+          maxHeight: maxHeight,
         ),
       ),
     );
@@ -123,13 +130,10 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   void _onCommandSelected(Command command) {
     _hideCommandOverlay();
-    // hints 非空时末尾加空格，提示用户继续输入参数
-    final suffix = command.hints.isNotEmpty ? ' ' : '';
+    // 末尾始终加空格：关闭 overlay 并提示用户继续输入参数
     _controller.value = TextEditingValue(
-      text: '/${command.name}$suffix',
-      selection: TextSelection.collapsed(
-        offset: 1 + command.name.length + suffix.length,
-      ),
+      text: '/${command.name} ',
+      selection: TextSelection.collapsed(offset: 1 + command.name.length + 1),
     );
   }
 
@@ -646,8 +650,8 @@ class _CommandSuggestionList extends StatelessWidget {
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: maxHeight),
         child: ListView.separated(
-          padding: const EdgeInsets.symmetric(vertical: 6),
           shrinkWrap: true,
+          padding: const EdgeInsets.symmetric(vertical: 6),
           itemCount: commands.length,
           separatorBuilder: (_, _) =>
               Divider(height: 1, color: Colors.grey[100]),
