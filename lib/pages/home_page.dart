@@ -6,6 +6,7 @@ import '../providers/global_event_provider.dart';
 import '../providers/session_provider.dart';
 import '../widgets/message/message_list.dart';
 import '../widgets/message/chat_input.dart';
+import '../widgets/question/question_card.dart';
 import '../widgets/session/session_drawer.dart';
 
 class MyHomePage extends ConsumerWidget {
@@ -108,6 +109,7 @@ class MyHomePage extends ConsumerWidget {
                         const Center(child: CircularProgressIndicator()),
                   ),
           ),
+          if (selectedSession != null || isPending) const QuestionOverlay(),
           if (selectedSession != null || isPending) const ChatInput(),
         ],
       ),

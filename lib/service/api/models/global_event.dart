@@ -1,5 +1,6 @@
 import 'package:json_annotation/json_annotation.dart';
 import 'message.dart' hide FileDiff;
+import 'question.dart';
 import 'session.dart';
 
 part 'global_event.g.dart';
@@ -328,6 +329,39 @@ class EventSessionError {
   Map<String, dynamic> toJson() => _$EventSessionErrorToJson(this);
 }
 
+class EventQuestionAsked {
+  final String type;
+  final QuestionRequest properties;
+
+  EventQuestionAsked({required this.type, required this.properties});
+}
+
+class EventQuestionReplied {
+  final String type;
+  final String sessionID;
+  final String requestID;
+  final List<List<String>> answers;
+
+  EventQuestionReplied({
+    required this.type,
+    required this.sessionID,
+    required this.requestID,
+    required this.answers,
+  });
+}
+
+class EventQuestionRejected {
+  final String type;
+  final String sessionID;
+  final String requestID;
+
+  EventQuestionRejected({
+    required this.type,
+    required this.sessionID,
+    required this.requestID,
+  });
+}
+
 Object parseEvent(Map<String, dynamic> json) {
   final type = json['type'] as String;
   switch (type) {
@@ -392,6 +426,32 @@ Object parseEvent(Map<String, dynamic> json) {
         type: type,
         sessionID: json['properties']['sessionID'] as String?,
         error: errorJson != null ? parseErrorType(errorJson) : null,
+      );
+    case 'question.asked':
+      final propsJson = json['properties'] as Map<String, dynamic>;
+      return EventQuestionAsked(
+        type: type,
+        properties: QuestionRequest.fromJson(propsJson),
+      );
+    case 'question.replied':
+      final repliedProps = json['properties'] as Map<String, dynamic>;
+      final rawAnswers = repliedProps['answers'] as List<dynamic>;
+      return EventQuestionReplied(
+        type: type,
+        sessionID: repliedProps['sessionID'] as String,
+        requestID: repliedProps['requestID'] as String,
+        answers: rawAnswers
+            .map(
+              (row) => (row as List<dynamic>).map((v) => v as String).toList(),
+            )
+            .toList(),
+      );
+    case 'question.rejected':
+      final rejectedProps = json['properties'] as Map<String, dynamic>;
+      return EventQuestionRejected(
+        type: type,
+        sessionID: rejectedProps['sessionID'] as String,
+        requestID: rejectedProps['requestID'] as String,
       );
     default:
       throw Exception('Unknown Event type: $type');

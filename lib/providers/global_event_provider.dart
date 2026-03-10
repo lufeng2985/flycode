@@ -4,6 +4,7 @@ import '../service/api/models/global_event.dart';
 import '../service/api/models/message.dart';
 import '../service/api/models/parts.dart';
 import '../service/api/session_api.dart';
+import 'question_provider.dart';
 import 'session_provider.dart';
 
 part 'global_event_provider.g.dart';
@@ -40,6 +41,18 @@ class GlobalEventListener extends _$GlobalEventListener {
       _handleMessagePartUpdated(payload);
     } else if (payload is EventMessagePartRemoved) {
       _handleMessagePartRemoved(payload);
+    } else if (payload is EventQuestionAsked) {
+      ref
+          .read(pendingQuestionsProvider.notifier)
+          .addQuestion(payload.properties);
+    } else if (payload is EventQuestionReplied) {
+      ref
+          .read(pendingQuestionsProvider.notifier)
+          .removeQuestion(payload.requestID);
+    } else if (payload is EventQuestionRejected) {
+      ref
+          .read(pendingQuestionsProvider.notifier)
+          .removeQuestion(payload.requestID);
     }
   }
 
