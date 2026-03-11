@@ -1,7 +1,8 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../service/api/models/question.dart';
 import '../service/api/question_api.dart';
-import 'project_provider.dart';
+import '../providers/project_provider.dart';
+import 'session_provider.dart';
 
 part 'question_provider.g.dart';
 
@@ -47,4 +48,14 @@ class PendingQuestionsNotifier extends _$PendingQuestionsNotifier {
     await api.rejectQuestion(requestID, directory: directory);
     removeQuestion(requestID);
   }
+}
+
+@Riverpod(keepAlive: true)
+bool currentSessionHasQuestion(Ref ref) {
+  final selectedState = ref.watch(selectedSessionProvider);
+  final sessionId = selectedState.session?.id;
+  if (sessionId == null) return false;
+
+  final questions = ref.watch(pendingQuestionsProvider);
+  return questions.asData?.value?.any((q) => q.sessionID == sessionId) ?? false;
 }

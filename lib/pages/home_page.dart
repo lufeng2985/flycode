@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../service/api/session_api.dart';
 import '../providers/global_event_provider.dart';
 import '../providers/session_provider.dart';
+import '../providers/question_provider.dart';
 import '../widgets/message/message_list.dart';
 import '../widgets/message/chat_input.dart';
 import '../widgets/question/question_card.dart';
@@ -21,6 +22,7 @@ class MyHomePage extends ConsumerWidget {
     final selectedState = ref.watch(selectedSessionProvider);
     final selectedSession = selectedState.session;
     final isPending = selectedState.isPending;
+    final hasQuestion = ref.watch(currentSessionHasQuestionProvider);
 
     Widget buildNewSessionWelcome() {
       return Center(
@@ -110,7 +112,8 @@ class MyHomePage extends ConsumerWidget {
                   ),
           ),
           if (selectedSession != null || isPending) const QuestionOverlay(),
-          if (selectedSession != null || isPending) const ChatInput(),
+          if ((selectedSession != null || isPending) && !hasQuestion)
+            const ChatInput(),
         ],
       ),
     );

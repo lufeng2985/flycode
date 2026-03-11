@@ -72,3 +72,45 @@ abstract class _$PendingQuestionsNotifier
     element.handleCreate(ref, build);
   }
 }
+
+@ProviderFor(currentSessionHasQuestion)
+final currentSessionHasQuestionProvider = CurrentSessionHasQuestionProvider._();
+
+final class CurrentSessionHasQuestionProvider
+    extends $FunctionalProvider<bool, bool, bool>
+    with $Provider<bool> {
+  CurrentSessionHasQuestionProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'currentSessionHasQuestionProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$currentSessionHasQuestionHash();
+
+  @$internal
+  @override
+  $ProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  bool create(Ref ref) {
+    return currentSessionHasQuestion(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$currentSessionHasQuestionHash() =>
+    r'b6b51308b73452c61d9092353440dbf4d903e99f';

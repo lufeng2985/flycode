@@ -65,6 +65,8 @@ class _QuestionRequestCardState extends ConsumerState<QuestionRequestCard> {
   bool get _isLastQuestion =>
       _currentIndex == widget.request.questions.length - 1;
 
+  bool get _canGoBack => _currentIndex > 0;
+
   bool get _canProceed {
     final selected = _answers[_currentIndex];
     final hasCustomInput = _customControllers[_currentIndex].text
@@ -89,6 +91,14 @@ class _QuestionRequestCardState extends ConsumerState<QuestionRequestCard> {
         _answers[_currentIndex] = current.contains(label) ? [] : [label];
       }
     });
+  }
+
+  void _onPrevious() {
+    if (_canGoBack) {
+      setState(() {
+        _currentIndex--;
+      });
+    }
   }
 
   Future<void> _onNext() async {
@@ -201,7 +211,7 @@ class _QuestionRequestCardState extends ConsumerState<QuestionRequestCard> {
             onCustomChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 8),
-          // Footer: ignore / next
+          // Footer: ignore / previous / next
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
             child: Row(
@@ -216,6 +226,19 @@ class _QuestionRequestCardState extends ConsumerState<QuestionRequestCard> {
                   ),
                   child: const Text('忽略', style: TextStyle(fontSize: 14)),
                 ),
+                if (_canGoBack) ...[
+                  const Spacer(),
+                  TextButton(
+                    onPressed: _onPrevious,
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.grey[700],
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(0, 36),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text('上一步', style: TextStyle(fontSize: 14)),
+                  ),
+                ],
                 const Spacer(),
                 FilledButton(
                   onPressed: _canProceed ? _onNext : null,
