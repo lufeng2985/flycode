@@ -16,6 +16,9 @@ class MessagePart extends StatelessWidget {
   Widget build(BuildContext context) {
     if (part is TextPart) {
       final textPart = part as TextPart;
+      if (textPart.synthetic == true) {
+        return const SizedBox.shrink();
+      }
       return Padding(
         padding: const EdgeInsets.only(top: 4),
         child: MarkdownBody(

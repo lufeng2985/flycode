@@ -25,6 +25,8 @@ class _ImageAttachment {
   });
 }
 
+enum _InputMode { chat, shell }
+
 class ChatInput extends ConsumerStatefulWidget {
   const ChatInput({super.key});
 
@@ -36,6 +38,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   final TextEditingController _controller = TextEditingController();
   final LayerLink _layerLink = LayerLink();
   bool _isLoading = false;
+  _InputMode _inputMode = _InputMode.chat;
   final List<_ImageAttachment> _attachments = [];
   OverlayEntry? _commandOverlay;
   List<Command> _filteredCommands = [];
@@ -49,6 +52,11 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   // ─── 命令检测逻辑 ─────────────────────────────────────────────
 
   void _onTextChanged() {
+    if (_inputMode == _InputMode.shell) {
+      _hideCommandOverlay();
+      return;
+    }
+
     final text = _controller.text;
 
     // 含空格或不以 "/" 开头，立即关闭 Overlay
@@ -202,7 +210,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   Future<void> _handleSend() async {
     final text = _controller.text.trim();
-    if (text.isEmpty && _attachments.isEmpty) return;
+    final isShellMode = _inputMode == _InputMode.shell;
+    if (isShellMode && text.isEmpty) return;
+    if (!isShellMode && text.isEmpty && _attachments.isEmpty) return;
     if (_isLoading) return;
 
     final selectedState = ref.read(selectedSessionProvider);
@@ -218,18 +228,22 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       final session = await _ensureSession(api, project, selectedState);
       if (session == null) return;
 
-      final matchedCommand = _parseCommand(text);
-      if (matchedCommand != null) {
-        _dispatchCommand(
-          api,
-          session,
-          project,
-          chatConfig,
-          matchedCommand,
-          text,
-        );
+      if (isShellMode) {
+        await _dispatchShell(api, session, project, chatConfig, text);
       } else {
-        await _dispatchPrompt(api, session, project, chatConfig, text);
+        final matchedCommand = _parseCommand(text);
+        if (matchedCommand != null) {
+          await _dispatchCommand(
+            api,
+            session,
+            project,
+            chatConfig,
+            matchedCommand,
+            text,
+          );
+        } else {
+          await _dispatchPrompt(api, session, project, chatConfig, text);
+        }
       }
 
       setState(() {
@@ -291,6 +305,27 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     );
   }
 
+  Future<void> _dispatchShell(
+    SessionApi api,
+    String sessionId,
+    dynamic project,
+    ChatConfig chatConfig,
+    String command,
+  ) async {
+    await api.runShell(
+      sessionId,
+      directory: project?.worktree,
+      data: {
+        'agent': chatConfig.agent,
+        'command': command,
+        'model': {
+          'providerID': chatConfig.model.providerID,
+          'modelID': chatConfig.model.modelID,
+        },
+      },
+    );
+  }
+
   Future<void> _dispatchPrompt(
     SessionApi api,
     String sessionId,
@@ -338,12 +373,24 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     );
   }
 
+  void _setInputMode(_InputMode mode) {
+    if (_inputMode == mode) return;
+    setState(() {
+      _inputMode = mode;
+      if (mode == _InputMode.shell) {
+        _attachments.clear();
+      }
+    });
+    _hideCommandOverlay();
+  }
+
   // ─── Build ────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     final chatConfig = ref.watch(chatConfigProvider);
     final theme = Theme.of(context);
+    final isShellMode = _inputMode == _InputMode.shell;
     // 预加载命令列表，确保 _onTextChanged 里 ref.read 时数据已就绪
     ref.watch(commandsProvider);
 
@@ -368,7 +415,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (_attachments.isNotEmpty)
+                    if (!isShellMode && _attachments.isNotEmpty)
                       _AttachmentList(
                         attachments: _attachments,
                         onRemove: _removeAttachment,
@@ -379,17 +426,25 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       autofocus: false,
                       maxLines: 5,
                       minLines: 1,
-                      style: const TextStyle(fontSize: 14),
-                      decoration: const InputDecoration(
-                        hintText: '随便问点什么...',
-                        hintStyle: TextStyle(color: Colors.grey, fontSize: 14),
-                        contentPadding: EdgeInsets.all(12),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontFamily: isShellMode ? 'monospace' : null,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: isShellMode ? '输入 shell 命令...' : '随便问点什么...',
+                        hintStyle: TextStyle(
+                          color: Colors.grey,
+                          fontSize: 14,
+                          fontFamily: isShellMode ? 'monospace' : null,
+                        ),
+                        contentPadding: const EdgeInsets.all(12),
                         border: InputBorder.none,
                       ),
                       onSubmitted: (_) => _handleSend(),
                     ),
                     _InputToolBar(
                       isLoading: _isLoading,
+                      isShellMode: isShellMode,
                       onPickImage: _pickImage,
                       onSend: _handleSend,
                     ),
@@ -402,6 +457,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
               chatConfig: chatConfig,
               onToggleAgent: _toggleAgent,
               onShowModelSelector: _showModelSelector,
+              inputMode: _inputMode,
+              onModeChange: _setInputMode,
             ),
           ],
         ),
@@ -490,11 +547,13 @@ class _AttachmentList extends StatelessWidget {
 
 class _InputToolBar extends StatelessWidget {
   final bool isLoading;
+  final bool isShellMode;
   final VoidCallback onPickImage;
   final VoidCallback onSend;
 
   const _InputToolBar({
     required this.isLoading,
+    required this.isShellMode,
     required this.onPickImage,
     required this.onSend,
   });
@@ -505,16 +564,21 @@ class _InputToolBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: Row(
         children: [
-          const Text(
-            '>>',
-            style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+          Text(
+            isShellMode ? r'$' : '>>',
+            style: TextStyle(
+              color: isShellMode ? const Color(0xFF0F766E) : Colors.green,
+              fontWeight: FontWeight.bold,
+              fontFamily: isShellMode ? 'monospace' : null,
+            ),
           ),
           const Spacer(),
-          IconButton(
-            onPressed: isLoading ? null : onPickImage,
-            icon: const Icon(Icons.add, size: 20, color: Colors.grey),
-            visualDensity: VisualDensity.compact,
-          ),
+          if (!isShellMode)
+            IconButton(
+              onPressed: isLoading ? null : onPickImage,
+              icon: const Icon(Icons.add, size: 20, color: Colors.grey),
+              visualDensity: VisualDensity.compact,
+            ),
           Container(
             margin: const EdgeInsets.only(left: 4),
             decoration: BoxDecoration(
@@ -541,11 +605,15 @@ class _ConfigToolBar extends StatelessWidget {
   final ChatConfig chatConfig;
   final VoidCallback onToggleAgent;
   final VoidCallback onShowModelSelector;
+  final _InputMode inputMode;
+  final ValueChanged<_InputMode> onModeChange;
 
   const _ConfigToolBar({
     required this.chatConfig,
     required this.onToggleAgent,
     required this.onShowModelSelector,
+    required this.inputMode,
+    required this.onModeChange,
   });
 
   @override
@@ -566,29 +634,64 @@ class _ConfigToolBar extends StatelessWidget {
         const SizedBox(width: 8),
         const _SelectionChip(label: '默认'),
         const Spacer(),
-        IconButton(
-          onPressed: () {},
-          icon: const Icon(
-            Icons.terminal_outlined,
-            size: 20,
-            color: Colors.grey,
-          ),
-          visualDensity: VisualDensity.compact,
-        ),
         Container(
-          padding: const EdgeInsets.all(4),
+          padding: const EdgeInsets.all(3),
           decoration: BoxDecoration(
             color: Colors.white,
             border: Border.all(color: Colors.grey[300]!),
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(8),
           ),
-          child: const Icon(
-            Icons.chat_bubble_outline,
-            size: 20,
-            color: Colors.grey,
+          child: Row(
+            children: [
+              _ModeIconButton(
+                icon: Icons.terminal,
+                selected: inputMode == _InputMode.shell,
+                onTap: () => onModeChange(_InputMode.shell),
+              ),
+              _ModeIconButton(
+                icon: Icons.chat_bubble_outline,
+                selected: inputMode == _InputMode.chat,
+                onTap: () => onModeChange(_InputMode.chat),
+              ),
+            ],
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ModeIconButton extends StatelessWidget {
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _ModeIconButton({
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 1),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFFF1F5F9) : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+          border: selected
+              ? Border.all(color: const Color(0xFFD7E1EC))
+              : Border.all(color: Colors.transparent),
+        ),
+        child: Icon(
+          icon,
+          size: 18,
+          color: selected ? const Color(0xFF0F172A) : Colors.grey,
+        ),
+      ),
     );
   }
 }
