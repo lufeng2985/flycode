@@ -96,7 +96,10 @@ class MyHomePage extends ConsumerWidget {
         children: [
           Expanded(
             child: selectedSession != null
-                ? const MessageList()
+                ? MessageList(
+                    onNavigateToSubSession: (sessionId) =>
+                        context.push('/sub-session', extra: sessionId),
+                  )
                 : isPending
                 ? buildNewSessionWelcome()
                 : sessionsAsync.when(

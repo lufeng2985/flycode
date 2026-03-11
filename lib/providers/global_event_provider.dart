@@ -88,12 +88,23 @@ class GlobalEventListener extends _$GlobalEventListener {
     ref
         .read(sessionMessagesProvider.notifier)
         .updateMessage(sessionID, message);
+
+    // 同时分发给子 Session provider（如果已订阅）
+    _dispatchToSubSession(
+      sessionID,
+      (notifier) => notifier.updateMessage(sessionID, message),
+    );
   }
 
   void _handleMessageRemoved(EventMessageRemoved event) {
     ref
         .read(sessionMessagesProvider.notifier)
         .removeMessage(event.sessionID, event.messageID);
+
+    _dispatchToSubSession(
+      event.sessionID,
+      (notifier) => notifier.removeMessage(event.sessionID, event.messageID),
+    );
   }
 
   void _handleMessagePartUpdated(EventMessagePartUpdated event) {
@@ -111,12 +122,36 @@ class GlobalEventListener extends _$GlobalEventListener {
     ref
         .read(sessionMessagesProvider.notifier)
         .updatePart(sessionID, partMsgId, newPart);
+
+    _dispatchToSubSession(
+      sessionID,
+      (notifier) => notifier.updatePart(sessionID, partMsgId, newPart),
+    );
   }
 
   void _handleMessagePartRemoved(EventMessagePartRemoved event) {
     ref
         .read(sessionMessagesProvider.notifier)
         .removePart(event.sessionID, event.messageID, event.partID);
+
+    _dispatchToSubSession(
+      event.sessionID,
+      (notifier) =>
+          notifier.removePart(event.sessionID, event.messageID, event.partID),
+    );
+  }
+
+  /// 将消息事件分发给对应 sessionID 的子 Session provider（仅在已订阅时有效）
+  void _dispatchToSubSession(
+    String sessionID,
+    void Function(SubSessionMessagesNotifier notifier) action,
+  ) {
+    try {
+      final notifier = ref.read(subSessionMessagesProvider(sessionID).notifier);
+      action(notifier);
+    } catch (_) {
+      // provider 未被订阅时 ref.read 会抛出，直接忽略
+    }
   }
 }
 

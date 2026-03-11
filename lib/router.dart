@@ -8,6 +8,7 @@ import 'pages/session_diff_page.dart';
 import 'pages/settings_page.dart';
 import 'pages/server_config_page.dart';
 import 'pages/model_config_page.dart';
+import 'pages/sub_session_page.dart';
 import 'models/server_config.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(
@@ -58,6 +59,14 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final filePath = state.extra as String;
         return FileContentPage(filePath: filePath);
+      },
+    ),
+    GoRoute(
+      path: '/sub-session',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) {
+        final sessionID = state.extra as String;
+        return SubSessionPage(sessionID: sessionID);
       },
     ),
   ],

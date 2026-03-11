@@ -18,7 +18,7 @@ Future<SessionApi> sessionApi(Ref ref) async {
 Future<List<Session>> sessions(Ref ref) async {
   final api = await ref.watch(sessionApiProvider.future);
   final project = await ref.watch(selectedProjectProvider.future);
-  return api.getSessions(directory: project?.worktree);
+  return api.getSessions(directory: project?.worktree, roots: true);
 }
 
 class SessionApi {

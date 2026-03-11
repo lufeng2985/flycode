@@ -9,8 +9,14 @@ import 'reasoning_widget.dart';
 class MessagePart extends StatelessWidget {
   final Object part;
   final bool isUser;
+  final void Function(String sessionId)? onNavigateToSubSession;
 
-  const MessagePart({super.key, required this.part, required this.isUser});
+  const MessagePart({
+    super.key,
+    required this.part,
+    required this.isUser,
+    this.onNavigateToSubSession,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +43,10 @@ class MessagePart extends StatelessWidget {
         ),
       );
     } else if (part is ToolPart) {
-      return ToolUseWidget(toolPart: part as ToolPart);
+      return ToolUseWidget(
+        toolPart: part as ToolPart,
+        onNavigateToSubSession: onNavigateToSubSession,
+      );
     } else if (part is ReasoningPart) {
       return ReasoningWidget(reasoning: part as ReasoningPart);
     } else if (part is FilePart) {

@@ -4,8 +4,13 @@ import 'json_viewer.dart';
 
 class ToolUseWidget extends StatefulWidget {
   final ToolPart toolPart;
+  final void Function(String sessionId)? onNavigateToSubSession;
 
-  const ToolUseWidget({super.key, required this.toolPart});
+  const ToolUseWidget({
+    super.key,
+    required this.toolPart,
+    this.onNavigateToSubSession,
+  });
 
   @override
   State<ToolUseWidget> createState() => _ToolUseWidgetState();
@@ -14,9 +19,19 @@ class ToolUseWidget extends StatefulWidget {
 class _ToolUseWidgetState extends State<ToolUseWidget> {
   bool _isExpanded = true;
 
+  String? _subSessionId() {
+    final metadata = widget.toolPart.metadata;
+    if (metadata == null) return null;
+    return metadata['sessionId'] as String?;
+  }
+
   @override
   Widget build(BuildContext context) {
     final isBash = widget.toolPart.tool == 'bash';
+    final isTask = widget.toolPart.tool == 'task';
+    final subSessionId = isTask ? _subSessionId() : null;
+    final canNavigate =
+        isTask && subSessionId != null && widget.onNavigateToSubSession != null;
 
     return Container(
       margin: const EdgeInsets.only(top: 8),
@@ -61,11 +76,24 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
                       style: TextStyle(fontSize: 12, color: Colors.grey[700]),
                     ),
                   ),
-                  Icon(
-                    _isExpanded ? Icons.expand_less : Icons.expand_more,
-                    size: 16,
-                    color: Colors.grey[600],
-                  ),
+                  if (canNavigate)
+                    GestureDetector(
+                      onTap: () => widget.onNavigateToSubSession!(subSessionId),
+                      child: Tooltip(
+                        message: '查看子 Session',
+                        child: Icon(
+                          Icons.open_in_new,
+                          size: 15,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    )
+                  else
+                    Icon(
+                      _isExpanded ? Icons.expand_less : Icons.expand_more,
+                      size: 16,
+                      color: Colors.grey[600],
+                    ),
                 ],
               ),
             ),

@@ -192,3 +192,114 @@ final class SessionDiffFamily extends $Family
   @override
   String toString() => r'sessionDiffProvider';
 }
+
+/// 子 Session 消息列表（只读，支持 SSE 实时更新）
+
+@ProviderFor(SubSessionMessagesNotifier)
+final subSessionMessagesProvider = SubSessionMessagesNotifierFamily._();
+
+/// 子 Session 消息列表（只读，支持 SSE 实时更新）
+final class SubSessionMessagesNotifierProvider
+    extends
+        $AsyncNotifierProvider<
+          SubSessionMessagesNotifier,
+          List<MessageWithParts>
+        > {
+  /// 子 Session 消息列表（只读，支持 SSE 实时更新）
+  SubSessionMessagesNotifierProvider._({
+    required SubSessionMessagesNotifierFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'subSessionMessagesProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$subSessionMessagesNotifierHash();
+
+  @override
+  String toString() {
+    return r'subSessionMessagesProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  SubSessionMessagesNotifier create() => SubSessionMessagesNotifier();
+
+  @override
+  bool operator ==(Object other) {
+    return other is SubSessionMessagesNotifierProvider &&
+        other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$subSessionMessagesNotifierHash() =>
+    r'6e2093fa8ae09221367f7a628bf2408780feb73c';
+
+/// 子 Session 消息列表（只读，支持 SSE 实时更新）
+
+final class SubSessionMessagesNotifierFamily extends $Family
+    with
+        $ClassFamilyOverride<
+          SubSessionMessagesNotifier,
+          AsyncValue<List<MessageWithParts>>,
+          List<MessageWithParts>,
+          FutureOr<List<MessageWithParts>>,
+          String
+        > {
+  SubSessionMessagesNotifierFamily._()
+    : super(
+        retry: null,
+        name: r'subSessionMessagesProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// 子 Session 消息列表（只读，支持 SSE 实时更新）
+
+  SubSessionMessagesNotifierProvider call(String sessionID) =>
+      SubSessionMessagesNotifierProvider._(argument: sessionID, from: this);
+
+  @override
+  String toString() => r'subSessionMessagesProvider';
+}
+
+/// 子 Session 消息列表（只读，支持 SSE 实时更新）
+
+abstract class _$SubSessionMessagesNotifier
+    extends $AsyncNotifier<List<MessageWithParts>> {
+  late final _$args = ref.$arg as String;
+  String get sessionID => _$args;
+
+  FutureOr<List<MessageWithParts>> build(String sessionID);
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref =
+        this.ref
+            as $Ref<AsyncValue<List<MessageWithParts>>, List<MessageWithParts>>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<
+                AsyncValue<List<MessageWithParts>>,
+                List<MessageWithParts>
+              >,
+              AsyncValue<List<MessageWithParts>>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, () => build(_$args));
+  }
+}

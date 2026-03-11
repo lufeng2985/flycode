@@ -133,3 +133,69 @@ Future<List<FileDiff>> sessionDiff(Ref ref, String sessionID) async {
   final api = await ref.watch(sessionApiProvider.future);
   return api.getSessionDiff(sessionID);
 }
+
+/// 子 Session 消息列表（只读，支持 SSE 实时更新）
+@riverpod
+class SubSessionMessagesNotifier extends _$SubSessionMessagesNotifier {
+  @override
+  Future<List<MessageWithParts>> build(String sessionID) async {
+    final api = await ref.watch(sessionApiProvider.future);
+    return api.getSessionMessages(sessionID);
+  }
+
+  void updateMessage(String msgSessionID, MessageWithParts message) {
+    if (msgSessionID != sessionID) return;
+    final current = state.asData?.value ?? [];
+    final index = current.indexWhere(
+      (m) => _messageId(m) == _messageId(message),
+    );
+    final updated = List<MessageWithParts>.from(current);
+    if (index >= 0) {
+      updated[index] = message;
+    } else {
+      updated.add(message);
+    }
+    state = AsyncData(updated);
+  }
+
+  void removeMessage(String msgSessionID, String messageID) {
+    if (msgSessionID != sessionID) return;
+    final current = state.asData?.value ?? [];
+    final updated = current.where((m) => _messageId(m) != messageID).toList();
+    state = AsyncData(updated);
+  }
+
+  void updatePart(String msgSessionID, String messageID, Object newPart) {
+    if (msgSessionID != sessionID) return;
+    final current = state.asData?.value ?? [];
+    final msgIndex = current.indexWhere((m) => _messageId(m) == messageID);
+    if (msgIndex < 0) return;
+
+    final msg = current[msgIndex];
+    final existingIndex = msg.parts.indexWhere(
+      (p) => _partId(p) == _partId(newPart),
+    );
+    final newParts = List<Object>.from(msg.parts);
+    if (existingIndex >= 0) {
+      newParts[existingIndex] = newPart;
+    } else {
+      newParts.add(newPart);
+    }
+    final updated = List<MessageWithParts>.from(current);
+    updated[msgIndex] = MessageWithParts(info: msg.info, parts: newParts);
+    state = AsyncData(updated);
+  }
+
+  void removePart(String msgSessionID, String messageID, String partID) {
+    if (msgSessionID != sessionID) return;
+    final current = state.asData?.value ?? [];
+    final msgIndex = current.indexWhere((m) => _messageId(m) == messageID);
+    if (msgIndex < 0) return;
+
+    final msg = current[msgIndex];
+    final newParts = msg.parts.where((p) => _partId(p) != partID).toList();
+    final updated = List<MessageWithParts>.from(current);
+    updated[msgIndex] = MessageWithParts(info: msg.info, parts: newParts);
+    state = AsyncData(updated);
+  }
+}

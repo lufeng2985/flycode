@@ -14,11 +14,13 @@ import 'message_part.dart';
 class MessageBubble extends StatefulWidget {
   final MessageWithParts messageWithParts;
   final bool prevIsUser;
+  final void Function(String sessionId)? onNavigateToSubSession;
 
   const MessageBubble({
     super.key,
     required this.messageWithParts,
     required this.prevIsUser,
+    this.onNavigateToSubSession,
   });
 
   @override
@@ -209,7 +211,11 @@ class _MessageBubbleState extends State<MessageBubble> {
               ),
               const SizedBox(height: 8),
               ...widget.messageWithParts.parts.map(
-                (part) => MessagePart(part: part, isUser: isUser),
+                (part) => MessagePart(
+                  part: part,
+                  isUser: isUser,
+                  onNavigateToSubSession: widget.onNavigateToSubSession,
+                ),
               ),
             ],
           ),
