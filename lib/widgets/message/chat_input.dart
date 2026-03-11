@@ -11,6 +11,8 @@ import '../../service/api/models/command.dart';
 import '../../providers/session_provider.dart';
 import '../../providers/chat_config_provider.dart';
 import '../../providers/project_provider.dart';
+import '../../providers/session_status_provider.dart';
+import '../../service/api/models/session_status.dart';
 import 'model_selection_sheet.dart';
 
 class _ImageAttachment {
@@ -38,6 +40,11 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   final TextEditingController _controller = TextEditingController();
   final LayerLink _layerLink = LayerLink();
   bool _isLoading = false;
+
+  /// True while an abort request has been sent and we are waiting for the
+  /// backend to confirm the session is idle (via SSE session.status event).
+  bool _isAborting = false;
+
   _InputMode _inputMode = _InputMode.chat;
   final List<_ImageAttachment> _attachments = [];
   OverlayEntry? _commandOverlay;
@@ -263,6 +270,34 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     }
   }
 
+  /// Sends an abort request to the backend for the current session.
+  ///
+  /// Sets [_isAborting] immediately to prevent duplicate requests.
+  /// The flag is cleared when the SSE stream delivers a `session.status`
+  /// event with `{ type: "idle" }` (see [build] listener).
+  Future<void> _handleAbort() async {
+    if (_isAborting) return;
+    final session = ref.read(selectedSessionProvider).session;
+    if (session == null) return;
+
+    setState(() => _isAborting = true);
+
+    try {
+      final api = await ref.read(sessionApiProvider.future);
+      final project = await ref.read(selectedProjectProvider.future);
+      await api.abortSession(session.id, directory: project?.worktree);
+      // Do NOT clear _isAborting here — wait for SSE idle confirmation.
+    } catch (e) {
+      // Abort request failed — restore state so the user can retry.
+      if (mounted) {
+        setState(() => _isAborting = false);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('中断失败: $e')));
+      }
+    }
+  }
+
   Future<String?> _ensureSession(
     SessionApi api,
     dynamic project,
@@ -394,6 +429,28 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     // 预加载命令列表，确保 _onTextChanged 里 ref.read 时数据已就绪
     ref.watch(commandsProvider);
 
+    // Derive whether the backend is currently processing for this session.
+    final sessionId = ref.watch(
+      selectedSessionProvider.select((s) => s.session?.id),
+    );
+    final sessionStatuses = ref.watch(sessionStatusProvider);
+    final isWorking =
+        sessionId != null && (sessionStatuses[sessionId]?.isWorking ?? false);
+
+    // Clear _isAborting once the backend confirms idle via SSE.
+    ref.listen<Map<String, SessionStatus>>(sessionStatusProvider, (
+      _,
+      statuses,
+    ) {
+      if (!_isAborting) return;
+      final sid = sessionId;
+      if (sid == null) return;
+      final status = statuses[sid];
+      if (status == null || status is SessionStatusIdle) {
+        setState(() => _isAborting = false);
+      }
+    });
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -444,9 +501,12 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                     ),
                     _InputToolBar(
                       isLoading: _isLoading,
+                      isWorking: isWorking,
+                      isAborting: _isAborting,
                       isShellMode: isShellMode,
                       onPickImage: _pickImage,
                       onSend: _handleSend,
+                      onAbort: _handleAbort,
                     ),
                   ],
                 ),
@@ -546,20 +606,48 @@ class _AttachmentList extends StatelessWidget {
 }
 
 class _InputToolBar extends StatelessWidget {
+  /// True while the send HTTP request is in-flight (near-instant, but guards
+  /// against double-tap).
   final bool isLoading;
+
+  /// True when the backend is actively processing (busy or retry state).
+  /// When true, the action button switches to a Stop icon.
+  final bool isWorking;
+
+  /// True while an abort request has been sent and we are awaiting the SSE
+  /// idle confirmation. Disables the button to prevent duplicate requests.
+  final bool isAborting;
+
   final bool isShellMode;
   final VoidCallback onPickImage;
   final VoidCallback onSend;
+  final VoidCallback onAbort;
 
   const _InputToolBar({
     required this.isLoading,
+    required this.isWorking,
+    required this.isAborting,
     required this.isShellMode,
     required this.onPickImage,
     required this.onSend,
+    required this.onAbort,
   });
 
   @override
   Widget build(BuildContext context) {
+    // Determine the current action-button configuration.
+    // Priority: aborting > working > sending > idle.
+    final bool showStop = isWorking || isAborting;
+    final bool actionDisabled = isAborting || isLoading;
+    final Color buttonColor;
+    if (showStop) {
+      buttonColor = actionDisabled
+          ? Colors.red.withValues(alpha: 0.5)
+          : Colors.red;
+    } else {
+      buttonColor = actionDisabled ? Colors.grey : Colors.grey[600]!;
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: Row(
@@ -575,24 +663,41 @@ class _InputToolBar extends StatelessWidget {
           const Spacer(),
           if (!isShellMode)
             IconButton(
-              onPressed: isLoading ? null : onPickImage,
+              onPressed: (isLoading || isWorking) ? null : onPickImage,
               icon: const Icon(Icons.add, size: 20, color: Colors.grey),
               visualDensity: VisualDensity.compact,
             ),
           Container(
             margin: const EdgeInsets.only(left: 4),
             decoration: BoxDecoration(
-              color: isLoading ? Colors.grey : Colors.grey[400],
+              color: buttonColor,
               borderRadius: BorderRadius.circular(4),
             ),
-            child: IconButton(
-              onPressed: isLoading ? null : onSend,
-              icon: const Icon(
-                Icons.arrow_upward,
-                size: 20,
-                color: Colors.white,
-              ),
-              visualDensity: VisualDensity.compact,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Show a subtle spinner overlay while loading or aborting.
+                if (isLoading || isAborting)
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white54),
+                    ),
+                  ),
+                IconButton(
+                  onPressed: actionDisabled
+                      ? null
+                      : (showStop ? onAbort : onSend),
+                  icon: Icon(
+                    showStop ? Icons.stop_rounded : Icons.arrow_upward,
+                    size: 20,
+                    color: Colors.white,
+                  ),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
             ),
           ),
         ],

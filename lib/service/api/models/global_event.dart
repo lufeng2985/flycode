@@ -2,6 +2,7 @@ import 'package:json_annotation/json_annotation.dart';
 import 'message.dart' hide FileDiff;
 import 'question.dart';
 import 'session.dart';
+import 'session_status.dart';
 
 part 'global_event.g.dart';
 
@@ -362,6 +363,26 @@ class EventQuestionRejected {
   });
 }
 
+class EventSessionStatus {
+  final String type;
+  final String sessionID;
+  final SessionStatus status;
+
+  EventSessionStatus({
+    required this.type,
+    required this.sessionID,
+    required this.status,
+  });
+}
+
+/// Sentinel object returned for unknown/unhandled event types.
+/// Using a sentinel instead of throwing prevents SSE connection crashes
+/// when the backend introduces new event types.
+class EventUnknown {
+  final String type;
+  const EventUnknown(this.type);
+}
+
 Object parseEvent(Map<String, dynamic> json) {
   final type = json['type'] as String;
   switch (type) {
@@ -453,8 +474,19 @@ Object parseEvent(Map<String, dynamic> json) {
         sessionID: rejectedProps['sessionID'] as String,
         requestID: rejectedProps['requestID'] as String,
       );
+    case 'session.status':
+      final statusProps = json['properties'] as Map<String, dynamic>;
+      return EventSessionStatus(
+        type: type,
+        sessionID: statusProps['sessionID'] as String,
+        status: SessionStatus.fromJson(
+          statusProps['status'] as Map<String, dynamic>,
+        ),
+      );
     default:
-      throw Exception('Unknown Event type: $type');
+      // Return a sentinel instead of throwing so unknown future event types
+      // do not crash the SSE connection.
+      return EventUnknown(type);
   }
 }
 
