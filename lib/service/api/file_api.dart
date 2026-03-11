@@ -18,17 +18,45 @@ class FileApi {
 
   FileApi(this._client, {String? directory}) : _directory = directory;
 
-  Future<FileContent> getFileContent(String path) async {
-    final extraHeaders = <String, String>{};
-    if (_directory != null) {
-      extraHeaders['x-opencode-directory'] = _directory;
+  Map<String, String> get _extraHeaders {
+    final headers = <String, String>{};
+    final dir = _directory;
+    if (dir != null) {
+      headers['x-opencode-directory'] = dir;
     }
+    return headers;
+  }
 
+  Future<FileContent> getFileContent(String path) async {
     final Map<String, dynamic> json = await _client.get(
       '/file/content',
       queryParameters: {'path': path},
-      extraHeaders: extraHeaders,
+      extraHeaders: _extraHeaders,
     );
     return FileContent.fromJson(json);
+  }
+
+  /// Search for files matching [query] in the project.
+  ///
+  /// Returns a list of relative paths from the project root.
+  /// Pass [dirs] = true to include directories in results.
+  /// Pass [limit] to cap the result count.
+  Future<List<String>> findFile(
+    String query, {
+    bool dirs = true,
+    int? limit,
+  }) async {
+    final params = <String, String>{
+      'query': query,
+      'dirs': dirs ? 'true' : 'false',
+    };
+    if (limit != null) params['limit'] = limit.toString();
+
+    final result = await _client.get(
+      '/find/file',
+      queryParameters: params,
+      extraHeaders: _extraHeaders,
+    );
+    return List<String>.from(result as List);
   }
 }

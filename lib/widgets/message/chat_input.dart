@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mime/mime.dart';
 import '../../service/api/session_api.dart';
 import '../../service/api/command_api.dart';
+import '../../service/api/file_api.dart';
 import '../../service/api/models/prompt_input.dart';
 import '../../service/api/models/command_input.dart';
 import '../../service/api/models/command.dart';
@@ -13,6 +16,7 @@ import '../../providers/chat_config_provider.dart';
 import '../../providers/project_provider.dart';
 import '../../providers/session_status_provider.dart';
 import '../../service/api/models/session_status.dart';
+import 'at_mention_controller.dart';
 import 'model_selection_sheet.dart';
 
 class _ImageAttachment {
@@ -37,7 +41,8 @@ class ChatInput extends ConsumerStatefulWidget {
 }
 
 class _ChatInputState extends ConsumerState<ChatInput> {
-  final TextEditingController _controller = TextEditingController();
+  final AtMentionController _controller = AtMentionController();
+  final FocusNode _focusNode = FocusNode();
   final LayerLink _layerLink = LayerLink();
   bool _isLoading = false;
 
@@ -50,29 +55,75 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   OverlayEntry? _commandOverlay;
   List<Command> _filteredCommands = [];
 
+  // ─── @ file mention state ─────────────────────────────────────────
+  OverlayEntry? _atFileOverlay;
+  String _atFilter = '';
+  List<String> _atSearchResults = [];
+  int _atHighlightIndex = 0;
+  Timer? _atDebounceTimer;
+  // Position of the `@` character that triggered the current search.
+  int _atTriggerStart = -1;
+
   @override
   void initState() {
     super.initState();
     _controller.addListener(_onTextChanged);
+    _focusNode.onKeyEvent = _handleKeyEvent;
   }
 
   // ─── 命令检测逻辑 ─────────────────────────────────────────────
 
   void _onTextChanged() {
+    // Sync pills first — remove stale ones after any edit.
+    _controller.syncPills();
+
     if (_inputMode == _InputMode.shell) {
       _hideCommandOverlay();
+      _hideAtFileOverlay();
       return;
     }
 
     final text = _controller.text;
+    final sel = _controller.selection;
+    final cursorPos = sel.isCollapsed ? sel.baseOffset : -1;
 
-    // 含空格或不以 "/" 开头，立即关闭 Overlay
+    // ── @ file mention detection ──
+    if (cursorPos > 0) {
+      final textBefore = text.substring(0, cursorPos);
+      final atMatch = RegExp(r'@(\S*)$').firstMatch(textBefore);
+      if (atMatch != null) {
+        final filter = atMatch.group(1)!;
+        final atStart = atMatch.start;
+        // Only show overlay if we are not inside a pill.
+        if (_controller.pillAt(atStart) == null) {
+          _atTriggerStart = atStart;
+          if (filter != _atFilter) {
+            _atFilter = filter;
+            _atHighlightIndex = 0;
+            _triggerAtSearch(filter);
+          }
+          if (_atFileOverlay == null && _atSearchResults.isNotEmpty) {
+            _showAtFileOverlay();
+          }
+          // ── @ overlay is active; skip command detection ──
+          _hideCommandOverlay();
+          return;
+        }
+      }
+    }
+
+    // No @ match — hide the file overlay.
+    _hideAtFileOverlay();
+    _atTriggerStart = -1;
+    _atFilter = '';
+
+    // ── Command autocomplete ──
     if (!text.startsWith('/') || text.contains(' ')) {
       _hideCommandOverlay();
       return;
     }
 
-    final query = text.substring(1); // "/" 后的内容（可为空字符串）
+    final query = text.substring(1);
     final commands = ref.read(commandsProvider).asData?.value ?? [];
     final filtered = commands.where((c) => c.name.startsWith(query)).toList();
 
@@ -86,6 +137,31 @@ class _ChatInputState extends ConsumerState<ChatInput> {
         _commandOverlay!.markNeedsBuild();
       }
     }
+  }
+
+  /// Debounced search via GET /find/file.
+  void _triggerAtSearch(String filter) {
+    _atDebounceTimer?.cancel();
+    _atDebounceTimer = Timer(const Duration(milliseconds: 200), () async {
+      try {
+        final fileApi = await ref.read(fileApiProvider.future);
+        final results = await fileApi.findFile(filter, dirs: true, limit: 10);
+        if (!mounted) return;
+        setState(() {
+          _atSearchResults = results;
+          _atHighlightIndex = 0;
+        });
+        if (_atFileOverlay == null && results.isNotEmpty) {
+          _showAtFileOverlay();
+        } else {
+          _atFileOverlay?.markNeedsBuild();
+          // Hide overlay if no results.
+          if (results.isEmpty) _hideAtFileOverlay();
+        }
+      } catch (_) {
+        // Silently ignore search errors.
+      }
+    });
   }
 
   /// 从输入文本解析匹配的命令，返回 null 表示非命令或命令不存在。
@@ -105,7 +181,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     }
   }
 
-  // ─── Overlay ─────────────────────────────────────────────────
+  // ─── Command Overlay ──────────────────────────────────────────────
 
   void _showCommandOverlay() {
     final overlay = Overlay.of(context);
@@ -114,13 +190,10 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     final screenHeight = mediaQuery.size.height;
     const horizontalPadding = 12.0;
     final overlayWidth = screenWidth - horizontalPadding * 2;
-    // 最大高度：屏幕高度的 35%
     final maxHeight = screenHeight * 0.5;
 
-    // 通过 RenderBox 获取输入框容器在屏幕中的绝对位置
     final renderBox = context.findRenderObject() as RenderBox?;
     final boxOffset = renderBox?.localToGlobal(Offset.zero) ?? Offset.zero;
-    // overlay 底部紧贴输入框顶部，再上移 4px 间距
     final bottomY = boxOffset.dy - 4;
 
     _commandOverlay = OverlayEntry(
@@ -145,11 +218,116 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   void _onCommandSelected(Command command) {
     _hideCommandOverlay();
-    // 末尾始终加空格：关闭 overlay 并提示用户继续输入参数
     _controller.value = TextEditingValue(
       text: '/${command.name} ',
       selection: TextSelection.collapsed(offset: 1 + command.name.length + 1),
     );
+  }
+
+  // ─── @ File Overlay ───────────────────────────────────────────────
+
+  void _showAtFileOverlay() {
+    if (_atFileOverlay != null) return;
+    final overlay = Overlay.of(context);
+    final mediaQuery = MediaQuery.of(context);
+    final screenWidth = mediaQuery.size.width;
+    final screenHeight = mediaQuery.size.height;
+    const horizontalPadding = 12.0;
+    final overlayWidth = screenWidth - horizontalPadding * 2;
+    final maxHeight = screenHeight * 0.4;
+
+    final renderBox = context.findRenderObject() as RenderBox?;
+    final boxOffset = renderBox?.localToGlobal(Offset.zero) ?? Offset.zero;
+    final bottomY = boxOffset.dy - 4;
+
+    _atFileOverlay = OverlayEntry(
+      builder: (ctx) => Positioned(
+        left: horizontalPadding,
+        bottom: screenHeight - bottomY,
+        width: overlayWidth,
+        child: _AtFileSuggestionList(
+          results: _atSearchResults,
+          highlightIndex: _atHighlightIndex,
+          maxHeight: maxHeight,
+          onSelect: _onFileSelected,
+        ),
+      ),
+    );
+    overlay.insert(_atFileOverlay!);
+  }
+
+  void _hideAtFileOverlay() {
+    _atFileOverlay?.remove();
+    _atFileOverlay = null;
+  }
+
+  void _onFileSelected(String relativePath) {
+    _hideAtFileOverlay();
+    final sel = _controller.selection;
+    final cursorPos = sel.isCollapsed
+        ? sel.baseOffset
+        : _controller.text.length;
+    _controller.insertPill(relativePath, _atTriggerStart, cursorPos);
+    _atTriggerStart = -1;
+    _atFilter = '';
+    _atSearchResults = [];
+    _focusNode.requestFocus();
+  }
+
+  /// Move highlight up or down in the @ file overlay.
+  void _moveAtHighlight(int delta) {
+    if (_atSearchResults.isEmpty) return;
+    setState(() {
+      _atHighlightIndex = (_atHighlightIndex + delta).clamp(
+        0,
+        _atSearchResults.length - 1,
+      );
+    });
+    _atFileOverlay?.markNeedsBuild();
+  }
+
+  /// Confirm the current highlight in the @ file overlay.
+  void _confirmAtHighlight() {
+    if (_atSearchResults.isEmpty) return;
+    _onFileSelected(_atSearchResults[_atHighlightIndex]);
+  }
+
+  // ─── Keyboard handling ────────────────────────────────────────────
+
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+
+    // @ file overlay navigation.
+    if (_atFileOverlay != null) {
+      if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+        _moveAtHighlight(-1);
+        return KeyEventResult.handled;
+      }
+      if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+        _moveAtHighlight(1);
+        return KeyEventResult.handled;
+      }
+      if (event.logicalKey == LogicalKeyboardKey.enter ||
+          event.logicalKey == LogicalKeyboardKey.tab) {
+        _confirmAtHighlight();
+        return KeyEventResult.handled;
+      }
+      if (event.logicalKey == LogicalKeyboardKey.escape) {
+        _hideAtFileOverlay();
+        return KeyEventResult.handled;
+      }
+    }
+
+    // Backspace: delete pill atomically.
+    if (event.logicalKey == LogicalKeyboardKey.backspace) {
+      if (_controller.tryDeletePillBeforeCursor()) {
+        return KeyEventResult.handled;
+      }
+    }
+
+    return KeyEventResult.ignored;
   }
 
   // ─── 图片附件 ─────────────────────────────────────────────────
@@ -249,12 +427,13 @@ class _ChatInputState extends ConsumerState<ChatInput> {
             text,
           );
         } else {
-          await _dispatchPrompt(api, session, project, chatConfig, text);
+          await _dispatchPrompt(api, session, project, chatConfig);
         }
       }
 
       setState(() {
         _controller.clear();
+        _controller.pills.clear();
         _attachments.clear();
       });
     } catch (e) {
@@ -271,10 +450,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   }
 
   /// Sends an abort request to the backend for the current session.
-  ///
-  /// Sets [_isAborting] immediately to prevent duplicate requests.
-  /// The flag is cleared when the SSE stream delivers a `session.status`
-  /// event with `{ type: "idle" }` (see [build] listener).
   Future<void> _handleAbort() async {
     if (_isAborting) return;
     final session = ref.read(selectedSessionProvider).session;
@@ -286,9 +461,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       final api = await ref.read(sessionApiProvider.future);
       final project = await ref.read(selectedProjectProvider.future);
       await api.abortSession(session.id, directory: project?.worktree);
-      // Do NOT clear _isAborting here — wait for SSE idle confirmation.
     } catch (e) {
-      // Abort request failed — restore state so the user can retry.
       if (mounted) {
         setState(() => _isAborting = false);
         ScaffoldMessenger.of(
@@ -366,10 +539,35 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     String sessionId,
     dynamic project,
     ChatConfig chatConfig,
-    String text,
   ) async {
+    final text = _controller.text;
+    final rootDir = (project?.worktree as String?) ?? '';
+
+    // Build file parts from @ pills.
+    final fileParts = _controller.pills.map((pill) {
+      final rel = pill.path;
+      final absPath = rootDir.isNotEmpty
+          ? '$rootDir/$rel'.replaceAll('//', '/')
+          : rel;
+      return FilePartInput(
+        mime: 'text/plain',
+        url: 'file://$absPath',
+        filename: rel.split('/').last,
+        source: {
+          'type': 'file',
+          'path': absPath,
+          'text': {
+            'value': pill.displayText,
+            'start': pill.start,
+            'end': pill.end,
+          },
+        },
+      );
+    }).toList();
+
     final List<Object> parts = [
       if (text.isNotEmpty) TextPartInput(text: text),
+      ...fileParts,
       ..._attachments.map(
         (att) => FilePartInput(
           mime: att.mime,
@@ -394,7 +592,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   void _toggleAgent() {
     final config = ref.read(chatConfigProvider);
-
     final newAgent = config.agent == 'build' ? 'plan' : 'build';
     ref.read(chatConfigProvider.notifier).setAgent(newAgent);
   }
@@ -417,6 +614,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       }
     });
     _hideCommandOverlay();
+    _hideAtFileOverlay();
   }
 
   // ─── Build ────────────────────────────────────────────────────
@@ -426,10 +624,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     final chatConfig = ref.watch(chatConfigProvider);
     final theme = Theme.of(context);
     final isShellMode = _inputMode == _InputMode.shell;
-    // 预加载命令列表，确保 _onTextChanged 里 ref.read 时数据已就绪
     ref.watch(commandsProvider);
 
-    // Derive whether the backend is currently processing for this session.
     final sessionId = ref.watch(
       selectedSessionProvider.select((s) => s.session?.id),
     );
@@ -480,6 +676,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       ),
                     TextField(
                       controller: _controller,
+                      focusNode: _focusNode,
                       autofocus: false,
                       maxLines: 5,
                       minLines: 1,
@@ -529,8 +726,11 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   @override
   void dispose() {
     _hideCommandOverlay();
+    _hideAtFileOverlay();
+    _atDebounceTimer?.cancel();
     _controller.removeListener(_onTextChanged);
     _controller.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 }
@@ -606,18 +806,9 @@ class _AttachmentList extends StatelessWidget {
 }
 
 class _InputToolBar extends StatelessWidget {
-  /// True while the send HTTP request is in-flight (near-instant, but guards
-  /// against double-tap).
   final bool isLoading;
-
-  /// True when the backend is actively processing (busy or retry state).
-  /// When true, the action button switches to a Stop icon.
   final bool isWorking;
-
-  /// True while an abort request has been sent and we are awaiting the SSE
-  /// idle confirmation. Disables the button to prevent duplicate requests.
   final bool isAborting;
-
   final bool isShellMode;
   final VoidCallback onPickImage;
   final VoidCallback onSend;
@@ -635,8 +826,6 @@ class _InputToolBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Determine the current action-button configuration.
-    // Priority: aborting > working > sending > idle.
     final bool showStop = isWorking || isAborting;
     final bool actionDisabled = isAborting || isLoading;
     final Color buttonColor;
@@ -676,7 +865,6 @@ class _InputToolBar extends StatelessWidget {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                // Show a subtle spinner overlay while loading or aborting.
                 if (isLoading || isAborting)
                   const SizedBox(
                     width: 20,
@@ -903,6 +1091,105 @@ class _CommandSuggestionList extends StatelessWidget {
                         ),
                       ),
                     ],
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+// ─── @ 文件建议列表 Widget ────────────────────────────────────────
+
+class _AtFileSuggestionList extends StatelessWidget {
+  final List<String> results;
+  final int highlightIndex;
+  final double maxHeight;
+  final ValueChanged<String> onSelect;
+
+  const _AtFileSuggestionList({
+    required this.results,
+    required this.highlightIndex,
+    required this.maxHeight,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (results.isEmpty) return const SizedBox.shrink();
+
+    return Material(
+      elevation: 8,
+      borderRadius: BorderRadius.circular(10),
+      color: Colors.white,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxHeight),
+        child: ListView.separated(
+          shrinkWrap: true,
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          itemCount: results.length,
+          separatorBuilder: (_, _) =>
+              Divider(height: 1, color: Colors.grey[100]),
+          itemBuilder: (ctx, i) {
+            final path = results[i];
+            final isHighlighted = i == highlightIndex;
+            final filename = path.split('/').last;
+            final dir = path.contains('/')
+                ? path.substring(0, path.lastIndexOf('/'))
+                : null;
+
+            return GestureDetector(
+              // Use onTapDown + onTap to avoid defocusing the text field.
+              behavior: HitTestBehavior.opaque,
+              onTap: () => onSelect(path),
+              child: Container(
+                color: isHighlighted
+                    ? const Color(0xFFEFF6FF)
+                    : Colors.transparent,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.insert_drive_file_outlined,
+                      size: 16,
+                      color: isHighlighted
+                          ? const Color(0xFF2563EB)
+                          : Colors.grey[500],
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: RichText(
+                        overflow: TextOverflow.ellipsis,
+                        text: TextSpan(
+                          children: [
+                            TextSpan(
+                              text: filename,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: isHighlighted
+                                    ? const Color(0xFF1D4ED8)
+                                    : Colors.black87,
+                              ),
+                            ),
+                            if (dir != null)
+                              TextSpan(
+                                text: '  $dir',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
