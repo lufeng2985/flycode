@@ -20,6 +20,9 @@ class MessagePart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (part is CompactionPart) {
+      return const _CompactionDivider();
+    }
     if (part is TextPart) {
       final textPart = part as TextPart;
       if (textPart.synthetic == true) {
@@ -59,6 +62,34 @@ class MessagePart extends StatelessWidget {
       }
     }
     return const SizedBox.shrink();
+  }
+}
+
+class _CompactionDivider extends StatelessWidget {
+  const _CompactionDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        children: [
+          Expanded(child: Divider(color: Colors.grey[300], height: 1)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Text(
+              'Context compacted',
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey[500],
+                letterSpacing: 0.2,
+              ),
+            ),
+          ),
+          Expanded(child: Divider(color: Colors.grey[300], height: 1)),
+        ],
+      ),
+    );
   }
 }
 
