@@ -9,6 +9,7 @@ import '../widgets/message/message_list.dart';
 import '../widgets/message/chat_input.dart';
 import '../widgets/question/question_card.dart';
 import '../widgets/session/session_drawer.dart';
+import '../widgets/session/todo_list_widget.dart';
 
 class MyHomePage extends ConsumerWidget {
   const MyHomePage({super.key, required this.title});
@@ -100,6 +101,8 @@ class MyHomePage extends ConsumerWidget {
       ),
       body: Column(
         children: [
+          if (selectedSession != null)
+            TodoListWidget(sessionID: selectedSession.id),
           Expanded(
             child: selectedSession != null
                 ? MessageList(

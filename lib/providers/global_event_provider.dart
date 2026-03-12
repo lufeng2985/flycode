@@ -7,6 +7,7 @@ import '../service/api/session_api.dart';
 import 'question_provider.dart';
 import 'session_provider.dart';
 import 'session_status_provider.dart';
+import 'todo_provider.dart';
 
 part 'global_event_provider.g.dart';
 
@@ -58,6 +59,10 @@ class GlobalEventListener extends _$GlobalEventListener {
       ref
           .read(sessionStatusProvider.notifier)
           .updateStatus(payload.sessionID, payload.status);
+    } else if (payload is EventTodoUpdated) {
+      ref
+          .read(sessionTodosProvider(payload.sessionID).notifier)
+          .updateTodos(payload.todos);
     }
     // EventUnknown and other unhandled payloads are intentionally ignored.
   }

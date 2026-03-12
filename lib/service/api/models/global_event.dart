@@ -8,11 +8,17 @@ part 'global_event.g.dart';
 
 @JsonSerializable()
 class Todo {
+  final String id;
   final String content;
   final String status;
   final String priority;
 
-  Todo({required this.content, required this.status, required this.priority});
+  Todo({
+    required this.id,
+    required this.content,
+    required this.status,
+    required this.priority,
+  });
 
   factory Todo.fromJson(Map<String, dynamic> json) => _$TodoFromJson(json);
   Map<String, dynamic> toJson() => _$TodoToJson(this);

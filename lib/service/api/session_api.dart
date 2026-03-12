@@ -1,6 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../providers/project_provider.dart';
 import 'api_client.dart';
+import 'models/global_event.dart' show Todo;
 import 'models/session.dart';
 import 'models/message.dart' hide FileDiff;
 import 'models/prompt_input.dart';
@@ -289,14 +290,16 @@ class SessionApi {
     await _client.delete('/session/$id/share', queryParameters: queryParams);
   }
 
-  Future<Map<String, dynamic>> getSessionTodos(
-    String id, {
-    String? directory,
-  }) async {
+  Future<List<Todo>> getSessionTodos(String id, {String? directory}) async {
     final queryParams = <String, String>{};
     if (directory != null) queryParams['directory'] = directory;
 
-    return await _client.get('/session/$id/todo', queryParameters: queryParams);
+    final result = await _client.get(
+      '/session/$id/todo',
+      queryParameters: queryParams,
+    );
+    final list = result as List<dynamic>;
+    return list.map((e) => Todo.fromJson(e as Map<String, dynamic>)).toList();
   }
 
   Future<Map<String, dynamic>> getSessionStatus({String? directory}) async {
