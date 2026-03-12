@@ -61,7 +61,18 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
   }
 
   String? get _subSessionId {
-    return _part.metadata?['sessionId'] as String?;
+    // Check top-level ToolPart.metadata first
+    final topLevel = _part.metadata?['sessionId'] as String?;
+    if (topLevel != null) return topLevel;
+    // Fall back to state-level metadata (server may put sessionId there)
+    final state = _part.state;
+    if (state is ToolStateCompleted) {
+      return state.metadata['sessionId'] as String?;
+    }
+    if (state is ToolStateRunning) {
+      return state.metadata?['sessionId'] as String?;
+    }
+    return null;
   }
 
   bool get _canNavigate =>
