@@ -42,7 +42,7 @@ final class ChatConfigNotifierProvider
 }
 
 String _$chatConfigNotifierHash() =>
-    r'ac1b35158f8a232e6c9bac6d50a28d7058aa07c3';
+    r'5b99b7283f26bcc5714dc14dafd2ba2d05df8fb2';
 
 abstract class _$ChatConfigNotifier extends $Notifier<ChatConfig> {
   ChatConfig build();

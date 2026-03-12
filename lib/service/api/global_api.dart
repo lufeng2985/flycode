@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'api_client.dart';
+import 'models/agent.dart';
 import 'models/config.dart';
 import 'models/global_event.dart';
 import 'models/health.dart';
@@ -26,6 +27,13 @@ class GlobalApi {
   Future<Config> getConfig() async {
     final json = await _client.get('/global/config');
     return Config.fromJson(json);
+  }
+
+  Future<List<Agent>> getAgents({String? directory}) async {
+    final queryParams = directory != null ? {'directory': directory} : null;
+    final json = await _client.get('/agent', queryParameters: queryParams);
+    if (json is! List) return [];
+    return json.whereType<Map<String, dynamic>>().map(Agent.fromJson).toList();
   }
 
   Future<Config> updateConfig(Config config) async {

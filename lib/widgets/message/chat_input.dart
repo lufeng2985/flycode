@@ -11,10 +11,12 @@ import '../../service/api/file_api.dart';
 import '../../service/api/models/prompt_input.dart';
 import '../../service/api/models/command_input.dart';
 import '../../service/api/models/command.dart';
+import '../../providers/agent_provider.dart';
 import '../../providers/session_provider.dart';
 import '../../providers/chat_config_provider.dart';
 import '../../providers/project_provider.dart';
 import '../../providers/session_status_provider.dart';
+import '../../service/api/models/agent.dart';
 import '../../service/api/models/session_status.dart';
 import 'at_mention_controller.dart';
 import 'model_selection_sheet.dart';
@@ -590,10 +592,44 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   // ─── Agent / Model 切换 ───────────────────────────────────────
 
-  void _toggleAgent() {
-    final config = ref.read(chatConfigProvider);
-    final newAgent = config.agent == 'build' ? 'plan' : 'build';
-    ref.read(chatConfigProvider.notifier).setAgent(newAgent);
+  /// Cycles through agents when there are ≤ 3, otherwise shows the selector.
+  void _handleAgentTap(List<Agent> agents) {
+    if (agents.isEmpty) return;
+    if (agents.length <= 3) {
+      _cycleAgent(agents);
+    } else {
+      _showAgentSelector(agents);
+    }
+  }
+
+  /// Cycles to the next agent in the list (wraps around).
+  void _cycleAgent(List<Agent> agents) {
+    final current = ref.read(chatConfigProvider).agent;
+    final idx = agents.indexWhere((a) => a.name == current);
+    final nextIdx = (idx + 1) % agents.length;
+    final next = agents[nextIdx];
+    ref
+        .read(chatConfigProvider.notifier)
+        .setAgent(next.name, linkedModel: next.model);
+  }
+
+  /// Shows a bottom sheet for selecting an agent (used when > 3 agents).
+  void _showAgentSelector(List<Agent> agents) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _AgentSelectionSheet(
+        agents: agents,
+        currentAgent: ref.read(chatConfigProvider).agent,
+        onSelect: (agent) {
+          ref
+              .read(chatConfigProvider.notifier)
+              .setAgent(agent.name, linkedModel: agent.model);
+          Navigator.of(context).pop();
+        },
+      ),
+    );
   }
 
   void _showModelSelector() {
@@ -712,7 +748,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
             const SizedBox(height: 12),
             _ConfigToolBar(
               chatConfig: chatConfig,
-              onToggleAgent: _toggleAgent,
+              agents: ref.watch(agentsProvider).asData?.value ?? const [],
+              onAgentTap: _handleAgentTap,
               onShowModelSelector: _showModelSelector,
               inputMode: _inputMode,
               onModeChange: _setInputMode,
@@ -896,27 +933,34 @@ class _InputToolBar extends StatelessWidget {
 
 class _ConfigToolBar extends StatelessWidget {
   final ChatConfig chatConfig;
-  final VoidCallback onToggleAgent;
+  final List<Agent> agents;
+  final ValueChanged<List<Agent>> onAgentTap;
   final VoidCallback onShowModelSelector;
   final _InputMode inputMode;
   final ValueChanged<_InputMode> onModeChange;
 
   const _ConfigToolBar({
     required this.chatConfig,
-    required this.onToggleAgent,
+    required this.agents,
+    required this.onAgentTap,
     required this.onShowModelSelector,
     required this.inputMode,
     required this.onModeChange,
   });
+
+  String get _agentLabel {
+    final name = chatConfig.agent;
+    if (name.isEmpty) return 'Agent';
+    return '${name[0].toUpperCase()}${name.substring(1)}';
+  }
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
         _SelectionChip(
-          onTap: onToggleAgent,
-          label:
-              '${chatConfig.agent[0].toUpperCase()}${chatConfig.agent.substring(1)}',
+          onTap: agents.isNotEmpty ? () => onAgentTap(agents) : null,
+          label: _agentLabel,
         ),
         const SizedBox(width: 8),
         _SelectionChip(
@@ -1099,6 +1143,145 @@ class _CommandSuggestionList extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+// ─── Agent 选择底部弹窗（> 3 个 agent 时使用）────────────────────
+
+class _AgentSelectionSheet extends StatelessWidget {
+  final List<Agent> agents;
+  final String currentAgent;
+  final ValueChanged<Agent> onSelect;
+
+  const _AgentSelectionSheet({
+    required this.agents,
+    required this.currentAgent,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 拖动指示条
+            Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+              child: Text(
+                '选择 Agent',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const Divider(height: 1),
+            ListView.separated(
+              shrinkWrap: true,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: agents.length,
+              separatorBuilder: (_, _) =>
+                  Divider(height: 1, color: Colors.grey[100]),
+              itemBuilder: (ctx, i) {
+                final agent = agents[i];
+                final isSelected = agent.name == currentAgent;
+                final label = agent.name.isNotEmpty
+                    ? '${agent.name[0].toUpperCase()}${agent.name.substring(1)}'
+                    : agent.name;
+                return InkWell(
+                  onTap: () => onSelect(agent),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    child: Row(
+                      children: [
+                        // 颜色圆点（如果有 color 字段）
+                        if (agent.color != null) ...[
+                          Container(
+                            width: 10,
+                            height: 10,
+                            decoration: BoxDecoration(
+                              color: _parseColor(agent.color!),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                        ],
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                label,
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w500,
+                                  color: isSelected
+                                      ? theme.colorScheme.primary
+                                      : Colors.black87,
+                                ),
+                              ),
+                              if (agent.description != null &&
+                                  agent.description!.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: Text(
+                                    agent.description!,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.grey,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        if (isSelected)
+                          Icon(
+                            Icons.check,
+                            size: 18,
+                            color: theme.colorScheme.primary,
+                          ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _parseColor(String hex) {
+    try {
+      final buffer = StringBuffer();
+      if (hex.length == 7) buffer.write('ff');
+      buffer.write(hex.replaceFirst('#', ''));
+      return Color(int.parse(buffer.toString(), radix: 16));
+    } catch (_) {
+      return Colors.grey;
+    }
   }
 }
 

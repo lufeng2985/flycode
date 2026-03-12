@@ -1,4 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import '../service/api/models/agent.dart' as agent_model;
 import '../service/api/models/message.dart';
 import 'session_provider.dart';
 
@@ -64,15 +65,26 @@ class ChatConfigNotifier extends _$ChatConfigNotifier {
     try {
       final lastUser = messages.lastWhere((m) => m.info is UserMessage);
       if (lastUser.info case final UserMessage msg) {
-        state = state.copyWith(model: msg.model);
+        state = state.copyWith(agent: msg.agent, model: msg.model);
       }
     } on StateError {
       // No UserMessage found – preserve current model.
     }
   }
 
-  void setAgent(String agent) {
-    state = state.copyWith(agent: agent);
+  /// Sets the active agent. If [linkedModel] is provided (from the agent's
+  /// bound model field), the model is also updated automatically.
+  void setAgent(String agent, {agent_model.AgentModel? linkedModel}) {
+    var newState = state.copyWith(agent: agent);
+    if (linkedModel != null) {
+      newState = newState.copyWith(
+        model: MessageModel(
+          providerID: linkedModel.providerID,
+          modelID: linkedModel.modelID,
+        ),
+      );
+    }
+    state = newState;
   }
 
   void setModel(MessageModel model) {
