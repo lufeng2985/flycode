@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'pages/file_content_page.dart';
 import 'pages/home_page.dart';
 import 'pages/project_list_page.dart';
+import 'pages/session_context_page.dart';
 import 'pages/session_diff_page.dart';
 import 'pages/settings_page.dart';
 import 'pages/server_config_page.dart';
@@ -68,6 +69,11 @@ final GoRouter appRouter = GoRouter(
         final sessionID = state.extra as String;
         return SubSessionPage(sessionID: sessionID);
       },
+    ),
+    GoRoute(
+      path: '/session-context',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const SessionContextPage(),
     ),
   ],
 );

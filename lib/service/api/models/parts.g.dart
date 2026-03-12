@@ -7,7 +7,7 @@ part of 'parts.dart';
 // **************************************************************************
 
 PartTime _$PartTimeFromJson(Map<String, dynamic> json) => PartTime(
-  start: (json['start'] as num).toInt(),
+  start: (json['start'] as num?)?.toInt(),
   end: (json['end'] as num?)?.toInt(),
 );
 
@@ -67,8 +67,8 @@ Map<String, dynamic> _$ReasoningPartToJson(ReasoningPart instance) =>
 FilePartSourceText _$FilePartSourceTextFromJson(Map<String, dynamic> json) =>
     FilePartSourceText(
       value: json['value'] as String,
-      start: (json['start'] as num).toInt(),
-      end: (json['end'] as num).toInt(),
+      start: (json['start'] as num?)?.toInt(),
+      end: (json['end'] as num?)?.toInt(),
     );
 
 Map<String, dynamic> _$FilePartSourceTextToJson(FilePartSourceText instance) =>
@@ -300,7 +300,7 @@ StepFinishPart _$StepFinishPartFromJson(Map<String, dynamic> json) =>
       type: json['type'] as String,
       reason: json['reason'] as String,
       snapshot: json['snapshot'] as String?,
-      cost: (json['cost'] as num).toInt(),
+      cost: (json['cost'] as num?)?.toDouble(),
       tokens: MessageTokens.fromJson(json['tokens'] as Map<String, dynamic>),
     );
 
@@ -318,8 +318,9 @@ Map<String, dynamic> _$StepFinishPartToJson(StepFinishPart instance) =>
 
 MessageTokens _$MessageTokensFromJson(Map<String, dynamic> json) =>
     MessageTokens(
-      input: (json['input'] as num).toInt(),
-      output: (json['output'] as num).toInt(),
+      input: (json['input'] as num?)?.toInt(),
+      output: (json['output'] as num?)?.toInt(),
+      total: (json['total'] as num?)?.toInt(),
       reasoning: (json['reasoning'] as num?)?.toInt(),
       cache: json['cache'] == null
           ? null
@@ -330,6 +331,7 @@ Map<String, dynamic> _$MessageTokensToJson(MessageTokens instance) =>
     <String, dynamic>{
       'input': instance.input,
       'output': instance.output,
+      'total': instance.total,
       'reasoning': instance.reasoning,
       'cache': instance.cache,
     };

@@ -45,8 +45,9 @@ Map<String, dynamic> _$MessageCacheTokensToJson(MessageCacheTokens instance) =>
 
 MessageTokens _$MessageTokensFromJson(Map<String, dynamic> json) =>
     MessageTokens(
-      input: (json['input'] as num).toInt(),
-      output: (json['output'] as num).toInt(),
+      input: (json['input'] as num?)?.toInt(),
+      output: (json['output'] as num?)?.toInt(),
+      total: (json['total'] as num?)?.toInt(),
       reasoning: (json['reasoning'] as num?)?.toInt(),
       cache: json['cache'] == null
           ? null
@@ -57,6 +58,7 @@ Map<String, dynamic> _$MessageTokensToJson(MessageTokens instance) =>
     <String, dynamic>{
       'input': instance.input,
       'output': instance.output,
+      'total': instance.total,
       'reasoning': instance.reasoning,
       'cache': instance.cache,
     };
@@ -198,7 +200,7 @@ AssistantMessage _$AssistantMessageFromJson(Map<String, dynamic> json) =>
       mode: json['mode'] as String,
       path: MessagePath.fromJson(json['path'] as Map<String, dynamic>),
       summary: json['summary'] as bool?,
-      cost: (json['cost'] as num?)?.toInt(),
+      cost: (json['cost'] as num?)?.toDouble(),
       tokens: MessageTokens.fromJson(json['tokens'] as Map<String, dynamic>),
       finish: json['finish'] as String?,
     );

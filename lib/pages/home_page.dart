@@ -64,12 +64,18 @@ class MyHomePage extends ConsumerWidget {
           ),
         ),
         actions: [
-          if (selectedSession != null)
+          if (selectedSession != null) ...[
             IconButton(
               icon: const Icon(Icons.difference_outlined, color: Colors.grey),
               tooltip: '文件变更',
               onPressed: () => context.push('/diff', extra: selectedSession.id),
             ),
+            IconButton(
+              icon: const Icon(Icons.info_outline, color: Colors.grey),
+              tooltip: '上下文',
+              onPressed: () => context.push('/session-context'),
+            ),
+          ],
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),

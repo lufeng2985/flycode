@@ -18,17 +18,17 @@ class Part {
 
 @JsonSerializable()
 class PartTime {
-  final int start;
+  final int? start;
   final int? end;
 
-  PartTime({required this.start, this.end});
+  PartTime({this.start, this.end});
 
   factory PartTime.fromJson(Map<String, dynamic> json) => PartTime(
-    start: (json['start'] as num).toInt(),
+    start: (json['start'] as num?)?.toInt(),
     end: (json['end'] as num?)?.toInt(),
   );
   Map<String, dynamic> toJson() => {
-    'start': start,
+    if (start != null) 'start': start,
     if (end != null) 'end': end,
   };
 }
@@ -126,22 +126,26 @@ class ReasoningPart {
 @JsonSerializable()
 class FilePartSourceText {
   final String value;
-  final int start;
-  final int end;
+  final int? start;
+  final int? end;
 
   FilePartSourceText({
     required this.value,
-    required this.start,
-    required this.end,
+    this.start,
+    this.end,
   });
 
   factory FilePartSourceText.fromJson(Map<String, dynamic> json) =>
       FilePartSourceText(
         value: json['value'] as String,
-        start: (json['start'] as num).toInt(),
-        end: (json['end'] as num).toInt(),
+        start: (json['start'] as num?)?.toInt(),
+        end: (json['end'] as num?)?.toInt(),
       );
-  Map<String, dynamic> toJson() => {'value': value, 'start': start, 'end': end};
+  Map<String, dynamic> toJson() => {
+    'value': value,
+    if (start != null) 'start': start,
+    if (end != null) 'end': end,
+  };
 }
 
 @JsonSerializable()
@@ -578,7 +582,7 @@ class StepFinishPart {
   final String type;
   final String reason;
   final String? snapshot;
-  final int cost;
+  final double? cost;
   final MessageTokens tokens;
 
   StepFinishPart({
@@ -588,7 +592,7 @@ class StepFinishPart {
     required this.type,
     required this.reason,
     this.snapshot,
-    required this.cost,
+    this.cost,
     required this.tokens,
   });
 
@@ -599,7 +603,7 @@ class StepFinishPart {
     type: json['type'] as String,
     reason: json['reason'] as String,
     snapshot: json['snapshot'] as String?,
-    cost: (json['cost'] as num).toInt(),
+    cost: (json['cost'] as num?)?.toDouble(),
     tokens: MessageTokens.fromJson(json['tokens'] as Map<String, dynamic>),
   );
   Map<String, dynamic> toJson() => {
@@ -609,36 +613,40 @@ class StepFinishPart {
     'type': type,
     'reason': reason,
     if (snapshot != null) 'snapshot': snapshot,
-    'cost': cost,
+    if (cost != null) 'cost': cost,
     'tokens': tokens.toJson(),
   };
 }
 
 @JsonSerializable()
 class MessageTokens {
-  final int input;
-  final int output;
+  final int? input;
+  final int? output;
+  final int? total;
   final int? reasoning;
   final MessageCacheTokens? cache;
 
   MessageTokens({
-    required this.input,
-    required this.output,
+    this.input,
+    this.output,
+    this.total,
     this.reasoning,
     this.cache,
   });
 
   factory MessageTokens.fromJson(Map<String, dynamic> json) => MessageTokens(
-    input: (json['input'] as num).toInt(),
-    output: (json['output'] as num).toInt(),
+    input: (json['input'] as num?)?.toInt(),
+    output: (json['output'] as num?)?.toInt(),
+    total: (json['total'] as num?)?.toInt(),
     reasoning: (json['reasoning'] as num?)?.toInt(),
     cache: json['cache'] == null
         ? null
         : MessageCacheTokens.fromJson(json['cache'] as Map<String, dynamic>),
   );
   Map<String, dynamic> toJson() => {
-    'input': input,
-    'output': output,
+    if (input != null) 'input': input,
+    if (output != null) 'output': output,
+    if (total != null) 'total': total,
     if (reasoning != null) 'reasoning': reasoning,
     if (cache != null) 'cache': cache?.toJson(),
   };

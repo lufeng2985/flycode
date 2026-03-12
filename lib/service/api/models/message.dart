@@ -69,29 +69,33 @@ class MessageCacheTokens {
 
 @JsonSerializable()
 class MessageTokens {
-  final int input;
-  final int output;
+  final int? input;
+  final int? output;
+  final int? total;
   final int? reasoning;
   final MessageCacheTokens? cache;
 
   MessageTokens({
-    required this.input,
-    required this.output,
+    this.input,
+    this.output,
+    this.total,
     this.reasoning,
     this.cache,
   });
 
   factory MessageTokens.fromJson(Map<String, dynamic> json) => MessageTokens(
-    input: (json['input'] as num).toInt(),
-    output: (json['output'] as num).toInt(),
+    input: (json['input'] as num?)?.toInt(),
+    output: (json['output'] as num?)?.toInt(),
+    total: (json['total'] as num?)?.toInt(),
     reasoning: (json['reasoning'] as num?)?.toInt(),
     cache: json['cache'] == null
         ? null
         : MessageCacheTokens.fromJson(json['cache'] as Map<String, dynamic>),
   );
   Map<String, dynamic> toJson() => {
-    'input': input,
-    'output': output,
+    if (input != null) 'input': input,
+    if (output != null) 'output': output,
+    if (total != null) 'total': total,
     if (reasoning != null) 'reasoning': reasoning,
     if (cache != null) 'cache': cache?.toJson(),
   };
@@ -365,7 +369,7 @@ class AssistantMessage {
   final String mode;
   final MessagePath path;
   final bool? summary;
-  final int? cost;
+  final double? cost;
   final MessageTokens tokens;
   final String? finish;
 
@@ -401,7 +405,7 @@ class AssistantMessage {
         mode: json['mode'] as String,
         path: MessagePath.fromJson(json['path'] as Map<String, dynamic>),
         summary: json['summary'] as bool?,
-        cost: (json['cost'] as num?)?.toInt(),
+        cost: (json['cost'] as num?)?.toDouble(),
         tokens: MessageTokens.fromJson(json['tokens'] as Map<String, dynamic>),
         finish: json['finish'] as String?,
       );

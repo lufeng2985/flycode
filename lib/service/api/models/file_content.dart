@@ -1,34 +1,34 @@
 class FileContentHunk {
-  final int oldStart;
-  final int oldLines;
-  final int newStart;
-  final int newLines;
+  final int? oldStart;
+  final int? oldLines;
+  final int? newStart;
+  final int? newLines;
   final List<String> lines;
 
   FileContentHunk({
-    required this.oldStart,
-    required this.oldLines,
-    required this.newStart,
-    required this.newLines,
+    this.oldStart,
+    this.oldLines,
+    this.newStart,
+    this.newLines,
     required this.lines,
   });
 
   factory FileContentHunk.fromJson(Map<String, dynamic> json) =>
       FileContentHunk(
-        oldStart: (json['oldStart'] as num).toInt(),
-        oldLines: (json['oldLines'] as num).toInt(),
-        newStart: (json['newStart'] as num).toInt(),
-        newLines: (json['newLines'] as num).toInt(),
+        oldStart: (json['oldStart'] as num?)?.toInt(),
+        oldLines: (json['oldLines'] as num?)?.toInt(),
+        newStart: (json['newStart'] as num?)?.toInt(),
+        newLines: (json['newLines'] as num?)?.toInt(),
         lines: (json['lines'] as List<dynamic>)
             .map((e) => e as String)
             .toList(),
       );
 
   Map<String, dynamic> toJson() => {
-    'oldStart': oldStart,
-    'oldLines': oldLines,
-    'newStart': newStart,
-    'newLines': newLines,
+    if (oldStart != null) 'oldStart': oldStart,
+    if (oldLines != null) 'oldLines': oldLines,
+    if (newStart != null) 'newStart': newStart,
+    if (newLines != null) 'newLines': newLines,
     'lines': lines,
   };
 }

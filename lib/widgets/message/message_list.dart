@@ -16,16 +16,26 @@ class MessageList extends ConsumerWidget {
 
     return messagesAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.red),
-            const SizedBox(height: 16),
-            Text('Error: $error'),
-          ],
-        ),
-      ),
+      error: (error, stack) {
+        debugPrint('MessageList Error: $error\n$stack');
+        return Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                const SizedBox(height: 16),
+                SelectableText(
+                  'Error: $error\n\nStack trace:\n$stack',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
       data: (messages) =>
           _buildList(messages, onNavigateToSubSession: onNavigateToSubSession),
     );
