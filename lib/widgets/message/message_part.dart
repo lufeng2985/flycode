@@ -4,7 +4,6 @@ import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import '../../service/api/models/parts.dart';
 import 'code_block_widget.dart';
 import 'tool_use_widget.dart';
-import 'reasoning_widget.dart';
 
 class MessagePart extends StatelessWidget {
   final Object part;
@@ -50,8 +49,6 @@ class MessagePart extends StatelessWidget {
         toolPart: part as ToolPart,
         onNavigateToSubSession: onNavigateToSubSession,
       );
-    } else if (part is ReasoningPart) {
-      return ReasoningWidget(reasoning: part as ReasoningPart);
     } else if (part is FilePart) {
       final filePart = part as FilePart;
       if (filePart.mime.startsWith('image/')) {

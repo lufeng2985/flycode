@@ -65,8 +65,9 @@ class _CodeBlockWidgetState extends State<_CodeBlockWidget> {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
+        color: const Color(0xFFF6F8FA),
         borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -75,7 +76,10 @@ class _CodeBlockWidgetState extends State<_CodeBlockWidget> {
           // Header bar
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            color: const Color(0xFF2D2D2D),
+            decoration: const BoxDecoration(
+              color: Color(0xFFEFF1F3),
+              border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB))),
+            ),
             child: Row(
               children: [
                 if (hasLanguage)
@@ -84,7 +88,7 @@ class _CodeBlockWidgetState extends State<_CodeBlockWidget> {
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFFAAAAAA),
+                      color: Color(0xFF57606A),
                       letterSpacing: 0.5,
                     ),
                   )
@@ -94,7 +98,7 @@ class _CodeBlockWidgetState extends State<_CodeBlockWidget> {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF777777),
+                      color: Color(0xFF57606A),
                       letterSpacing: 0.5,
                     ),
                   ),
@@ -128,16 +132,16 @@ class _CodeBlockWidgetState extends State<_CodeBlockWidget> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                Icons.copy,
+                                Icons.copy_outlined,
                                 size: 14,
-                                color: Color(0xFF888888),
+                                color: Color(0xFF57606A),
                               ),
                               SizedBox(width: 4),
                               Text(
                                 'Copy',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Color(0xFF888888),
+                                  color: Color(0xFF57606A),
                                 ),
                               ),
                             ],
@@ -156,7 +160,7 @@ class _CodeBlockWidgetState extends State<_CodeBlockWidget> {
               style: const TextStyle(
                 fontFamily: 'monospace',
                 fontSize: 13,
-                color: Color(0xFFD4D4D4),
+                color: Color(0xFF1F2328),
                 height: 1.5,
               ),
             ),

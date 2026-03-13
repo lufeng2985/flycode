@@ -114,13 +114,8 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
       return _buildQuestionDismissed(context);
     }
 
-    return Container(
-      margin: const EdgeInsets.only(top: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F8F8),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE5E5E5)),
-      ),
+    return Padding(
+      padding: const EdgeInsets.only(top: 6, bottom: 2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -161,15 +156,14 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
     final subtitle = meta.getSubtitle(input);
     final args = _isActive ? <String>[] : meta.getArgs(input);
 
-    return InkWell(
+    return GestureDetector(
       onTap: _canNavigate
           ? () => widget.onNavigateToSubSession!(_subSessionId!)
           : _hasExpandableContent
           ? () => setState(() => _isExpanded = !_isExpanded)
           : null,
-      borderRadius: BorderRadius.circular(8),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -181,7 +175,7 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
                     child: Text(
                       displayName,
                       style: const TextStyle(
-                        fontSize: 12,
+                        fontSize: 13,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -189,19 +183,19 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
                 : Text(
                     displayName,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: _isError ? Colors.red[700] : Colors.black87,
                     ),
                   ),
             // Args chips (only when not active)
             if (args.isNotEmpty) ...[
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
               ...args.map((arg) => _ArgChip(label: arg)),
             ],
             // Subtitle
             if (!_isActive && subtitle != null && subtitle.isNotEmpty) ...[
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
               Expanded(
                 child: _part.tool == 'webfetch'
                     ? GestureDetector(
@@ -211,7 +205,7 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 13,
                             color: Theme.of(context).colorScheme.primary,
                             decoration: TextDecoration.underline,
                           ),
@@ -221,7 +215,7 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
                         subtitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        style: TextStyle(fontSize: 13, color: Colors.grey[700]),
                       ),
               ),
             ] else
@@ -236,7 +230,7 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
             else if (_hasExpandableContent && !_isActive)
               Icon(
                 _isExpanded ? Icons.expand_less : Icons.expand_more,
-                size: 15,
+                size: 16,
                 color: Colors.grey[500],
               ),
           ],
@@ -248,7 +242,7 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
   Widget _buildErrorBody(BuildContext context) {
     final err = _errorText ?? '';
     return Container(
-      margin: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+      margin: const EdgeInsets.only(top: 4, bottom: 8),
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: Colors.red[50],
@@ -266,7 +260,6 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Divider(height: 1, color: Color(0xFFE5E5E5)),
         if (_part.tool == 'bash')
           _BashOutputPanel(
             command: _input['command']?.toString() ?? '',
@@ -300,17 +293,17 @@ class _ArgChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(right: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      margin: const EdgeInsets.only(right: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: const Color(0xFFEEEEEE),
+        color: const Color(0xFFF1F1F1),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
         label,
         style: const TextStyle(
-          fontSize: 10,
-          color: Color(0xFF666666),
+          fontSize: 11,
+          color: Color(0xFF555555),
           fontFamily: 'monospace',
         ),
       ),
@@ -338,7 +331,7 @@ class _BashOutputPanel extends StatelessWidget {
         : (running ? 'running...' : 'no output');
 
     return Padding(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.only(top: 4, bottom: 8),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(10),
@@ -371,7 +364,7 @@ class _FilePathPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+      padding: const EdgeInsets.only(top: 4, bottom: 8),
       child: Text(
         filePath,
         style: TextStyle(
