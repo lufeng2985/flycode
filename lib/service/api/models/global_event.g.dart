@@ -7,7 +7,7 @@ part of 'global_event.dart';
 // **************************************************************************
 
 Todo _$TodoFromJson(Map<String, dynamic> json) => Todo(
-  id: json['id'] as String,
+  id: json['id'] as String?,
   content: json['content'] as String,
   status: json['status'] as String,
   priority: json['priority'] as String,

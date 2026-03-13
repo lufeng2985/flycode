@@ -8,13 +8,13 @@ part 'global_event.g.dart';
 
 @JsonSerializable()
 class Todo {
-  final String id;
+  final String? id;
   final String content;
   final String status;
   final String priority;
 
   Todo({
-    required this.id,
+    this.id,
     required this.content,
     required this.status,
     required this.priority,
@@ -511,7 +511,7 @@ class GlobalEvent {
 GlobalEvent parseGlobalEvent(Map<String, dynamic> json) {
   final payloadJson = json['payload'] as Map<String, dynamic>;
   return GlobalEvent(
-    directory: json['directory'] as String,
+    directory: json['directory'] as String? ?? '',
     payload: parseEvent(payloadJson),
   );
 }

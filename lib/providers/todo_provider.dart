@@ -9,9 +9,9 @@ part 'todo_provider.g.dart';
 /// - build(sessionID): 通过 REST GET /session/{id}/todo 初始化加载
 /// - updateTodos(todos): 由 SSE todo.updated 事件调用，全量替换列表
 ///
-/// 使用 keepAlive: false（默认 autoDispose），当 sessionID 对应的 UI 全部卸载后
-/// provider 会自动销毁；SSE 事件通过 ref.read 访问，不依赖生命周期。
-@riverpod
+/// 使用 keepAlive: true，确保即使 TodoListWidget 未挂载（如切换路由），
+/// SSE 通过 ref.read 写入的 updateTodos 数据不会因 provider 销毁而丢失。
+@Riverpod(keepAlive: true)
 class SessionTodosNotifier extends _$SessionTodosNotifier {
   @override
   Future<List<Todo>> build(String sessionID) async {

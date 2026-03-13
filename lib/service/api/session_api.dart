@@ -298,6 +298,7 @@ class SessionApi {
       '/session/$id/todo',
       queryParameters: queryParams,
     );
+    if (result == null) return [];
     final list = result as List<dynamic>;
     return list.map((e) => Todo.fromJson(e as Map<String, dynamic>)).toList();
   }
