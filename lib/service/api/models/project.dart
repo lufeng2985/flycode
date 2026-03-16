@@ -90,10 +90,27 @@ class Project {
         ? null
         : ProjectCommands.fromJson(json['commands'] as Map<String, dynamic>),
     time: ProjectTime.fromJson(json['time'] as Map<String, dynamic>),
-    sandboxes: (json['sandboxes'] as List<dynamic>)
-        .map((e) => e as String)
-        .toList(),
+    sandboxes:
+        (json['sandboxes'] as List<dynamic>?)
+            ?.map((e) => e as String)
+            .toList() ??
+        [],
   );
+
+  factory Project.fromDirectory(String directory, {int? updatedAt}) {
+    final parts = directory.replaceAll('\\', '/').split('/');
+    final name = parts.lastWhere((p) => p.isNotEmpty, orElse: () => 'root');
+    final id = Uri.encodeComponent(directory).replaceAll('%', '_');
+    final now = DateTime.now().millisecondsSinceEpoch;
+
+    return Project(
+      id: id,
+      worktree: directory,
+      name: name,
+      time: ProjectTime(created: now, updated: updatedAt ?? now),
+      sandboxes: [],
+    );
+  }
 
   Map<String, dynamic> toJson() => {
     'id': id,

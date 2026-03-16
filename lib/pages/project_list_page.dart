@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../service/api/models/project.dart';
 import '../service/api/project_api.dart';
 import '../providers/project_provider.dart';
+import '../widgets/project/open_project_sheet.dart';
 
 String _projectDisplayName(String worktree) {
   final parts = worktree.replaceAll('\\', '/').split('/');
@@ -47,6 +48,14 @@ class ProjectListPage extends ConsumerWidget {
         foregroundColor: Colors.black87,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add_rounded, size: 24),
+            tooltip: '打开项目',
+            onPressed: () => showOpenProjectSheet(context),
+          ),
+          const SizedBox(width: 4),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
           child: Container(color: Colors.grey[100], height: 1),

@@ -47,17 +47,11 @@ final class ProjectApiProvider
 
 String _$projectApiHash() => r'aa718dc825630bb1802dff1ca98b9d006ca7901b';
 
-@ProviderFor(projects)
+@ProviderFor(Projects)
 final projectsProvider = ProjectsProvider._();
 
 final class ProjectsProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<List<Project>>,
-          List<Project>,
-          FutureOr<List<Project>>
-        >
-    with $FutureModifier<List<Project>>, $FutureProvider<List<Project>> {
+    extends $AsyncNotifierProvider<Projects, List<Project>> {
   ProjectsProvider._()
     : super(
         from: null,
@@ -74,14 +68,25 @@ final class ProjectsProvider
 
   @$internal
   @override
-  $FutureProviderElement<List<Project>> $createElement(
-    $ProviderPointer pointer,
-  ) => $FutureProviderElement(pointer);
-
-  @override
-  FutureOr<List<Project>> create(Ref ref) {
-    return projects(ref);
-  }
+  Projects create() => Projects();
 }
 
-String _$projectsHash() => r'7ec3b7420577e64be695162262641ca5b920e6cb';
+String _$projectsHash() => r'656bae86601fa243ddc05f594ab3acb4c357fad4';
+
+abstract class _$Projects extends $AsyncNotifier<List<Project>> {
+  FutureOr<List<Project>> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<AsyncValue<List<Project>>, List<Project>>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<List<Project>>, List<Project>>,
+              AsyncValue<List<Project>>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
