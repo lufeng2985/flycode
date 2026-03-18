@@ -43,6 +43,14 @@ class ProjectTime {
 
   ProjectTime({required this.created, required this.updated, this.initialized});
 
+  ProjectTime copyWith({int? created, int? updated, int? initialized}) {
+    return ProjectTime(
+      created: created ?? this.created,
+      updated: updated ?? this.updated,
+      initialized: initialized ?? this.initialized,
+    );
+  }
+
   factory ProjectTime.fromJson(Map<String, dynamic> json) => ProjectTime(
     created: (json['created'] as num).toInt(),
     updated: (json['updated'] as num).toInt(),
@@ -77,6 +85,28 @@ class Project {
     required this.time,
     required this.sandboxes,
   });
+
+  Project copyWith({
+    String? id,
+    String? worktree,
+    String? vcs,
+    String? name,
+    ProjectIcon? icon,
+    ProjectCommands? commands,
+    ProjectTime? time,
+    List<String>? sandboxes,
+  }) {
+    return Project(
+      id: id ?? this.id,
+      worktree: worktree ?? this.worktree,
+      vcs: vcs ?? this.vcs,
+      name: name ?? this.name,
+      icon: icon ?? this.icon,
+      commands: commands ?? this.commands,
+      time: time ?? this.time,
+      sandboxes: sandboxes ?? this.sandboxes,
+    );
+  }
 
   factory Project.fromJson(Map<String, dynamic> json) => Project(
     id: json['id'] as String,

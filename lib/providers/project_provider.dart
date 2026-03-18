@@ -14,10 +14,7 @@ class SelectedProjectNotifier extends _$SelectedProjectNotifier {
 
     final projects = await ref.read(projectsProvider.future);
     if (projects.isEmpty) return null;
-    final sorted = List<Project>.from(projects.where((p) => p.id != 'global'))
-      ..sort((a, b) => b.time.updated.compareTo(a.time.updated));
-    if (sorted.isEmpty) return null;
-    return sorted.first;
+    return projects.first;
   }
 
   void select(Project project) {
