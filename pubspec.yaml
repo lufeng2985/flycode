@@ -64,6 +64,7 @@ dev_dependencies:
   build_runner: ^2.11.1
   json_serializable: ^6.13.0
   riverpod_generator: ^4.0.3
+  flutter_launcher_icons: ^0.14.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -106,3 +107,20 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+flutter_launcher_icons:
+  image_path: assets/app_icon/app_logo.jpg
+  android: true
+  ios: true
+  web:
+    generate: true
+    image_path: assets/app_icon/app_logo.jpg
+    background_color: '#000000'
+    theme_color: '#000000'
+  windows:
+    generate: true
+    image_path: assets/app_icon/app_logo.jpg
+    icon_size: 48
+  macos:
+    generate: true
+    image_path: assets/app_icon/app_logo.jpg
