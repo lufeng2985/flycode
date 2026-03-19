@@ -14,9 +14,11 @@ import '../../service/api/models/command.dart';
 import '../../providers/agent_provider.dart';
 import '../../providers/session_provider.dart';
 import '../../providers/chat_config_provider.dart';
+import '../../providers/provider_list_provider.dart';
 import '../../providers/project_provider.dart';
 import '../../providers/session_status_provider.dart';
 import '../../service/api/models/agent.dart';
+import '../../service/api/models/provider.dart';
 import '../../service/api/models/session_status.dart';
 import 'at_mention_controller.dart';
 import 'model_selection_sheet.dart';
@@ -78,6 +80,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   void _onTextChanged() {
     // Sync pills first — remove stale ones after any edit.
     _controller.syncPills();
+
+    _syncInputModeByBangPrefix(_controller.text);
 
     if (_inputMode == _InputMode.shell) {
       _hideCommandOverlay();
@@ -332,6 +336,20 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     return KeyEventResult.ignored;
   }
 
+  void _syncInputModeByBangPrefix(String text) {
+    final shouldShellMode = text.startsWith('!');
+    final nextMode = shouldShellMode ? _InputMode.shell : _InputMode.chat;
+    _setInputMode(nextMode);
+  }
+
+  String _normalizeShellCommand(String text) {
+    final trimmed = text.trim();
+    if (!trimmed.startsWith('!')) {
+      return trimmed;
+    }
+    return trimmed.substring(1).trimLeft();
+  }
+
   // ─── 图片附件 ─────────────────────────────────────────────────
 
   Future<void> _pickImage() async {
@@ -398,7 +416,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   Future<void> _handleSend() async {
     final text = _controller.text.trim();
     final isShellMode = _inputMode == _InputMode.shell;
-    if (isShellMode && text.isEmpty) return;
+    final shellCommand = isShellMode ? _normalizeShellCommand(text) : text;
+    if (isShellMode && shellCommand.isEmpty) return;
     if (!isShellMode && text.isEmpty && _attachments.isEmpty) return;
     if (_isLoading) return;
 
@@ -416,7 +435,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       if (session == null) return;
 
       if (isShellMode) {
-        await _dispatchShell(api, session, project, chatConfig, text);
+        await _dispatchShell(api, session, project, chatConfig, shellCommand);
       } else {
         final matchedCommand = _parseCommand(text);
         if (matchedCommand != null) {
@@ -660,7 +679,10 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     final chatConfig = ref.watch(chatConfigProvider);
     final theme = Theme.of(context);
     final isShellMode = _inputMode == _InputMode.shell;
+    final providerList = ref.watch(providerListProvider).asData?.value;
     ref.watch(commandsProvider);
+
+    final modelLabel = _resolveModelLabel(providerList, chatConfig);
 
     final sessionId = ref.watch(
       selectedSessionProvider.select((s) => s.session?.id),
@@ -693,6 +715,14 @@ class _ChatInputState extends ConsumerState<ChatInput> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            _ConfigToolBar(
+              chatConfig: chatConfig,
+              modelLabel: modelLabel,
+              agents: ref.watch(agentsProvider).asData?.value ?? const [],
+              onAgentTap: _handleAgentTap,
+              onShowModelSelector: _showModelSelector,
+            ),
+            const SizedBox(height: 12),
             CompositedTransformTarget(
               link: _layerLink,
               child: Container(
@@ -745,19 +775,29 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                 ),
               ),
             ),
-            const SizedBox(height: 12),
-            _ConfigToolBar(
-              chatConfig: chatConfig,
-              agents: ref.watch(agentsProvider).asData?.value ?? const [],
-              onAgentTap: _handleAgentTap,
-              onShowModelSelector: _showModelSelector,
-              inputMode: _inputMode,
-              onModeChange: _setInputMode,
-            ),
           ],
         ),
       ),
     );
+  }
+
+  String _resolveModelLabel(
+    ProviderListResponse? providerList,
+    ChatConfig chatConfig,
+  ) {
+    if (providerList == null) {
+      return chatConfig.model.modelID;
+    }
+    for (final provider in providerList.all) {
+      if (provider.id != chatConfig.model.providerID) {
+        continue;
+      }
+      final model = provider.models[chatConfig.model.modelID];
+      if (model != null && model.name.isNotEmpty) {
+        return model.name;
+      }
+    }
+    return chatConfig.model.modelID;
   }
 
   @override
@@ -933,19 +973,17 @@ class _InputToolBar extends StatelessWidget {
 
 class _ConfigToolBar extends StatelessWidget {
   final ChatConfig chatConfig;
+  final String modelLabel;
   final List<Agent> agents;
   final ValueChanged<List<Agent>> onAgentTap;
   final VoidCallback onShowModelSelector;
-  final _InputMode inputMode;
-  final ValueChanged<_InputMode> onModeChange;
 
   const _ConfigToolBar({
     required this.chatConfig,
+    required this.modelLabel,
     required this.agents,
     required this.onAgentTap,
     required this.onShowModelSelector,
-    required this.inputMode,
-    required this.onModeChange,
   });
 
   String get _agentLabel {
@@ -965,70 +1003,12 @@ class _ConfigToolBar extends StatelessWidget {
         const SizedBox(width: 8),
         _SelectionChip(
           onTap: onShowModelSelector,
-          label: chatConfig.model.modelID,
+          label: modelLabel,
           icon: Icons.share_outlined,
         ),
         const SizedBox(width: 8),
         const _SelectionChip(label: '默认'),
-        const Spacer(),
-        Container(
-          padding: const EdgeInsets.all(3),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: Colors.grey[300]!),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            children: [
-              _ModeIconButton(
-                icon: Icons.terminal,
-                selected: inputMode == _InputMode.shell,
-                onTap: () => onModeChange(_InputMode.shell),
-              ),
-              _ModeIconButton(
-                icon: Icons.chat_bubble_outline,
-                selected: inputMode == _InputMode.chat,
-                onTap: () => onModeChange(_InputMode.chat),
-              ),
-            ],
-          ),
-        ),
       ],
-    );
-  }
-}
-
-class _ModeIconButton extends StatelessWidget {
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _ModeIconButton({
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 1),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: selected ? const Color(0xFFF1F5F9) : Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
-          border: selected
-              ? Border.all(color: const Color(0xFFD7E1EC))
-              : Border.all(color: Colors.transparent),
-        ),
-        child: Icon(
-          icon,
-          size: 18,
-          color: selected ? const Color(0xFF0F172A) : Colors.grey,
-        ),
-      ),
     );
   }
 }
