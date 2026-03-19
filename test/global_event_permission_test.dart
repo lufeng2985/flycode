@@ -1,0 +1,49 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:flycode/service/api/models/global_event.dart';
+
+void main() {
+  test('parseEvent parses permission.asked', () {
+    final event = parseEvent({
+      'type': 'permission.asked',
+      'properties': {
+        'id': 'perm-1',
+        'sessionID': 'sess-1',
+        'permission': 'bash',
+        'patterns': ['npm run test'],
+        'always': ['npm run *'],
+        'metadata': {'command': 'npm run test'},
+        'tool': {'messageID': 'msg-1', 'callID': 'call-1'},
+      },
+    });
+
+    expect(event, isA<EventPermissionAsked>());
+    final asked = event as EventPermissionAsked;
+    expect(asked.request.id, 'perm-1');
+    expect(asked.request.sessionID, 'sess-1');
+    expect(asked.request.permission, 'bash');
+    expect(asked.request.patterns, ['npm run test']);
+    expect(asked.request.always, ['npm run *']);
+    expect(asked.request.tool?.messageID, 'msg-1');
+    expect(asked.request.tool?.callID, 'call-1');
+  });
+
+  test('parseEvent parses permission.replied', () {
+    final event = parseEvent({
+      'type': 'permission.replied',
+      'properties': {'sessionID': 'sess-2', 'requestID': 'perm-2'},
+    });
+
+    expect(event, isA<EventPermissionReplied>());
+    final replied = event as EventPermissionReplied;
+    expect(replied.sessionID, 'sess-2');
+    expect(replied.requestID, 'perm-2');
+  });
+
+  test('parseEvent keeps unknown event as sentinel', () {
+    final event = parseEvent({
+      'type': 'permission.future',
+      'properties': {'foo': 'bar'},
+    });
+    expect(event, isA<EventUnknown>());
+  });
+}

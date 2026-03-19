@@ -5,6 +5,7 @@ import '../service/api/models/message.dart';
 import '../service/api/models/parts.dart';
 import '../service/api/session_api.dart';
 import 'question_provider.dart';
+import 'permission_provider.dart';
 import 'session_provider.dart';
 import 'session_status_provider.dart';
 import 'todo_provider.dart';
@@ -32,6 +33,7 @@ class GlobalEventListener extends _$GlobalEventListener {
         payload is EventSessionUpdated ||
         payload is EventSessionDeleted) {
       ref.invalidate(sessionsProvider);
+      ref.invalidate(allSessionsProvider);
       return;
     }
 
@@ -59,6 +61,14 @@ class GlobalEventListener extends _$GlobalEventListener {
       ref
           .read(sessionStatusProvider.notifier)
           .updateStatus(payload.sessionID, payload.status);
+    } else if (payload is EventPermissionAsked) {
+      ref
+          .read(pendingPermissionsProvider.notifier)
+          .addPermission(payload.request);
+    } else if (payload is EventPermissionReplied) {
+      ref
+          .read(pendingPermissionsProvider.notifier)
+          .removePermission(payload.requestID);
     } else if (payload is EventTodoUpdated) {
       ref
           .read(sessionTodosProvider(payload.sessionID).notifier)

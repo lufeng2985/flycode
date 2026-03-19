@@ -1,5 +1,6 @@
 import 'package:json_annotation/json_annotation.dart';
 import 'message.dart' hide FileDiff;
+import 'permission.dart';
 import 'question.dart';
 import 'session.dart';
 import 'session_status.dart';
@@ -381,6 +382,25 @@ class EventSessionStatus {
   });
 }
 
+class EventPermissionAsked {
+  final String type;
+  final PermissionRequest request;
+
+  EventPermissionAsked({required this.type, required this.request});
+}
+
+class EventPermissionReplied {
+  final String type;
+  final String sessionID;
+  final String requestID;
+
+  EventPermissionReplied({
+    required this.type,
+    required this.sessionID,
+    required this.requestID,
+  });
+}
+
 /// Sentinel object returned for unknown/unhandled event types.
 /// Using a sentinel instead of throwing prevents SSE connection crashes
 /// when the backend introduces new event types.
@@ -488,6 +508,20 @@ Object parseEvent(Map<String, dynamic> json) {
         status: SessionStatus.fromJson(
           statusProps['status'] as Map<String, dynamic>,
         ),
+      );
+    case 'permission.asked':
+      final props = json['properties'] as Map<String, dynamic>;
+      return EventPermissionAsked(
+        type: type,
+        request: PermissionRequest.fromJson(props),
+      );
+    case 'permission.replied':
+      final props = json['properties'] as Map<String, dynamic>;
+      return EventPermissionReplied(
+        type: type,
+        sessionID: props['sessionID'] as String? ?? '',
+        requestID:
+            props['requestID'] as String? ?? props['id'] as String? ?? '',
       );
     default:
       // Return a sentinel instead of throwing so unknown future event types

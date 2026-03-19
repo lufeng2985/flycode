@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../service/api/session_api.dart';
 import '../providers/global_event_provider.dart';
+import '../providers/permission_provider.dart';
 import '../providers/session_provider.dart';
 import '../providers/question_provider.dart';
 import '../widgets/message/message_list.dart';
 import '../widgets/message/chat_input.dart';
+import '../widgets/permission/session_permission_dock.dart';
 import '../widgets/question/question_card.dart';
 import '../widgets/session/session_drawer.dart';
 import '../widgets/session/todo_list_widget.dart';
@@ -23,6 +25,10 @@ class MyHomePage extends ConsumerWidget {
     final selectedState = ref.watch(selectedSessionProvider);
     final selectedSession = selectedState.session;
     final isPending = selectedState.isPending;
+    final permissionRequest = ref.watch(
+      currentSessionPermissionRequestProvider,
+    );
+    final hasPermissionBlock = permissionRequest != null;
     final hasQuestion = ref.watch(currentSessionHasQuestionProvider);
 
     Widget buildNewSessionWelcome() {
@@ -123,8 +129,17 @@ class MyHomePage extends ConsumerWidget {
                         const Center(child: CircularProgressIndicator()),
                   ),
           ),
-          if (selectedSession != null || isPending) const QuestionOverlay(),
-          if ((selectedSession != null || isPending) && !hasQuestion)
+          if ((selectedSession != null || isPending) &&
+              selectedSession != null &&
+              hasPermissionBlock)
+            SessionPermissionDock(request: permissionRequest),
+          if ((selectedSession != null || isPending) &&
+              !hasPermissionBlock &&
+              hasQuestion)
+            const QuestionOverlay(),
+          if ((selectedSession != null || isPending) &&
+              !hasPermissionBlock &&
+              !hasQuestion)
             const ChatInput(),
         ],
       ),
