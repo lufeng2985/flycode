@@ -2,13 +2,12 @@ import 'dart:convert';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/server_config.dart';
-import 'project_provider.dart';
 
 part 'server_config_provider.g.dart';
 
 const String _serverConfigKey = 'server_config';
 
-@riverpod
+@Riverpod(keepAlive: true)
 class ServerConfigNotifier extends _$ServerConfigNotifier {
   @override
   Future<ServerConfig> build() async {

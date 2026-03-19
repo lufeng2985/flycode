@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../service/api/provider_api.dart';
 import '../../service/api/models/provider.dart';
 import '../../service/api/models/message.dart';
 import '../../providers/model_config_provider.dart';
 import '../../providers/chat_config_provider.dart';
+import '../../providers/provider_list_provider.dart';
 
 class ModelSelectionSheet extends ConsumerStatefulWidget {
   const ModelSelectionSheet({super.key});
@@ -36,7 +36,7 @@ class _ModelSelectionSheetState extends ConsumerState<ModelSelectionSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final providerListAsync = ref.watch(_providerListFutureProvider);
+    final providerListAsync = ref.watch(providerListProvider);
     final configsAsync = ref.watch(modelConfigProvider);
 
     return Container(
@@ -301,10 +301,3 @@ class _ModelTile extends ConsumerWidget {
     );
   }
 }
-
-final _providerListFutureProvider = FutureProvider<ProviderListResponse>((
-  ref,
-) async {
-  final api = await ref.watch(providerApiProvider.future);
-  return await api.list();
-});

@@ -180,7 +180,7 @@ class SessionContextPage extends ConsumerWidget {
           return RefreshIndicator(
             onRefresh: () async {
               ref.invalidate(sessionMessagesProvider);
-              ref.invalidate(providerListProvider);
+              await ref.read(providerListProvider.notifier).refresh();
             },
             child: ListView(
               padding: const EdgeInsets.all(16),

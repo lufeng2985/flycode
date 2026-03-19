@@ -34,7 +34,7 @@ final class SelectedProjectNotifierProvider
 }
 
 String _$selectedProjectNotifierHash() =>
-    r'2c82709a925dae8512854ec3dd4fa41dd640d0b3';
+    r'bb08fe14e36288f419fe14027cf34be71ee28b3a';
 
 abstract class _$SelectedProjectNotifier extends $AsyncNotifier<Project?> {
   FutureOr<Project?> build();

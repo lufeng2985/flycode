@@ -22,7 +22,7 @@ class ApiException implements Exception {
   String toString() => 'ApiException: $statusCode $name - $message';
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 Future<ApiClient> apiClient(Ref ref) async {
   final config = await ref.watch(serverConfigProvider.future);
   return ApiClient(
@@ -47,6 +47,8 @@ class ApiClient {
        _username = username,
        _password = password,
        _client = client ?? http.Client();
+
+  String get baseUrl => _baseUrl;
 
   Uri _getUri(String path, {Map<String, String>? queryParameters}) {
     return Uri.parse(

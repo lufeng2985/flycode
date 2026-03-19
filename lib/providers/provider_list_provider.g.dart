@@ -9,19 +9,11 @@ part of 'provider_list_provider.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 
-@ProviderFor(providerList)
+@ProviderFor(ProviderList)
 final providerListProvider = ProviderListProvider._();
 
 final class ProviderListProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<ProviderListResponse>,
-          ProviderListResponse,
-          FutureOr<ProviderListResponse>
-        >
-    with
-        $FutureModifier<ProviderListResponse>,
-        $FutureProvider<ProviderListResponse> {
+    extends $AsyncNotifierProvider<ProviderList, ProviderListResponse> {
   ProviderListProvider._()
     : super(
         from: null,
@@ -38,14 +30,30 @@ final class ProviderListProvider
 
   @$internal
   @override
-  $FutureProviderElement<ProviderListResponse> $createElement(
-    $ProviderPointer pointer,
-  ) => $FutureProviderElement(pointer);
-
-  @override
-  FutureOr<ProviderListResponse> create(Ref ref) {
-    return providerList(ref);
-  }
+  ProviderList create() => ProviderList();
 }
 
-String _$providerListHash() => r'71f71220df1d7858ff66e9e75e419e4ea0b3e9f8';
+String _$providerListHash() => r'c7e87525f8831f5c56f7fa7c1880152c823f6238';
+
+abstract class _$ProviderList extends $AsyncNotifier<ProviderListResponse> {
+  FutureOr<ProviderListResponse> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref =
+        this.ref
+            as $Ref<AsyncValue<ProviderListResponse>, ProviderListResponse>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<
+                AsyncValue<ProviderListResponse>,
+                ProviderListResponse
+              >,
+              AsyncValue<ProviderListResponse>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}

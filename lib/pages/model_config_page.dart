@@ -1,25 +1,48 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../service/api/provider_api.dart';
 import '../service/api/models/provider.dart';
 import '../providers/model_config_provider.dart';
-
-final _providerListFutureProvider = FutureProvider<ProviderListResponse>((
-  ref,
-) async {
-  final api = await ref.watch(providerApiProvider.future);
-  return await api.list();
-});
+import '../providers/provider_list_provider.dart';
 
 class ModelConfigPage extends ConsumerWidget {
   const ModelConfigPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final providerListAsync = ref.watch(_providerListFutureProvider);
+    final providerListAsync = ref.watch(providerListProvider);
+    final isRefreshing = providerListAsync.isLoading;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('模型配置'), centerTitle: true),
+      appBar: AppBar(
+        title: const Text('模型配置'),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            tooltip: '刷新模型列表',
+            onPressed: isRefreshing
+                ? null
+                : () async {
+                    try {
+                      await ref.read(providerListProvider.notifier).refresh();
+                      if (!context.mounted) {
+                        return;
+                      }
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('模型列表已刷新')),
+                      );
+                    } catch (error) {
+                      if (!context.mounted) {
+                        return;
+                      }
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('刷新失败: $error')),
+                      );
+                    }
+                  },
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
       body: providerListAsync.when(
         data: (providerList) => _buildModelList(context, ref, providerList),
         loading: () => const Center(child: CircularProgressIndicator()),

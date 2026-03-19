@@ -26,7 +26,7 @@ final class ProviderApiProvider
         argument: null,
         retry: null,
         name: r'providerApiProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -46,4 +46,4 @@ final class ProviderApiProvider
   }
 }
 
-String _$providerApiHash() => r'aefa6a2c613acd1256a079068d015a6a5716648a';
+String _$providerApiHash() => r'49aef454f4432b0a2841cea17bd74c7191ab4ec5';
