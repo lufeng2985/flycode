@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../service/api/global_api.dart';
 import '../service/api/models/global_event.dart';
@@ -17,6 +18,10 @@ class GlobalEventListener extends _$GlobalEventListener {
   @override
   Stream<GlobalEvent> build() async* {
     final api = await ref.watch(globalApiProvider.future);
+
+    // Prime local status cache from snapshot so UI can recover if SSE dropped
+    // previous status transitions (for example, busy -> idle).
+    unawaited(ref.read(sessionStatusProvider.notifier).refreshFromServer());
 
     // 用 listenSelf 监听自身 stream state 来处理副作用，避免直接 stream.listen() 导致双重订阅
     listenSelf((_, next) {

@@ -1,4 +1,7 @@
+import 'dart:async';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import '../service/api/session_api.dart';
+import 'project_provider.dart';
 import '../service/api/models/session_status.dart';
 
 part 'session_status_provider.g.dart';
@@ -9,8 +12,19 @@ part 'session_status_provider.g.dart';
 /// A missing key is equivalent to [SessionStatusIdle].
 @riverpod
 class SessionStatusNotifier extends _$SessionStatusNotifier {
+  static const Duration _pollInterval = Duration(seconds: 5);
+
+  Timer? _pollTimer;
+  bool _isRefreshing = false;
+
   @override
-  Map<String, SessionStatus> build() => const {};
+  Map<String, SessionStatus> build() {
+    ref.onDispose(() {
+      _pollTimer?.cancel();
+      _pollTimer = null;
+    });
+    return const {};
+  }
 
   void updateStatus(String sessionID, SessionStatus status) {
     if (status is SessionStatusIdle) {
@@ -24,6 +38,27 @@ class SessionStatusNotifier extends _$SessionStatusNotifier {
     } else {
       state = Map.unmodifiable({...state, sessionID: status});
     }
+    _syncPolling();
+  }
+
+  /// Replaces local session-status cache with server snapshot.
+  ///
+  /// This is used as a reconciliation fallback when SSE misses an update.
+  Future<void> refreshFromServer() async {
+    if (_isRefreshing) return;
+    _isRefreshing = true;
+
+    try {
+      final api = await ref.read(sessionApiProvider.future);
+      final project = await ref.read(selectedProjectProvider.future);
+      final raw = await api.getSessionStatus(directory: project?.worktree);
+      state = Map.unmodifiable(_parseStatusSnapshot(raw));
+    } catch (_) {
+      // Keep current state when snapshot fetch fails.
+    } finally {
+      _isRefreshing = false;
+      _syncPolling();
+    }
   }
 
   /// Returns true when the given session is busy or retrying.
@@ -36,4 +71,83 @@ class SessionStatusNotifier extends _$SessionStatusNotifier {
   SessionStatus statusFor(String sessionID) {
     return state[sessionID] ?? const SessionStatusIdle();
   }
+
+  void _syncPolling() {
+    final hasWorking = state.values.any((status) => status.isWorking);
+    if (!hasWorking) {
+      _pollTimer?.cancel();
+      _pollTimer = null;
+      return;
+    }
+
+    _pollTimer ??= Timer.periodic(_pollInterval, (_) {
+      unawaited(refreshFromServer());
+    });
+  }
+}
+
+Map<String, SessionStatus> _parseStatusSnapshot(Map<String, dynamic> raw) {
+  final result = <String, SessionStatus>{};
+
+  void tryInsert(String sessionID, Object? statusLike) {
+    final status = _parseStatusValue(statusLike);
+    if (status == null || status is SessionStatusIdle) {
+      return;
+    }
+    result[sessionID] = status;
+  }
+
+  void parseMap(Map<String, dynamic> map) {
+    for (final entry in map.entries) {
+      final key = entry.key;
+      final value = entry.value;
+
+      if (value is Map<String, dynamic>) {
+        final sid = value['sessionID'];
+        final nestedStatus = value['status'];
+        if (sid is String && sid.isNotEmpty && nestedStatus != null) {
+          tryInsert(sid, nestedStatus);
+          continue;
+        }
+
+        if (value.containsKey('type')) {
+          tryInsert(key, value);
+          continue;
+        }
+
+        parseMap(value);
+        continue;
+      }
+
+      if (value is List) {
+        for (final item in value) {
+          if (item is Map<String, dynamic>) {
+            final sid = item['sessionID'];
+            final status = item['status'];
+            if (sid is String && sid.isNotEmpty && status != null) {
+              tryInsert(sid, status);
+            }
+          }
+        }
+        continue;
+      }
+
+      tryInsert(key, value);
+    }
+  }
+
+  parseMap(raw);
+  return result;
+}
+
+SessionStatus? _parseStatusValue(Object? value) {
+  if (value is Map<String, dynamic> && value.containsKey('type')) {
+    return SessionStatus.fromJson(value);
+  }
+
+  if (value is String) {
+    return SessionStatus.fromJson({'type': value});
+  }
+
+  return null;
 }

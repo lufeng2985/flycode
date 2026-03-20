@@ -691,6 +691,15 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     final isWorking =
         sessionId != null && (sessionStatuses[sessionId]?.isWorking ?? false);
 
+    // Reconcile status snapshot on session switch to recover from missed SSE.
+    ref.listen<String?>(selectedSessionProvider.select((s) => s.session?.id), (
+      previous,
+      next,
+    ) {
+      if (next == null || next == previous) return;
+      unawaited(ref.read(sessionStatusProvider.notifier).refreshFromServer());
+    });
+
     // Clear _isAborting once the backend confirms idle via SSE.
     ref.listen<Map<String, SessionStatus>>(sessionStatusProvider, (
       _,

@@ -46,4 +46,19 @@ void main() {
     });
     expect(event, isA<EventUnknown>());
   });
+
+  test('parseEvent parses session.status payload', () {
+    final event = parseEvent({
+      'type': 'session.status',
+      'properties': {
+        'sessionID': 'sess-9',
+        'status': {'type': 'busy'},
+      },
+    });
+
+    expect(event, isA<EventSessionStatus>());
+    final statusEvent = event as EventSessionStatus;
+    expect(statusEvent.sessionID, 'sess-9');
+    expect(statusEvent.status.isWorking, isTrue);
+  });
 }
