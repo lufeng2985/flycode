@@ -18,6 +18,34 @@ class SelectedSessionNotifier extends _$SelectedSessionNotifier {
   @override
   SelectedSessionState build() {
     ref.watch(selectedProjectProvider);
+
+    ref.listen(sessionsProvider, (previous, next) {
+      next.whenData((sessions) {
+        final current = state;
+
+        // 用户手动进入“新建会话”态时，不自动抢占选择。
+        if (current.isPending) return;
+
+        if (sessions.isEmpty) {
+          if (current.session != null) {
+            state = (session: null, isPending: false);
+          }
+          return;
+        }
+
+        final selected = current.session;
+        if (selected == null) {
+          state = (session: sessions.first, isPending: false);
+          return;
+        }
+
+        final stillExists = sessions.any((s) => s.id == selected.id);
+        if (!stillExists) {
+          state = (session: sessions.first, isPending: false);
+        }
+      });
+    }, fireImmediately: true);
+
     return (session: null, isPending: false);
   }
 
