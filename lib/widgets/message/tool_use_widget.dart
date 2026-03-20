@@ -155,6 +155,19 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
 
     final subtitle = meta.getSubtitle(input);
     final args = _isActive ? <String>[] : meta.getArgs(input);
+    final rightAction = _canNavigate
+        ? Icon(
+            Icons.open_in_new,
+            size: 14,
+            color: Theme.of(context).colorScheme.primary,
+          )
+        : _hasExpandableContent && !_isActive
+        ? Icon(
+            _isExpanded ? Icons.expand_less : Icons.expand_more,
+            size: 16,
+            color: Colors.grey[500],
+          )
+        : null;
 
     return GestureDetector(
       onTap: _canNavigate
@@ -165,74 +178,111 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Display name — shimmer when active
-            _isActive
-                ? Shimmer.fromColors(
-                    baseColor: Colors.grey[400]!,
-                    highlightColor: Colors.grey[200]!,
-                    child: Text(
-                      displayName,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  )
-                : Text(
-                    displayName,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: _isError ? Colors.red[700] : Colors.black87,
-                    ),
-                  ),
-            // Args chips (only when not active)
-            if (args.isNotEmpty) ...[
-              const SizedBox(width: 8),
-              ...args.map((arg) => _ArgChip(label: arg)),
-            ],
-            // Subtitle
-            if (!_isActive && subtitle != null && subtitle.isNotEmpty) ...[
-              const SizedBox(width: 8),
-              Expanded(
-                child: _part.tool == 'webfetch'
-                    ? GestureDetector(
-                        onTap: () => _launchUrl(subtitle),
-                        child: Text(
-                          subtitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Theme.of(context).colorScheme.primary,
-                            decoration: TextDecoration.underline,
-                          ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Display name — shimmer when active
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      _isActive
+                          ? Shimmer.fromColors(
+                              baseColor: Colors.grey[400]!,
+                              highlightColor: Colors.grey[200]!,
+                              child: Text(
+                                displayName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            )
+                          : Text(
+                              displayName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: _isError
+                                    ? Colors.red[700]
+                                    : Colors.black87,
+                              ),
+                            ),
+                      SizedBox(width: 8),
+                      if (!_isActive &&
+                          !_isError &&
+                          subtitle != null &&
+                          subtitle.isNotEmpty)
+                        Expanded(
+                          child: _part.tool == 'webfetch'
+                              ? GestureDetector(
+                                  onTap: () => _launchUrl(subtitle),
+                                  child: Text(
+                                    subtitle,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                )
+                              : Text(
+                                  subtitle,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
                         ),
-                      )
-                    : Text(
-                        subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                    ],
+                  ),
+                  // Args chips (only when not active)
+                  if (args.isNotEmpty)
+                    Padding(
+                      padding: EdgeInsets.only(
+                        top:
+                            (!_isActive &&
+                                !_isError &&
+                                subtitle != null &&
+                                subtitle.isNotEmpty)
+                            ? 6
+                            : 4,
                       ),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final maxWidth = constraints.maxWidth.isFinite
+                              ? constraints.maxWidth
+                              : 280.0;
+                          return Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: args
+                                .map(
+                                  (arg) =>
+                                      _ArgChip(label: arg, maxWidth: maxWidth),
+                                )
+                                .toList(),
+                          );
+                        },
+                      ),
+                    ),
+                ],
               ),
-            ] else
-              const Spacer(),
-            // Right action
-            if (_canNavigate)
-              Icon(
-                Icons.open_in_new,
-                size: 14,
-                color: Theme.of(context).colorScheme.primary,
-              )
-            else if (_hasExpandableContent && !_isActive)
-              Icon(
-                _isExpanded ? Icons.expand_less : Icons.expand_more,
-                size: 16,
-                color: Colors.grey[500],
-              ),
+            ),
+            if (rightAction != null) ...[const SizedBox(width: 8), rightAction],
           ],
         ),
       ),
@@ -287,24 +337,30 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
 
 class _ArgChip extends StatelessWidget {
   final String label;
+  final double maxWidth;
 
-  const _ArgChip({required this.label});
+  const _ArgChip({required this.label, required this.maxWidth});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(right: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF1F1F1),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 11,
-          color: Color(0xFF555555),
-          fontFamily: 'monospace',
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF1F1F1),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          softWrap: false,
+          style: const TextStyle(
+            fontSize: 11,
+            color: Color(0xFF555555),
+            fontFamily: 'monospace',
+          ),
         ),
       ),
     );
