@@ -200,6 +200,7 @@ class _MessageBubbleState extends State<MessageBubble> {
     BuildContext context,
     AssistantMessage assistantMessage,
   ) {
+    final isStreaming = assistantMessage.time.completed == null;
     final parts = widget.messageWithParts.parts;
     final lastTextPartIndex = parts.lastIndexWhere(
       (p) => p is TextPart && p.synthetic != true && p.text.isNotEmpty,
@@ -214,6 +215,7 @@ class _MessageBubbleState extends State<MessageBubble> {
             MessagePart(
               part: parts[i],
               isUser: false,
+              isStreaming: isStreaming,
               onNavigateToSubSession: widget.onNavigateToSubSession,
             ),
             if (i == lastTextPartIndex) ...[
