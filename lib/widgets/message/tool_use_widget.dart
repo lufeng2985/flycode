@@ -390,19 +390,24 @@ class _BashOutputPanel extends StatelessWidget {
       padding: const EdgeInsets.only(top: 4, bottom: 8),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: const Color(0xFF0F172A),
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: const Color(0xFF1E293B)),
+          color: const Color(0xFFF6F8FA),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFE5E7EB)),
         ),
-        child: SelectableText(
-          command.isNotEmpty ? '\$ $command\n\n$displayOutput' : displayOutput,
-          style: const TextStyle(
-            color: Color(0xFFE2E8F0),
-            fontSize: 12,
-            height: 1.45,
-            fontFamily: 'monospace',
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: SelectableText(
+            command.isNotEmpty
+                ? '\$ $command\n\n$displayOutput'
+                : displayOutput,
+            style: const TextStyle(
+              color: Color(0xFF1F2328),
+              fontSize: 13,
+              height: 1.5,
+              fontFamily: 'monospace',
+            ),
           ),
         ),
       ),
