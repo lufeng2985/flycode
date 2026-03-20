@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../service/api/models/agent.dart' as agent_model;
 import '../service/api/models/message.dart';
@@ -8,6 +11,7 @@ part 'chat_config_provider.g.dart';
 const _kDefaultAgent = 'build';
 const _kFallbackProviderID = 'opencode';
 const _kFallbackModelID = 'minimax-m2.5-free';
+const _kLastUsedModelCacheKey = 'chat_config_last_used_model';
 
 class ChatConfig {
   final String agent;
@@ -29,15 +33,20 @@ class ChatConfig {
 class ChatConfigNotifier extends _$ChatConfigNotifier {
   @override
   ChatConfig build() {
+    final initialSelected = ref.read(selectedSessionProvider);
+
     // Listen for session changes and sync the model when switching to an
     // existing session. Uses listen (not watch) so that message updates never
     // trigger a full rebuild of this notifier.
     ref.listen(selectedSessionProvider, (previous, next) async {
       final newSession = next.session;
 
-      // New-session flow (isPending=true) or nothing selected: preserve the
-      // current model so the user's last choice is not overwritten.
-      if (next.isPending || newSession == null) return;
+      // New-session flow (isPending=true) or nothing selected: restore from
+      // cache so input can fallback to the last-used model.
+      if (next.isPending || newSession == null) {
+        await _restoreModelFromCacheIfNoSession();
+        return;
+      }
 
       // Same session selected again – nothing to do.
       if (newSession.id == previous?.session?.id) return;
@@ -45,6 +54,12 @@ class ChatConfigNotifier extends _$ChatConfigNotifier {
       // Switched to an existing session: try to restore its last-used model.
       await _syncModelFromSession();
     });
+
+    if (initialSelected.session != null && !initialSelected.isPending) {
+      unawaited(_syncModelFromSession());
+    } else {
+      unawaited(_restoreModelFromCacheIfNoSession());
+    }
 
     return ChatConfig(
       agent: _kDefaultAgent,
@@ -55,39 +70,99 @@ class ChatConfigNotifier extends _$ChatConfigNotifier {
     );
   }
 
-  /// Reads the messages of the currently selected session once (no watch) and
-  /// updates the model to match the last UserMessage. If the session has no
-  /// messages the current model is preserved.
+  /// Reads selected-session messages once (no watch) and syncs model from the
+  /// latest message context:
+  /// 1) Prefer the last UserMessage (agent + model are both available).
+  /// 2) Fallback to the last AssistantMessage's provider/model.
+  /// If no suitable message exists, current config is preserved.
   Future<void> _syncModelFromSession() async {
     final messages = await ref.read(sessionMessagesProvider.future);
     if (messages.isEmpty) return;
 
-    try {
-      final lastUser = messages.lastWhere((m) => m.info is UserMessage);
-      if (lastUser.info case final UserMessage msg) {
-        state = state.copyWith(agent: msg.agent, model: msg.model);
+    for (final message in messages.reversed) {
+      if (message.info case final UserMessage user) {
+        _setState(agent: user.agent, model: user.model, persistModel: true);
+        return;
       }
-    } on StateError {
-      // No UserMessage found – preserve current model.
+
+      if (message.info case final AssistantMessage assistant) {
+        _setState(
+          model: MessageModel(
+            providerID: assistant.providerID,
+            modelID: assistant.modelID,
+          ),
+          persistModel: true,
+        );
+        return;
+      }
     }
   }
 
   /// Sets the active agent. If [linkedModel] is provided (from the agent's
   /// bound model field), the model is also updated automatically.
   void setAgent(String agent, {agent_model.AgentModel? linkedModel}) {
-    var newState = state.copyWith(agent: agent);
-    if (linkedModel != null) {
-      newState = newState.copyWith(
-        model: MessageModel(
-          providerID: linkedModel.providerID,
-          modelID: linkedModel.modelID,
-        ),
-      );
+    if (linkedModel == null) {
+      _setState(agent: agent);
+      return;
     }
-    state = newState;
+
+    _setState(
+      agent: agent,
+      model: MessageModel(
+        providerID: linkedModel.providerID,
+        modelID: linkedModel.modelID,
+      ),
+      persistModel: true,
+    );
   }
 
   void setModel(MessageModel model) {
-    state = state.copyWith(model: model);
+    _setState(model: model, persistModel: true);
+  }
+
+  Future<void> _restoreModelFromCacheIfNoSession() async {
+    final selectedState = ref.read(selectedSessionProvider);
+    if (selectedState.session != null) return;
+
+    final cachedModel = await _readCachedModel();
+    if (!ref.mounted || cachedModel == null) return;
+
+    _setState(model: cachedModel);
+  }
+
+  Future<MessageModel?> _readCachedModel() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_kLastUsedModelCacheKey);
+    if (raw == null || raw.trim().isEmpty) return null;
+
+    try {
+      final json = jsonDecode(raw);
+      if (json is! Map<String, dynamic>) return null;
+      final model = MessageModel.fromJson(json);
+      if (model.providerID.isEmpty || model.modelID.isEmpty) {
+        return null;
+      }
+      return model;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _persistModel(MessageModel model) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kLastUsedModelCacheKey, jsonEncode(model.toJson()));
+  }
+
+  void _setState({
+    String? agent,
+    MessageModel? model,
+    bool persistModel = false,
+  }) {
+    final next = state.copyWith(agent: agent, model: model);
+    state = next;
+
+    if (persistModel && model != null) {
+      unawaited(_persistModel(model));
+    }
   }
 }
