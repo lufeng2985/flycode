@@ -85,6 +85,7 @@ Widget _buildList(
       return MessageBubble(
         messageWithParts: messageWithParts,
         prevIsUser: prevIsUser,
+        isLatestMessage: index == 0,
         onNavigateToSubSession: onNavigateToSubSession,
       );
     },

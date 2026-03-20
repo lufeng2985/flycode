@@ -10,6 +10,7 @@ class MessagePart extends StatelessWidget {
   final Object part;
   final bool isUser;
   final bool isStreaming;
+  final bool animateText;
   final void Function(String sessionId)? onNavigateToSubSession;
 
   const MessagePart({
@@ -17,6 +18,7 @@ class MessagePart extends StatelessWidget {
     required this.part,
     required this.isUser,
     this.isStreaming = false,
+    this.animateText = false,
     this.onNavigateToSubSession,
   });
 
@@ -27,7 +29,7 @@ class MessagePart extends StatelessWidget {
     }
     if (part is TextPart) {
       final textPart = part as TextPart;
-      if (textPart.synthetic == true) {
+      if (textPart.synthetic == true && !isStreaming) {
         return const SizedBox.shrink();
       }
       return Padding(
@@ -35,7 +37,7 @@ class MessagePart extends StatelessWidget {
         child: _TypewriterMarkdownText(
           key: ValueKey(textPart.id),
           text: textPart.text,
-          animate: !isUser && isStreaming,
+          animate: !isUser && animateText,
         ),
       );
     } else if (part is ToolPart) {

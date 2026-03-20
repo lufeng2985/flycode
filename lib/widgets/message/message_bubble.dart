@@ -13,12 +13,14 @@ import 'message_part.dart';
 class MessageBubble extends StatefulWidget {
   final MessageWithParts messageWithParts;
   final bool prevIsUser;
+  final bool isLatestMessage;
   final void Function(String sessionId)? onNavigateToSubSession;
 
   const MessageBubble({
     super.key,
     required this.messageWithParts,
     required this.prevIsUser,
+    this.isLatestMessage = false,
     this.onNavigateToSubSession,
   });
 
@@ -202,6 +204,9 @@ class _MessageBubbleState extends State<MessageBubble> {
   ) {
     final isStreaming = assistantMessage.time.completed == null;
     final parts = widget.messageWithParts.parts;
+    final lastAnimatedTextPartIndex = parts.lastIndexWhere(
+      (p) => p is TextPart && p.text.isNotEmpty,
+    );
     final lastTextPartIndex = parts.lastIndexWhere(
       (p) => p is TextPart && p.synthetic != true && p.text.isNotEmpty,
     );
@@ -216,6 +221,10 @@ class _MessageBubbleState extends State<MessageBubble> {
               part: parts[i],
               isUser: false,
               isStreaming: isStreaming,
+              animateText:
+                  widget.isLatestMessage &&
+                  isStreaming &&
+                  i == lastAnimatedTextPartIndex,
               onNavigateToSubSession: widget.onNavigateToSubSession,
             ),
             if (i == lastTextPartIndex) ...[
