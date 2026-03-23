@@ -10,7 +10,6 @@ import '../widgets/message/message_list.dart';
 import '../widgets/message/chat_input.dart';
 import '../widgets/permission/session_permission_dock.dart';
 import '../widgets/question/question_card.dart';
-import '../widgets/session/session_drawer.dart';
 import '../widgets/session/todo_list_widget.dart';
 
 class MyHomePage extends ConsumerWidget {
@@ -60,88 +59,76 @@ class MyHomePage extends ConsumerWidget {
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu, color: Colors.grey),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
-        ),
-        actions: [
-          if (selectedSession != null) ...[
-            IconButton(
-              icon: const Icon(Icons.difference_outlined, color: Colors.grey),
-              tooltip: '文件变更',
-              onPressed: () => context.push('/diff', extra: selectedSession.id),
-            ),
-            IconButton(
-              icon: const Icon(Icons.info_outline, color: Colors.grey),
-              tooltip: '上下文',
-              onPressed: () => context.push('/session-context'),
-            ),
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) return;
+        ref.read(selectedSessionProvider.notifier).select(null);
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          actions: [
+            if (selectedSession != null) ...[
+              IconButton(
+                icon: const Icon(Icons.difference_outlined, color: Colors.grey),
+                tooltip: '文件变更',
+                onPressed: () =>
+                    context.push('/diff', extra: selectedSession.id),
+              ),
+              IconButton(
+                icon: const Icon(Icons.info_outline, color: Colors.grey),
+                tooltip: '上下文',
+                onPressed: () => context.push('/session-context'),
+              ),
+            ],
           ],
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(1),
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+              ),
             ),
           ),
         ),
-      ),
-      drawer: SessionDrawer(
-        sessionsAsync: sessionsAsync,
-        selectedSession: selectedSession,
-        onSessionSelected: (session) {
-          ref.read(selectedSessionProvider.notifier).select(session);
-          Navigator.pop(context);
-        },
-        onNewSession: () {
-          ref.read(selectedSessionProvider.notifier).startNew();
-          Navigator.pop(context);
-        },
-      ),
-      body: Column(
-        children: [
-          if (selectedSession != null)
-            TodoListWidget(sessionID: selectedSession.id),
-          Expanded(
-            child: selectedSession != null
-                ? MessageList(
-                    onNavigateToSubSession: (sessionId) =>
-                        context.push('/sub-session', extra: sessionId),
-                  )
-                : isPending
-                ? buildNewSessionWelcome()
-                : sessionsAsync.when(
-                    data: (sessions) => sessions.isEmpty
-                        ? const Center(child: Text('No sessions'))
-                        : const Center(
-                            child: Text('Select a session from drawer'),
-                          ),
-                    error: (error, stack) =>
-                        Center(child: Text('$error, $stack')),
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
-                  ),
-          ),
-          if ((selectedSession != null || isPending) &&
-              selectedSession != null &&
-              hasPermissionBlock)
-            SessionPermissionDock(request: permissionRequest),
-          if ((selectedSession != null || isPending) &&
-              !hasPermissionBlock &&
-              hasQuestion)
-            const QuestionOverlay(),
-          if ((selectedSession != null || isPending) &&
-              !hasPermissionBlock &&
-              !hasQuestion)
-            const ChatInput(),
-        ],
+        body: Column(
+          children: [
+            if (selectedSession != null)
+              TodoListWidget(sessionID: selectedSession.id),
+            Expanded(
+              child: selectedSession != null
+                  ? MessageList(
+                      onNavigateToSubSession: (sessionId) =>
+                          context.push('/sub-session', extra: sessionId),
+                    )
+                  : isPending
+                  ? buildNewSessionWelcome()
+                  : sessionsAsync.when(
+                      data: (sessions) => sessions.isEmpty
+                          ? const Center(child: Text('暂无会话'))
+                          : const Center(child: Text('请选择一个会话')),
+                      error: (error, stack) =>
+                          Center(child: Text('$error, $stack')),
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
+                    ),
+            ),
+            if ((selectedSession != null || isPending) &&
+                selectedSession != null &&
+                hasPermissionBlock)
+              SessionPermissionDock(request: permissionRequest),
+            if ((selectedSession != null || isPending) &&
+                !hasPermissionBlock &&
+                hasQuestion)
+              const QuestionOverlay(),
+            if ((selectedSession != null || isPending) &&
+                !hasPermissionBlock &&
+                !hasQuestion)
+              const ChatInput(),
+          ],
+        ),
       ),
     );
   }

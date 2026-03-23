@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 
 import 'pages/file_content_page.dart';
 import 'pages/home_page.dart';
+import 'pages/main_tab_page.dart';
 import 'pages/project_list_page.dart';
+import 'pages/session_list_page.dart';
 import 'pages/session_context_page.dart';
 import 'pages/session_diff_page.dart';
 import 'pages/settings_page.dart';
@@ -20,9 +22,16 @@ final GoRouter appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
   initialLocation: '/',
   routes: <RouteBase>[
+    GoRoute(path: '/', builder: (context, state) => const MainTabPage()),
     GoRoute(
-      path: '/',
-      builder: (context, state) => const MyHomePage(title: '首页'),
+      path: '/sessions',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const SessionListPage(),
+    ),
+    GoRoute(
+      path: '/chat',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const MyHomePage(title: '会话'),
     ),
     GoRoute(
       path: '/settings',

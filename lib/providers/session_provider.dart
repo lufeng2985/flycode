@@ -17,31 +17,34 @@ typedef SelectedSessionState = ({Session? session, bool isPending});
 class SelectedSessionNotifier extends _$SelectedSessionNotifier {
   @override
   SelectedSessionState build() {
-    ref.watch(selectedProjectProvider);
+    ref.listen(selectedProjectProvider, (previous, next) {
+      final prevProject = previous?.asData?.value;
+      final nextProject = next.asData?.value;
+      final changed = prevProject?.id != nextProject?.id;
+      if (!changed) return;
+
+      // 项目切换后清空当前会话，由用户在会话页主动选择。
+      state = (session: null, isPending: false);
+    });
 
     ref.listen(sessionsProvider, (previous, next) {
       next.whenData((sessions) {
         final current = state;
 
-        // 用户手动进入“新建会话”态时，不自动抢占选择。
+        // 用户手动进入“新建会话”态时，不自动变更选择。
         if (current.isPending) return;
 
-        if (sessions.isEmpty) {
-          if (current.session != null) {
-            state = (session: null, isPending: false);
-          }
-          return;
-        }
-
         final selected = current.session;
-        if (selected == null) {
-          state = (session: sessions.first, isPending: false);
+        if (selected == null) return;
+
+        if (sessions.isEmpty) {
+          state = (session: null, isPending: false);
           return;
         }
 
         final stillExists = sessions.any((s) => s.id == selected.id);
         if (!stillExists) {
-          state = (session: sessions.first, isPending: false);
+          state = (session: null, isPending: false);
         }
       });
     }, fireImmediately: true);

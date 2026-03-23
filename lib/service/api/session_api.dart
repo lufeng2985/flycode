@@ -19,8 +19,10 @@ Future<SessionApi> sessionApi(Ref ref) async {
 Future<List<Session>> sessions(Ref ref) async {
   final api = await ref.watch(sessionApiProvider.future);
   final project = await ref.watch(selectedProjectProvider.future);
+  if (project == null) return [];
+
   final sessions = await api.getSessions(
-    directory: project?.worktree,
+    directory: project.worktree,
     roots: true,
   );
   return sessions.where((s) => s.projectID != 'global').toList();

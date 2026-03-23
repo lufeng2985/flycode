@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../service/api/models/project.dart';
 import '../service/api/project_api.dart';
 import '../providers/project_provider.dart';
@@ -153,7 +154,7 @@ class ProjectListPage extends ConsumerWidget {
                       ref
                           .read(selectedProjectProvider.notifier)
                           .select(project);
-                      Navigator.pop(context);
+                      context.push('/sessions');
                     },
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
