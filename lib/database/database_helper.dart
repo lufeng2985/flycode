@@ -4,6 +4,7 @@ import 'package:path/path.dart';
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
   static Database? _database;
+  static const int _dbVersion = 2;
 
   factory DatabaseHelper() => _instance;
 
@@ -19,7 +20,12 @@ class DatabaseHelper {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, 'flycode.db');
 
-    return await openDatabase(path, version: 1, onCreate: _onCreate);
+    return await openDatabase(
+      path,
+      version: _dbVersion,
+      onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
+    );
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -31,5 +37,27 @@ class DatabaseHelper {
         PRIMARY KEY (provider_id, model_id)
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE pinned_projects (
+        server_base_url TEXT NOT NULL,
+        worktree TEXT NOT NULL,
+        pinned_at INTEGER NOT NULL,
+        PRIMARY KEY (server_base_url, worktree)
+      )
+    ''');
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('''
+        CREATE TABLE pinned_projects (
+          server_base_url TEXT NOT NULL,
+          worktree TEXT NOT NULL,
+          pinned_at INTEGER NOT NULL,
+          PRIMARY KEY (server_base_url, worktree)
+        )
+      ''');
+    }
   }
 }

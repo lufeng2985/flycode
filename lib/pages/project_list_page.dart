@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../service/api/models/project.dart';
+import '../providers/project_pin_provider.dart';
 import '../service/api/project_api.dart';
 import '../providers/project_provider.dart';
 import '../widgets/project/open_project_sheet.dart';
@@ -43,12 +45,79 @@ String _formatUpdatedTime(int timestampMs) {
   return '$y-$m-$d';
 }
 
+List<Project> _sortProjects(
+  List<Project> projects,
+  Map<String, int> pinnedProjects,
+) {
+  final sorted = List<Project>.from(projects);
+
+  sorted.sort((a, b) {
+    final aPinnedAt = pinnedProjects[a.worktree];
+    final bPinnedAt = pinnedProjects[b.worktree];
+
+    final aPinned = aPinnedAt != null;
+    final bPinned = bPinnedAt != null;
+
+    if (aPinned != bPinned) {
+      return aPinned ? -1 : 1;
+    }
+
+    if (aPinned && bPinned) {
+      final pinCompare = bPinnedAt.compareTo(aPinnedAt);
+      if (pinCompare != 0) return pinCompare;
+    }
+
+    return b.time.updated.compareTo(a.time.updated);
+  });
+
+  return sorted;
+}
+
+Future<void> _showProjectActionMenu(
+  BuildContext context,
+  WidgetRef ref,
+  Project project,
+  bool isPinned,
+) async {
+  HapticFeedback.lightImpact();
+
+  final action = await showModalBottomSheet<String>(
+    context: context,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (context) {
+      return SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(
+                isPinned ? Icons.push_pin_outlined : Icons.push_pin,
+              ),
+              title: Text(isPinned ? '取消置顶' : '置顶'),
+              onTap: () => Navigator.of(context).pop('toggle_pin'),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      );
+    },
+  );
+
+  if (action != 'toggle_pin') return;
+
+  await ref.read(projectPinsProvider.notifier).togglePin(project);
+}
+
 class ProjectListPage extends ConsumerWidget {
   const ProjectListPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final projectsAsync = ref.watch(projectsProvider);
+    final pinnedProjectsAsync = ref.watch(projectPinsProvider);
     final selectedProjectAsync = ref.watch(selectedProjectProvider);
     final selectedProject = selectedProjectAsync.asData?.value;
     final colorScheme = Theme.of(context).colorScheme;
@@ -78,170 +147,214 @@ class ProjectListPage extends ConsumerWidget {
         ),
       ),
       body: RefreshIndicator(
-        onRefresh: () => ref.refresh(projectsProvider.future),
+        onRefresh: () async {
+          await Future.wait([
+            ref.refresh(projectsProvider.future),
+            ref.refresh(projectPinsProvider.future),
+          ]);
+        },
         child: projectsAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, stack) => Center(
             child: Text('$error', style: TextStyle(color: Colors.grey[500])),
           ),
           data: (projects) {
-            if (projects.isEmpty) {
-              return ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                children: [
-                  SizedBox(height: MediaQuery.of(context).size.height * 0.2),
-                  Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 72,
-                          height: 72,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          child: Icon(
-                            Icons.folder_off_rounded,
-                            size: 36,
-                            color: Colors.grey[350],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          '暂无项目',
-                          style: TextStyle(
-                            color: Colors.grey[500],
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          '请先添加一个项目',
-                          style: TextStyle(
-                            color: Colors.grey[400],
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              );
-            }
-            return ListView.separated(
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-              itemCount: projects.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                final project = projects[index];
-                final isSelected = selectedProject?.id == project.id;
-                final displayName = _projectDisplayName(project);
-                final updatedText = _formatUpdatedTime(project.time.updated);
-                final iconColor = _parseColor(project.icon?.color);
+            return pinnedProjectsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => Center(
+                child: Text(
+                  '$error',
+                  style: TextStyle(color: Colors.grey[500]),
+                ),
+              ),
+              data: (pinnedProjects) {
+                final sortedProjects = _sortProjects(projects, pinnedProjects);
 
-                return Material(
-                  color: isSelected
-                      ? (iconColor ?? colorScheme.primary).withValues(
-                          alpha: 0.06,
-                        )
-                      : Colors.grey[50],
-                  borderRadius: BorderRadius.circular(12),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () {
-                      ref
-                          .read(selectedProjectProvider.notifier)
-                          .select(project);
-                      context.push('/sessions');
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 12,
+                if (sortedProjects.isEmpty) {
+                  return ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.2,
                       ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? (iconColor ?? colorScheme.primary)
-                                        .withValues(alpha: 0.12)
-                                  : Colors.white,
-                              borderRadius: BorderRadius.circular(10),
-                              border: !isSelected
-                                  ? Border.all(color: Colors.grey[200]!)
-                                  : null,
+                      Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 72,
+                              height: 72,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[100],
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                              child: Icon(
+                                Icons.folder_off_rounded,
+                                size: 36,
+                                color: Colors.grey[350],
+                              ),
                             ),
-                            child: Icon(
-                              Icons.folder_rounded,
-                              size: 22,
-                              color: isSelected
-                                  ? (iconColor ?? colorScheme.primary)
-                                  : Colors.grey[400],
+                            const SizedBox(height: 16),
+                            Text(
+                              '暂无项目',
+                              style: TextStyle(
+                                color: Colors.grey[500],
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
+                            const SizedBox(height: 6),
+                            Text(
+                              '请先添加一个项目',
+                              style: TextStyle(
+                                color: Colors.grey[400],
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                }
+
+                return ListView.separated(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 16,
+                  ),
+                  itemCount: sortedProjects.length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final project = sortedProjects[index];
+                    final isSelected = selectedProject?.id == project.id;
+                    final isPinned = pinnedProjects.containsKey(
+                      project.worktree,
+                    );
+                    final displayName = _projectDisplayName(project);
+                    final updatedText = _formatUpdatedTime(
+                      project.time.updated,
+                    );
+                    final iconColor = _parseColor(project.icon?.color);
+
+                    return Material(
+                      color: isSelected
+                          ? (iconColor ?? colorScheme.primary).withValues(
+                              alpha: 0.06,
+                            )
+                          : Colors.grey[50],
+                      borderRadius: BorderRadius.circular(12),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () {
+                          ref
+                              .read(selectedProjectProvider.notifier)
+                              .select(project);
+                          context.push('/sessions');
+                        },
+                        onLongPress: () => _showProjectActionMenu(
+                          context,
+                          ref,
+                          project,
+                          isPinned,
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  displayName,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: isSelected
-                                        ? FontWeight.w600
-                                        : FontWeight.w500,
-                                    color: isSelected
-                                        ? (iconColor ?? colorScheme.primary)
-                                        : Colors.black87,
-                                  ),
-                                ),
-                                const SizedBox(height: 3),
-                                Text(
-                                  project.worktree,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.grey[500],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            mainAxisAlignment: MainAxisAlignment.center,
+                          child: Row(
                             children: [
-                              if (isSelected) ...[
-                                Icon(
-                                  Icons.check_circle_rounded,
-                                  size: 16,
-                                  color: iconColor ?? colorScheme.primary,
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? (iconColor ?? colorScheme.primary)
+                                            .withValues(alpha: 0.12)
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: !isSelected
+                                      ? Border.all(color: Colors.grey[200]!)
+                                      : null,
                                 ),
-                                const SizedBox(height: 4),
-                              ],
-                              Text(
-                                updatedText,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey[400],
+                                child: Icon(
+                                  Icons.folder_rounded,
+                                  size: 22,
+                                  color: isSelected
+                                      ? (iconColor ?? colorScheme.primary)
+                                      : Colors.grey[400],
                                 ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      displayName,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: isSelected
+                                            ? FontWeight.w600
+                                            : FontWeight.w500,
+                                        color: isSelected
+                                            ? (iconColor ?? colorScheme.primary)
+                                            : Colors.black87,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      project.worktree,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey[500],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  if (isPinned) ...[
+                                    Icon(
+                                      Icons.push_pin_rounded,
+                                      size: 14,
+                                      color: Colors.grey[500],
+                                    ),
+                                    const SizedBox(height: 4),
+                                  ],
+                                  if (isSelected) ...[
+                                    Icon(
+                                      Icons.check_circle_rounded,
+                                      size: 16,
+                                      color: iconColor ?? colorScheme.primary,
+                                    ),
+                                    const SizedBox(height: 4),
+                                  ],
+                                  Text(
+                                    updatedText,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey[400],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ),
+                    );
+                  },
                 );
               },
             );
