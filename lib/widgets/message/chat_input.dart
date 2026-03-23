@@ -17,6 +17,7 @@ import '../../providers/chat_config_provider.dart';
 import '../../providers/provider_list_provider.dart';
 import '../../providers/project_provider.dart';
 import '../../providers/session_status_provider.dart';
+import '../../providers/model_variant_provider.dart';
 import '../../service/api/models/agent.dart';
 import '../../service/api/models/provider.dart';
 import '../../service/api/models/session_status.dart';
@@ -430,12 +431,20 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       final api = await ref.read(sessionApiProvider.future);
       final project = await ref.read(selectedProjectProvider.future);
       final chatConfig = ref.read(chatConfigProvider);
+      final variant = ref.read(modelVariantProvider).current;
 
       final session = await _ensureSession(api, project, selectedState);
       if (session == null) return;
 
       if (isShellMode) {
-        await _dispatchShell(api, session, project, chatConfig, shellCommand);
+        await _dispatchShell(
+          api,
+          session,
+          project,
+          chatConfig,
+          shellCommand,
+          variant,
+        );
       } else {
         final matchedCommand = _parseCommand(text);
         if (matchedCommand != null) {
@@ -444,11 +453,12 @@ class _ChatInputState extends ConsumerState<ChatInput> {
             session,
             project,
             chatConfig,
+            variant,
             matchedCommand,
             text,
           );
         } else {
-          await _dispatchPrompt(api, session, project, chatConfig);
+          await _dispatchPrompt(api, session, project, chatConfig, variant);
         }
       }
 
@@ -510,6 +520,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     String sessionId,
     dynamic project,
     ChatConfig chatConfig,
+    String? variant,
     Command matchedCommand,
     String text,
   ) async {
@@ -530,6 +541,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
         arguments: arguments,
         model: modelStr,
         agent: chatConfig.agent,
+        variant: variant,
       ),
     );
   }
@@ -540,6 +552,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     dynamic project,
     ChatConfig chatConfig,
     String command,
+    String? variant,
   ) async {
     await api.runShell(
       sessionId,
@@ -551,6 +564,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           'providerID': chatConfig.model.providerID,
           'modelID': chatConfig.model.modelID,
         },
+        'variant': ?variant,
       },
     );
   }
@@ -560,6 +574,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     String sessionId,
     dynamic project,
     ChatConfig chatConfig,
+    String? variant,
   ) async {
     final text = _controller.text;
     final rootDir = (project?.worktree as String?) ?? '';
@@ -604,6 +619,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       data: PromptAsyncInput(
         agent: chatConfig.agent,
         model: chatConfig.model,
+        variant: variant,
         parts: parts,
       ),
     );
@@ -660,6 +676,25 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     );
   }
 
+  void _showVariantSelector(ModelVariantState variantState) {
+    if (variantState.available.isEmpty) return;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _VariantSelectionSheet(
+        variants: variantState.available,
+        current: variantState.current,
+        onSelect: (variant) {
+          ref
+              .read(modelVariantProvider.notifier)
+              .setSelectedForCurrentModel(variant);
+          Navigator.of(context).pop();
+        },
+      ),
+    );
+  }
+
   void _setInputMode(_InputMode mode) {
     if (_inputMode == mode) return;
     setState(() {
@@ -680,6 +715,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     final theme = Theme.of(context);
     final isShellMode = _inputMode == _InputMode.shell;
     final providerList = ref.watch(providerListProvider).asData?.value;
+    final variantState = ref.watch(modelVariantProvider);
     ref.watch(commandsProvider);
 
     final modelLabel = _resolveModelLabel(providerList, chatConfig);
@@ -727,9 +763,15 @@ class _ChatInputState extends ConsumerState<ChatInput> {
             _ConfigToolBar(
               chatConfig: chatConfig,
               modelLabel: modelLabel,
+              showVariantSelector: variantState.available.isNotEmpty,
+              variantLabel: _formatVariantLabel(variantState.current),
               agents: ref.watch(agentsProvider).asData?.value ?? const [],
               onAgentTap: _handleAgentTap,
               onShowModelSelector: _showModelSelector,
+              onShowVariantSelector: () => _showVariantSelector(variantState),
+              onCycleVariant: () {
+                ref.read(modelVariantProvider.notifier).cycleForCurrentModel();
+              },
             ),
             const SizedBox(height: 12),
             CompositedTransformTarget(
@@ -807,6 +849,11 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       }
     }
     return chatConfig.model.modelID;
+  }
+
+  String _formatVariantLabel(String? variant) {
+    if (variant == null || variant.isEmpty) return 'Default';
+    return '${variant[0].toUpperCase()}${variant.substring(1)}';
   }
 
   @override
@@ -983,16 +1030,24 @@ class _InputToolBar extends StatelessWidget {
 class _ConfigToolBar extends StatelessWidget {
   final ChatConfig chatConfig;
   final String modelLabel;
+  final bool showVariantSelector;
+  final String variantLabel;
   final List<Agent> agents;
   final ValueChanged<List<Agent>> onAgentTap;
   final VoidCallback onShowModelSelector;
+  final VoidCallback onShowVariantSelector;
+  final VoidCallback onCycleVariant;
 
   const _ConfigToolBar({
     required this.chatConfig,
     required this.modelLabel,
+    required this.showVariantSelector,
+    required this.variantLabel,
     required this.agents,
     required this.onAgentTap,
     required this.onShowModelSelector,
+    required this.onShowVariantSelector,
+    required this.onCycleVariant,
   });
 
   String get _agentLabel {
@@ -1015,8 +1070,14 @@ class _ConfigToolBar extends StatelessWidget {
           label: modelLabel,
           icon: Icons.share_outlined,
         ),
-        const SizedBox(width: 8),
-        const _SelectionChip(label: '默认'),
+        if (showVariantSelector) ...[
+          const SizedBox(width: 8),
+          _SelectionChip(
+            onTap: onShowVariantSelector,
+            onLongPress: onCycleVariant,
+            label: variantLabel,
+          ),
+        ],
       ],
     );
   }
@@ -1026,13 +1087,20 @@ class _SelectionChip extends StatelessWidget {
   final String label;
   final IconData? icon;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
 
-  const _SelectionChip({required this.label, this.icon, this.onTap});
+  const _SelectionChip({
+    required this.label,
+    this.icon,
+    this.onTap,
+    this.onLongPress,
+  });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
+      onLongPress: onLongPress,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
@@ -1052,6 +1120,103 @@ class _SelectionChip extends StatelessWidget {
               style: const TextStyle(fontSize: 12, color: Colors.black87),
             ),
             const Icon(Icons.keyboard_arrow_down, size: 14, color: Colors.grey),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _VariantSelectionSheet extends StatelessWidget {
+  final List<String> variants;
+  final String? current;
+  final ValueChanged<String?> onSelect;
+
+  const _VariantSelectionSheet({
+    required this.variants,
+    required this.current,
+    required this.onSelect,
+  });
+
+  String _labelFor(String? value) {
+    if (value == null || value.isEmpty) return 'Default';
+    return '${value[0].toUpperCase()}${value.substring(1)}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final options = <String?>[null, ...variants];
+    final theme = Theme.of(context);
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+              child: Text(
+                '选择变体',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const Divider(height: 1),
+            ListView.separated(
+              shrinkWrap: true,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: options.length,
+              separatorBuilder: (_, _) =>
+                  Divider(height: 1, color: Colors.grey[100]),
+              itemBuilder: (ctx, i) {
+                final value = options[i];
+                final selected = current == value;
+                return InkWell(
+                  onTap: () => onSelect(value),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _labelFor(value),
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                              color: selected
+                                  ? theme.colorScheme.primary
+                                  : Colors.black87,
+                            ),
+                          ),
+                        ),
+                        if (selected)
+                          Icon(
+                            Icons.check,
+                            size: 18,
+                            color: theme.colorScheme.primary,
+                          ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
           ],
         ),
       ),

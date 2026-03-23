@@ -2,19 +2,26 @@
 class AgentModel {
   final String providerID;
   final String modelID;
+  final String? variant;
 
-  const AgentModel({required this.providerID, required this.modelID});
+  const AgentModel({
+    required this.providerID,
+    required this.modelID,
+    this.variant,
+  });
 
   factory AgentModel.fromJson(Map<String, dynamic> json) {
     return AgentModel(
       providerID: json['providerID'] as String,
       modelID: json['modelID'] as String,
+      variant: json['variant'] as String?,
     );
   }
 
   Map<String, dynamic> toJson() => {
     'providerID': providerID,
     'modelID': modelID,
+    if (variant != null) 'variant': variant,
   };
 }
 
