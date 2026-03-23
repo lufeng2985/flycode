@@ -25,7 +25,7 @@ Future<List<Session>> sessions(Ref ref) async {
     directory: project.worktree,
     roots: true,
   );
-  return sessions.where((s) => s.projectID != 'global').toList();
+  return sessions;
 }
 
 class SessionApi {

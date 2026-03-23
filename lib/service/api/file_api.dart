@@ -101,4 +101,43 @@ class FileApi {
         .map(FileNode.fromJson)
         .toList();
   }
+
+  /// 获取当前服务端路径信息，并尽力解析出 home 目录。
+  ///
+  /// 优先读取 `/path` 返回中的 `home` 字段。
+  /// 若不存在，则回退为从 `cwd` 推导 `/Users/<name>` 或 `/home/<name>`。
+  Future<String?> resolveHomeDirectory() async {
+    final result = await _client.get('/path', extraHeaders: _extraHeaders);
+    if (result is! Map<String, dynamic>) return null;
+
+    String? pickString(dynamic value) {
+      if (value is! String) return null;
+      final trimmed = value.trim();
+      if (trimmed.isEmpty) return null;
+      return trimmed.replaceAll('\\', '/');
+    }
+
+    final explicitHome =
+        pickString(result['home']) ??
+        pickString(result['homeDir']) ??
+        pickString(result['homedir']) ??
+        pickString(result['HOME']);
+    if (explicitHome != null) return explicitHome;
+
+    final cwd = pickString(result['cwd']);
+    if (cwd == null) return null;
+
+    final parts = cwd.split('/').where((s) => s.isNotEmpty).toList();
+    if (parts.length >= 2 && parts.first == 'Users') {
+      return '/Users/${parts[1]}';
+    }
+    if (parts.length >= 2 && parts.first == 'home') {
+      return '/home/${parts[1]}';
+    }
+    if (parts.length >= 3 && parts[0].endsWith(':') && parts[1] == 'Users') {
+      return '${parts[0]}/Users/${parts[2]}';
+    }
+
+    return null;
+  }
 }

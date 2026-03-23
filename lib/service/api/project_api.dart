@@ -24,9 +24,7 @@ class Projects extends _$Projects {
       projectApi.getProjects(),
     ]);
 
-    final sessions = (results[0] as List<Session>)
-        .where((s) => s.projectID != 'global')
-        .toList();
+    final sessions = results[0] as List<Session>;
     final apiProjects = (results[1] as List<Project>)
         .where((p) => p.id != 'global')
         .toList();
@@ -84,12 +82,24 @@ class Projects extends _$Projects {
   }
 
   Project addProjectByDirectory(String directory) {
-    final newProject = Project.fromDirectory(directory);
     final current = state.asData?.value ?? [];
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final existingIndex = current.indexWhere((p) => p.worktree == directory);
 
-    if (!current.any((p) => p.worktree == directory)) {
-      state = AsyncData([...current, newProject]);
+    if (existingIndex != -1) {
+      final existing = current[existingIndex];
+      final updatedProject = existing.copyWith(
+        time: existing.time.copyWith(updated: now),
+      );
+      state = AsyncData([
+        updatedProject,
+        ...current.where((p) => p.worktree != directory),
+      ]);
+      return updatedProject;
     }
+
+    final newProject = Project.fromDirectory(directory, updatedAt: now);
+    state = AsyncData([newProject, ...current]);
 
     return newProject;
   }

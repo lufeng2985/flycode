@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../service/api/api_client.dart';
 import '../../service/api/file_api.dart';
@@ -34,6 +35,8 @@ class _OpenProjectSheet extends ConsumerStatefulWidget {
 }
 
 class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
+  static const double _resultAreaHeight = 320;
+
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
 
@@ -49,6 +52,7 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
 
   // 路径导航模式的目录缓存：directory -> List<FileNode>
   final Map<String, List<FileNode>> _dirCache = {};
+  String? _homeDir;
 
   @override
   void initState() {
@@ -136,37 +140,32 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
   // ---------------------------------------------------------------------------
 
   Future<List<String>> _navigatePath(FileApi fileApi, String input) async {
-    // 展开 ~
-    String expanded = input;
-    if (expanded.startsWith('~/') || expanded == '~') {
-      // home 目录暂时用空字符串占位，让服务端处理；
-      // 实际上 listDirectory 传入 '~' 时服务端会报错，
-      // 因此我们先取 home，再拼接。
-      // 为简化，我们将 ~ 替换为 home（后面通过服务端 /path 获取，
-      // 但这里选择直接调用 listDirectory('~') 来发现 home 子目录）。
-      // 注意：下面的逻辑会 fallback 到逐段处理。
-    }
-
-    // 将输入按 / 分段
-    final segments = _splitPath(expanded);
-    if (segments.isEmpty) return [];
-
-    // 如果输入以 / 开头，root 为 '/'
-    // 如果以 ~ 开头，root 为 '~'（服务端需要能理解）
+    final normalizedInput = _normalizePath(input);
     final String rootDir;
     final List<String> remainingSegments;
 
-    if (expanded.startsWith('/')) {
+    if (normalizedInput == '~' || normalizedInput.startsWith('~/')) {
+      final homeDir = await _resolveHomeDirectory(fileApi);
+      rootDir = homeDir;
+      if (normalizedInput == '~') {
+        remainingSegments = [];
+      } else {
+        final tail = normalizedInput.substring(2);
+        remainingSegments = _splitPath(
+          tail,
+        ).where((s) => s.isNotEmpty).toList();
+      }
+    } else if (normalizedInput.startsWith('/')) {
       rootDir = '/';
-      // segments[0] 是空字符串（split '/' 开头）
-      remainingSegments = segments.where((s) => s.isNotEmpty).toList();
-    } else if (expanded.startsWith('~')) {
-      rootDir = '~';
-      remainingSegments = segments.skip(1).where((s) => s.isNotEmpty).toList();
+      remainingSegments = _splitPath(
+        normalizedInput,
+      ).where((s) => s.isNotEmpty).toList();
     } else {
       // 含 / 但不以 / 或 ~ 开头（如 "src/comp"）
       rootDir = '.';
-      remainingSegments = segments;
+      remainingSegments = _splitPath(
+        normalizedInput,
+      ).where((s) => s.isNotEmpty).toList();
     }
 
     // 逐层深入
@@ -176,7 +175,9 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
     // 如果输入以 / 或 ~ 结尾（用户刚输入了分隔符），
     // 则列出当前目录内容
     final endsWithSlash =
-        expanded.endsWith('/') || expanded == '~' || expanded == '/';
+        normalizedInput.endsWith('/') ||
+        normalizedInput == '~' ||
+        normalizedInput == '/';
 
     if (endsWithSlash) {
       // 逐段导航直到最后一段
@@ -228,6 +229,98 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
 
   List<String> _splitPath(String path) {
     return path.split('/');
+  }
+
+  String _normalizePath(String path) {
+    return path.replaceAll('\\', '/');
+  }
+
+  Future<String> _resolveHomeDirectory(FileApi fileApi) async {
+    final cached = _homeDir;
+    if (cached != null && cached.isNotEmpty) {
+      return cached;
+    }
+
+    final fromPathApi = await fileApi.resolveHomeDirectory();
+    if (fromPathApi != null && fromPathApi.isNotEmpty) {
+      _homeDir = fromPathApi;
+      return fromPathApi;
+    }
+
+    final selectedProject = ref.read(selectedProjectProvider).asData?.value;
+    final fromProject = _inferHomeFromPath(selectedProject?.worktree);
+    if (fromProject != null) {
+      _homeDir = fromProject;
+      return fromProject;
+    }
+
+    final cwdNodes = await _cachedListDirectory(fileApi, '.');
+    final cwd = _inferDirectoryFromNodes(cwdNodes);
+    final fromCwd = _inferHomeFromPath(cwd);
+    if (fromCwd != null) {
+      _homeDir = fromCwd;
+      return fromCwd;
+    }
+
+    throw Exception('无法解析 home 目录');
+  }
+
+  String? _inferDirectoryFromNodes(List<FileNode> nodes) {
+    for (final node in nodes) {
+      final absolute = _normalizePath(node.absolute);
+      final relative = _normalizePath(node.path);
+      if (absolute.isEmpty || relative.isEmpty) continue;
+      final suffix = '/$relative';
+      if (!absolute.endsWith(suffix)) continue;
+      final base = absolute.substring(0, absolute.length - suffix.length);
+      if (base.isNotEmpty) return base;
+    }
+    return null;
+  }
+
+  String? _inferHomeFromPath(String? path) {
+    if (path == null || path.isEmpty) return null;
+
+    final normalized = _normalizePath(path);
+    final parts = normalized.split('/').where((s) => s.isNotEmpty).toList();
+    if (parts.length < 2) return null;
+
+    if (parts.first == 'Users') {
+      return '/Users/${parts[1]}';
+    }
+
+    if (parts.first == 'home') {
+      return '/home/${parts[1]}';
+    }
+
+    if (parts.length >= 3 && parts[0].endsWith(':') && parts[1] == 'Users') {
+      return '${parts[0]}/Users/${parts[2]}';
+    }
+
+    return null;
+  }
+
+  String _displayPath(String absolutePath) {
+    final input = _normalizePath(_controller.text.trim());
+    if (!(input == '~' || input.startsWith('~/'))) {
+      return absolutePath;
+    }
+
+    final home = _homeDir;
+    if (home == null || home.isEmpty) {
+      return absolutePath;
+    }
+
+    final normalizedAbsolute = _normalizePath(absolutePath);
+    final normalizedHome = _normalizePath(home);
+    if (normalizedAbsolute == normalizedHome) {
+      return '~';
+    }
+    final prefix = '$normalizedHome/';
+    if (normalizedAbsolute.startsWith(prefix)) {
+      return '~/${normalizedAbsolute.substring(prefix.length)}';
+    }
+    return absolutePath;
   }
 
   Future<List<FileNode>> _cachedListDirectory(
@@ -282,11 +375,19 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
 
       ref.read(selectedProjectProvider.notifier).select(project);
 
-      // 关闭 Sheet，然后关闭 ProjectListPage
-      Navigator.of(context).pop(); // 关闭 Sheet
-      if (mounted) {
-        Navigator.of(context).pop(); // 关闭 ProjectListPage
-      }
+      // 先关闭 Sheet，再在下一帧处理后续导航，避免 Navigator 锁冲突。
+      final navigator = Navigator.of(context);
+      navigator.pop();
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!navigator.mounted) return;
+
+        if (navigator.canPop()) {
+          navigator.pop();
+        } else if (navigator.context.mounted) {
+          navigator.context.push('/sessions');
+        }
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() => _confirming = false);
@@ -444,21 +545,34 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
   }
 
   Widget _buildResultArea(ColorScheme colorScheme) {
+    return SizedBox(
+      height: _resultAreaHeight,
+      child: _buildResultContent(colorScheme),
+    );
+  }
+
+  Widget _buildResultContent(ColorScheme colorScheme) {
     // 错误状态
     if (_error != null) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-        child: Row(
-          children: [
-            Icon(Icons.error_outline_rounded, color: Colors.red[400], size: 18),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                _error!,
-                style: TextStyle(color: Colors.red[600], fontSize: 13),
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            children: [
+              Icon(
+                Icons.error_outline_rounded,
+                color: Colors.red[400],
+                size: 18,
               ),
-            ),
-          ],
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  _error!,
+                  style: TextStyle(color: Colors.red[600], fontSize: 13),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -466,9 +580,9 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
     // 空状态（未输入或无结果）
     if (_results.isEmpty && !_loading) {
       if (_controller.text.trim().isEmpty) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 32),
+        return Center(
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 Icons.folder_open_rounded,
@@ -489,8 +603,7 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
           ),
         );
       } else {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 32),
+        return Center(
           child: Text(
             '未找到匹配的目录',
             style: TextStyle(color: Colors.grey[400], fontSize: 13),
@@ -500,85 +613,77 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
     }
 
     // 结果列表
-    return ConstrainedBox(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.45,
-      ),
-      child: ListView.builder(
-        shrinkWrap: true,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        itemCount: _results.length,
-        itemBuilder: (context, index) {
-          final path = _results[index];
-          final parts = path.replaceAll('\\', '/').split('/');
-          final name = parts.lastWhere((p) => p.isNotEmpty, orElse: () => path);
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      itemCount: _results.length,
+      itemBuilder: (context, index) {
+        final path = _results[index];
+        final displayPath = _displayPath(path);
+        final parts = path.replaceAll('\\', '/').split('/');
+        final name = parts.lastWhere((p) => p.isNotEmpty, orElse: () => path);
 
-          return Material(
-            color: Colors.transparent,
+        return Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          child: InkWell(
             borderRadius: BorderRadius.circular(8),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(8),
-              onTap: _confirming ? null : () => _selectDirectory(path),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 10,
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: colorScheme.primary.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        Icons.folder_rounded,
-                        size: 20,
-                        color: colorScheme.primary.withValues(alpha: 0.7),
-                      ),
+            onTap: _confirming ? null : () => _selectDirectory(path),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+              child: Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: colorScheme.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.black87,
-                            ),
+                    child: Icon(
+                      Icons.folder_rounded,
+                      size: 20,
+                      color: colorScheme.primary.withValues(alpha: 0.7),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black87,
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            path,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey[450],
-                            ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          displayPath,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey[450],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      size: 18,
-                      color: Colors.grey[350],
-                    ),
-                  ],
-                ),
+                  ),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: 18,
+                    color: Colors.grey[350],
+                  ),
+                ],
               ),
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 }
