@@ -80,6 +80,67 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
       _subSessionId != null &&
       widget.onNavigateToSubSession != null;
 
+  _ApplyPatchSummary? get _applyPatchSummary {
+    if (_part.tool != 'apply_patch') return null;
+    final state = _part.state;
+    Map<String, dynamic>? metadata;
+    if (state is ToolStateCompleted) {
+      metadata = state.metadata;
+    } else if (state is ToolStateRunning) {
+      metadata = state.metadata;
+    } else if (state is ToolStateError) {
+      metadata = state.metadata;
+    }
+
+    final rawFiles = metadata?['files'];
+    if (rawFiles is! List || rawFiles.isEmpty) return null;
+
+    final first = rawFiles.first;
+    if (first is! Map) return null;
+    final firstFile = first.map(
+      (key, value) => MapEntry(key.toString(), value),
+    );
+
+    final relativePath = _toNonEmptyString(firstFile['relativePath']);
+    final filePath = _toNonEmptyString(firstFile['filePath']);
+    final path = relativePath ?? filePath;
+    if (path == null) return null;
+
+    final normalizedPath = path.replaceAll('\\', '/');
+    final slashIndex = normalizedPath.lastIndexOf('/');
+    final fileName = slashIndex >= 0
+        ? normalizedPath.substring(slashIndex + 1)
+        : normalizedPath;
+    var directory = slashIndex > 0
+        ? normalizedPath.substring(0, slashIndex)
+        : '';
+    if (directory.isNotEmpty && !directory.startsWith('/')) {
+      directory = '/$directory';
+    }
+
+    return _ApplyPatchSummary(
+      fileName: fileName,
+      directory: directory,
+      additions: _toInt(firstFile['additions']),
+      deletions: _toInt(firstFile['deletions']),
+      extraFilesCount: rawFiles.length > 1 ? rawFiles.length - 1 : 0,
+    );
+  }
+
+  String? _toNonEmptyString(dynamic value) {
+    if (value == null) return null;
+    final text = value.toString().trim();
+    if (text.isEmpty) return null;
+    return text;
+  }
+
+  int _toInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
+  }
+
   // Determines if this tool should render at all
   // (question only shows when completed or dismissed-error)
   bool get _shouldRender {
@@ -142,6 +203,13 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
   }
 
   Widget _buildHeader(BuildContext context) {
+    if (_part.tool == 'apply_patch' && !_isActive && !_isError) {
+      final summary = _applyPatchSummary;
+      if (summary != null) {
+        return _buildApplyPatchHeader(context, summary);
+      }
+    }
+
     final meta = toolMetaOf(_part.tool);
     final input = _input;
 
@@ -289,6 +357,72 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
     );
   }
 
+  Widget _buildApplyPatchHeader(
+    BuildContext context,
+    _ApplyPatchSummary summary,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          const Text(
+            'Patch',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: summary.fileName,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey[700],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  if (summary.directory.isNotEmpty)
+                    TextSpan(
+                      text: ' ${summary.directory}',
+                      style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                    ),
+                  if (summary.extraFilesCount > 0)
+                    TextSpan(
+                      text: '  +${summary.extraFilesCount} files',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                    ),
+                ],
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '+${summary.additions}',
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF1A7F37),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            '-${summary.deletions}',
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFFD1242F),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildErrorBody(BuildContext context) {
     final err = _errorText ?? '';
     return Container(
@@ -331,6 +465,22 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
   }
+}
+
+class _ApplyPatchSummary {
+  final String fileName;
+  final String directory;
+  final int additions;
+  final int deletions;
+  final int extraFilesCount;
+
+  const _ApplyPatchSummary({
+    required this.fileName,
+    required this.directory,
+    required this.additions,
+    required this.deletions,
+    required this.extraFilesCount,
+  });
 }
 
 // ─── Arg chip ────────────────────────────────────────────────────────────────
