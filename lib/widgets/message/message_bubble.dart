@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/provider_list_provider.dart';
+import '../../service/api/models/provider.dart';
 import '../../service/api/models/message.dart';
 import '../../service/api/models/parts.dart'
     hide
@@ -10,7 +13,7 @@ import '../../service/api/models/parts.dart'
         ApiError;
 import 'message_part.dart';
 
-class MessageBubble extends StatefulWidget {
+class MessageBubble extends ConsumerStatefulWidget {
   final MessageWithParts messageWithParts;
   final bool prevIsUser;
   final bool isLatestMessage;
@@ -25,10 +28,10 @@ class MessageBubble extends StatefulWidget {
   });
 
   @override
-  State<MessageBubble> createState() => _MessageBubbleState();
+  ConsumerState<MessageBubble> createState() => _MessageBubbleState();
 }
 
-class _MessageBubbleState extends State<MessageBubble> {
+class _MessageBubbleState extends ConsumerState<MessageBubble> {
   bool _copied = false;
 
   String _extractText() {
@@ -64,6 +67,7 @@ class _MessageBubbleState extends State<MessageBubble> {
 
   @override
   Widget build(BuildContext context) {
+    final providerList = ref.watch(providerListProvider).asData?.value;
     final isUser = widget.messageWithParts.info is UserMessage;
     final userMessage = isUser
         ? widget.messageWithParts.info as UserMessage
@@ -78,10 +82,30 @@ class _MessageBubbleState extends State<MessageBubble> {
     }
 
     if (isUser) {
-      return _buildUserBubble(context, userMessage!);
+      return _buildUserBubble(context, userMessage!, providerList);
     }
 
-    return _buildAssistantContent(context, assistantMessage!);
+    return _buildAssistantContent(context, assistantMessage!, providerList);
+  }
+
+  String _resolveModelLabel(
+    ProviderListResponse? providerList,
+    String providerId,
+    String modelId,
+  ) {
+    if (providerList == null) {
+      return modelId;
+    }
+    for (final provider in providerList.all) {
+      if (provider.id != providerId) {
+        continue;
+      }
+      final model = provider.models[modelId];
+      if (model != null && model.name.isNotEmpty) {
+        return model.name;
+      }
+    }
+    return modelId;
   }
 
   // ─── Error ────────────────────────────────────────────────────────────────
@@ -153,42 +177,65 @@ class _MessageBubbleState extends State<MessageBubble> {
 
   // ─── User bubble ──────────────────────────────────────────────────────────
 
-  Widget _buildUserBubble(BuildContext context, UserMessage userMessage) {
+  Widget _buildUserBubble(
+    BuildContext context,
+    UserMessage userMessage,
+    ProviderListResponse? providerList,
+  ) {
+    final modelLabel = _resolveModelLabel(
+      providerList,
+      userMessage.model.providerID,
+      userMessage.model.modelID,
+    );
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Align(
         alignment: Alignment.centerRight,
-        child: Container(
+        child: ConstrainedBox(
           constraints: BoxConstraints(
             maxWidth: MediaQuery.of(context).size.width * 0.75,
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(16),
-              topRight: Radius.circular(16),
-              bottomLeft: Radius.circular(16),
-              bottomRight: Radius.circular(4),
-            ),
-          ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              ...widget.messageWithParts.parts.map(
-                (part) => MessagePart(
-                  part: part,
-                  isUser: true,
-                  onNavigateToSubSession: widget.onNavigateToSubSession,
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: 0.1),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                    bottomLeft: Radius.circular(16),
+                    bottomRight: Radius.circular(4),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: widget.messageWithParts.parts
+                      .map(
+                        (part) => MessagePart(
+                          part: part,
+                          isUser: true,
+                          onNavigateToSubSession: widget.onNavigateToSubSession,
+                        ),
+                      )
+                      .toList(),
                 ),
               ),
-              if (_hasTextContent) ...[
-                const SizedBox(height: 4),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: _CopyButton(copied: _copied, onCopy: _copyMessage),
-                ),
-              ],
+              const SizedBox(height: 6),
+              _UserFooter(
+                message: userMessage,
+                modelLabel: modelLabel,
+                copied: _copied,
+                onCopy: _copyMessage,
+                showCopy: _hasTextContent,
+              ),
             ],
           ),
         ),
@@ -201,7 +248,13 @@ class _MessageBubbleState extends State<MessageBubble> {
   Widget _buildAssistantContent(
     BuildContext context,
     AssistantMessage assistantMessage,
+    ProviderListResponse? providerList,
   ) {
+    final modelLabel = _resolveModelLabel(
+      providerList,
+      assistantMessage.providerID,
+      assistantMessage.modelID,
+    );
     final isStreaming = assistantMessage.time.completed == null;
     final parts = widget.messageWithParts.parts;
     final lastAnimatedTextPartIndex = parts.lastIndexWhere(
@@ -231,6 +284,7 @@ class _MessageBubbleState extends State<MessageBubble> {
               const SizedBox(height: 6),
               _AssistantFooter(
                 message: assistantMessage,
+                modelLabel: modelLabel,
                 copied: _copied,
                 onCopy: _copyMessage,
               ),
@@ -288,31 +342,28 @@ class _CopyButton extends StatelessWidget {
 
 class _AssistantFooter extends StatelessWidget {
   final AssistantMessage message;
+  final String modelLabel;
   final bool copied;
   final VoidCallback onCopy;
 
   const _AssistantFooter({
     required this.message,
+    required this.modelLabel,
     required this.copied,
     required this.onCopy,
   });
 
-  String _formatDuration(int start, int? end) {
-    if (end == null) return '';
-    final seconds = end - start;
-    if (seconds < 0) return '';
-    if (seconds < 60) return '${seconds}s';
-    final m = seconds ~/ 60;
-    final s = seconds % 60;
-    return '${m}m ${s}s';
+  String? _formatCompletedTime(int? completed) {
+    if (completed == null) return null;
+    final date = DateTime.fromMillisecondsSinceEpoch(completed);
+    final hour = date.hour.toString().padLeft(2, '0');
+    final minute = date.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
   }
 
   @override
   Widget build(BuildContext context) {
-    final durationStr = _formatDuration(
-      message.time.created,
-      message.time.completed,
-    );
+    final completedTimeLabel = _formatCompletedTime(message.time.completed);
 
     return DefaultTextStyle(
       style: TextStyle(fontSize: 12, color: Colors.grey[500]),
@@ -320,9 +371,71 @@ class _AssistantFooter extends StatelessWidget {
         children: [
           _CopyButton(copied: copied, onCopy: onCopy),
           const SizedBox(width: 12),
-          Text('${message.providerID} · ${message.modelID}'),
-          if (durationStr.isNotEmpty) ...[const Text(' · '), Text(durationStr)],
+          Flexible(
+            fit: FlexFit.loose,
+            child: Text(modelLabel, overflow: TextOverflow.ellipsis),
+          ),
+          if (completedTimeLabel != null) ...[
+            const Text(' · '),
+            Text(completedTimeLabel),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+class _UserFooter extends StatelessWidget {
+  final UserMessage message;
+  final String modelLabel;
+  final bool copied;
+  final VoidCallback onCopy;
+  final bool showCopy;
+
+  const _UserFooter({
+    required this.message,
+    required this.modelLabel,
+    required this.copied,
+    required this.onCopy,
+    required this.showCopy,
+  });
+
+  String _formatTime(int timestamp) {
+    final date = DateTime.fromMillisecondsSinceEpoch(timestamp);
+    final hour = date.hour.toString().padLeft(2, '0');
+    final minute = date.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final timeLabel = _formatTime(message.time.created);
+    final maxModelWidth = MediaQuery.of(context).size.width * 0.35;
+
+    return DefaultTextStyle(
+      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+      child: Align(
+        alignment: Alignment.centerRight,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxModelWidth),
+              child: Text(
+                modelLabel,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.right,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(timeLabel),
+            if (showCopy) ...[
+              const SizedBox(width: 12),
+              _CopyButton(copied: copied, onCopy: onCopy),
+            ],
+          ],
+        ),
       ),
     );
   }
