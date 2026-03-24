@@ -63,6 +63,7 @@ class _MainTabPageState extends State<MainTabPage> {
                   selectedBackgroundColor: colorScheme.surface,
                   onTap: () => _onTabSelected(0),
                 ),
+                const SizedBox(width: 6),
                 _BottomNavItem(
                   label: 'SETTINGS',
                   selected: _index == 1,
