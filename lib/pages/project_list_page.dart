@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../service/api/models/project.dart';
+import '../service/api/api_client.dart';
 import '../providers/project_pin_provider.dart';
+import '../providers/server_config_provider.dart';
 import '../service/api/project_api.dart';
 import '../providers/project_provider.dart';
 import '../widgets/project/open_project_sheet.dart';
@@ -73,6 +75,23 @@ List<Project> _sortProjects(
   return sorted;
 }
 
+String _connectionErrorText(Object error) {
+  if (error is ApiException) {
+    if (error.statusCode == 401 || error.statusCode == 403) {
+      return '认证失败，请检查服务器账号和密码。';
+    }
+    if (error.statusCode >= 500) {
+      return '服务器暂时不可用（${error.statusCode}）。';
+    }
+    return '请求失败（${error.statusCode}）：${error.message}';
+  }
+  final text = error.toString();
+  if (text.contains('SocketException') || text.contains('ClientException')) {
+    return '无法连接到服务器，请检查地址或网络。';
+  }
+  return '加载项目失败，请检查服务器配置。';
+}
+
 Future<void> _showProjectActionMenu(
   BuildContext context,
   WidgetRef ref,
@@ -117,10 +136,20 @@ class ProjectListPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final projectsAsync = ref.watch(projectsProvider);
+    final asyncServerConfig = ref.watch(serverConfigProvider);
     final pinnedProjectsAsync = ref.watch(projectPinsProvider);
     final selectedProjectAsync = ref.watch(selectedProjectProvider);
     final selectedProject = selectedProjectAsync.asData?.value;
     final colorScheme = Theme.of(context).colorScheme;
+
+    void openServerConfigPage() {
+      final config = asyncServerConfig.value;
+      if (config != null) {
+        context.push('/settings/server', extra: config);
+      } else {
+        context.push('/settings/server');
+      }
+    }
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -155,8 +184,40 @@ class ProjectListPage extends ConsumerWidget {
         },
         child: projectsAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, stack) => Center(
-            child: Text('$error', style: TextStyle(color: Colors.grey[500])),
+          error: (error, stack) => ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            children: [
+              SizedBox(height: MediaQuery.of(context).size.height * 0.18),
+              Icon(Icons.cloud_off_outlined, size: 44, color: Colors.grey[350]),
+              const SizedBox(height: 12),
+              const Text(
+                '暂时无法加载项目',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _connectionErrorText(error),
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 18),
+              FilledButton.icon(
+                onPressed: openServerConfigPage,
+                icon: const Icon(Icons.settings_ethernet),
+                label: const Text('去配置服务器'),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: () {
+                  ref.invalidate(projectsProvider);
+                  ref.invalidate(projectPinsProvider);
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text('重试加载'),
+              ),
+            ],
           ),
           data: (projects) {
             return pinnedProjectsAsync.when(
@@ -210,6 +271,14 @@ class ProjectListPage extends ConsumerWidget {
                                 color: Colors.grey[400],
                                 fontSize: 13,
                               ),
+                            ),
+                            const SizedBox(height: 14),
+                            OutlinedButton.icon(
+                              onPressed: openServerConfigPage,
+                              icon: const Icon(
+                                Icons.settings_ethernet_outlined,
+                              ),
+                              label: const Text('检查服务器配置'),
                             ),
                           ],
                         ),

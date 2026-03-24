@@ -1,9 +1,9 @@
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 
+import 'pages/app_entry_page.dart';
 import 'pages/file_content_page.dart';
 import 'pages/home_page.dart';
-import 'pages/main_tab_page.dart';
 import 'pages/project_list_page.dart';
 import 'pages/session_list_page.dart';
 import 'pages/session_context_page.dart';
@@ -22,7 +22,7 @@ final GoRouter appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
   initialLocation: '/',
   routes: <RouteBase>[
-    GoRoute(path: '/', builder: (context, state) => const MainTabPage()),
+    GoRoute(path: '/', builder: (context, state) => const AppEntryPage()),
     GoRoute(
       path: '/sessions',
       parentNavigatorKey: _rootNavigatorKey,

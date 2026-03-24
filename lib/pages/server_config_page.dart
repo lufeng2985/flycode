@@ -1,13 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'dart:io';
+import 'package:http/http.dart' as http;
+import '../providers/onboarding_provider.dart';
 import '../providers/server_config_provider.dart';
+import '../providers/provider_list_provider.dart';
+import '../service/api/project_api.dart';
+import '../service/api/session_api.dart';
 import '../service/api/api_client.dart';
 import '../models/server_config.dart';
 
 class ServerConfigPage extends ConsumerStatefulWidget {
   final ServerConfig? initialConfig;
+  final bool onboardingMode;
 
-  const ServerConfigPage({super.key, this.initialConfig});
+  const ServerConfigPage({
+    super.key,
+    this.initialConfig,
+    this.onboardingMode = false,
+  });
 
   @override
   ConsumerState<ServerConfigPage> createState() => _ServerConfigPageState();
@@ -21,6 +33,7 @@ class _ServerConfigPageState extends ConsumerState<ServerConfigPage> {
 
   bool _isTesting = false;
   bool _obscurePassword = true;
+  bool _testPassed = false;
 
   @override
   void initState() {
@@ -29,14 +42,47 @@ class _ServerConfigPageState extends ConsumerState<ServerConfigPage> {
     _baseUrlController = TextEditingController(text: config?.baseUrl ?? '');
     _usernameController = TextEditingController(text: config?.username ?? '');
     _passwordController = TextEditingController(text: config?.password ?? '');
+    _baseUrlController.addListener(_onConfigChanged);
+    _usernameController.addListener(_onConfigChanged);
+    _passwordController.addListener(_onConfigChanged);
+  }
+
+  void _onConfigChanged() {
+    if (!_testPassed) return;
+    setState(() => _testPassed = false);
   }
 
   @override
   void dispose() {
+    _baseUrlController.removeListener(_onConfigChanged);
+    _usernameController.removeListener(_onConfigChanged);
+    _passwordController.removeListener(_onConfigChanged);
     _baseUrlController.dispose();
     _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  String _humanizedConnectionError(Object error) {
+    if (error is ApiException) {
+      if (error.statusCode == 401 || error.statusCode == 403) {
+        return '认证失败，请检查用户名或密码';
+      }
+      if (error.statusCode >= 500) {
+        return '服务器异常（${error.statusCode}），请稍后重试';
+      }
+      return '请求失败（${error.statusCode}）：${error.message}';
+    }
+    if (error is SocketException) {
+      return '无法连接到服务器，请检查地址和网络';
+    }
+    if (error is http.ClientException) {
+      return '网络请求失败，请检查服务器地址';
+    }
+    if (error is FormatException) {
+      return '服务器地址格式不正确';
+    }
+    return '连接失败，请检查服务器配置';
   }
 
   Future<void> _testConnection() async {
@@ -57,6 +103,7 @@ class _ServerConfigPageState extends ConsumerState<ServerConfigPage> {
       await client.get('/global/health');
 
       if (mounted) {
+        setState(() => _testPassed = true);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('连接成功'), backgroundColor: Colors.green),
         );
@@ -64,7 +111,10 @@ class _ServerConfigPageState extends ConsumerState<ServerConfigPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('连接失败: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text(_humanizedConnectionError(e)),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
@@ -76,6 +126,12 @@ class _ServerConfigPageState extends ConsumerState<ServerConfigPage> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    if (widget.onboardingMode && !_testPassed) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请先测试连接并成功后再保存')));
+      return;
+    }
 
     final config = ServerConfig(
       baseUrl: _baseUrlController.text.trim(),
@@ -88,23 +144,60 @@ class _ServerConfigPageState extends ConsumerState<ServerConfigPage> {
     );
 
     await ref.read(serverConfigProvider.notifier).save(config);
+    await ref.read(onboardingControllerProvider).markServerSetupCompleted();
+
+    ref.invalidate(serverConfigProvider);
+    ref.invalidate(projectsProvider);
+    ref.invalidate(sessionsProvider);
+    ref.invalidate(providerListProvider);
 
     if (mounted) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('保存成功')));
+      if (widget.onboardingMode) {
+        context.go('/');
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('服务器配置'), centerTitle: true),
+      appBar: AppBar(
+        title: Text(widget.onboardingMode ? '连接服务器' : '服务器配置'),
+        centerTitle: true,
+        automaticallyImplyLeading: !widget.onboardingMode,
+      ),
       body: Form(
         key: _formKey,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            if (widget.onboardingMode) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
+                ),
+                child: const Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.info_outline, size: 18, color: Colors.blue),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '首次使用请先连接服务器。建议先点击“测试连接”，再保存进入首页。',
+                        style: TextStyle(fontSize: 13, color: Colors.black87),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
             TextFormField(
               controller: _baseUrlController,
               decoration: const InputDecoration(
@@ -174,7 +267,7 @@ class _ServerConfigPageState extends ConsumerState<ServerConfigPage> {
                   child: FilledButton.icon(
                     onPressed: _save,
                     icon: const Icon(Icons.save_outlined),
-                    label: const Text('保存'),
+                    label: Text(widget.onboardingMode ? '保存并进入' : '保存'),
                   ),
                 ),
               ],
