@@ -1,8 +1,6 @@
 import 'package:json_annotation/json_annotation.dart';
 
-part 'command.g.dart';
-
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class Command {
   final String name;
   final String? description;

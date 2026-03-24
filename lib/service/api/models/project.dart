@@ -1,8 +1,6 @@
 import 'package:json_annotation/json_annotation.dart';
 
-part 'project.g.dart';
-
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class ProjectIcon {
   final String? url;
   final String? override;
@@ -23,7 +21,7 @@ class ProjectIcon {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class ProjectCommands {
   final String? start;
 
@@ -35,7 +33,7 @@ class ProjectCommands {
   Map<String, dynamic> toJson() => {if (start != null) 'start': start};
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class ProjectTime {
   final int created;
   final int updated;
@@ -64,7 +62,7 @@ class ProjectTime {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class Project {
   final String id;
   final String worktree;

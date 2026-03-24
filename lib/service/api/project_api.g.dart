@@ -71,7 +71,7 @@ final class ProjectsProvider
   Projects create() => Projects();
 }
 
-String _$projectsHash() => r'e04a901bda88c28972d95cad7398e2b47eb009b3';
+String _$projectsHash() => r'059893d4f6080553e95c7164c68252a8d45c0225';
 
 abstract class _$Projects extends $AsyncNotifier<List<Project>> {
   FutureOr<List<Project>> build();

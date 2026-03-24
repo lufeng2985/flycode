@@ -2,7 +2,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'session.g.dart';
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class SessionTime {
   final int created;
   final int updated;
@@ -30,7 +30,7 @@ class SessionTime {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class FileDiff {
   final String file;
   final String before;
@@ -66,7 +66,7 @@ class FileDiff {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class SessionSummary {
   final int additions;
   final int deletions;
@@ -96,7 +96,7 @@ class SessionSummary {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class SessionShare {
   final String url;
 
@@ -107,7 +107,7 @@ class SessionShare {
   Map<String, dynamic> toJson() => {'url': url};
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class SessionRevert {
   final String messageID;
   final String? partID;
@@ -137,7 +137,7 @@ class SessionRevert {
 
 enum PermissionAction { allow, deny }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class PermissionRule {
   final String permission;
   final String pattern;
@@ -181,7 +181,7 @@ class CreateSessionRequest {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createToJson: false)
 class Session {
   final String id;
   final String slug;

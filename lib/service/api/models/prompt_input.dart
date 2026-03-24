@@ -122,14 +122,18 @@ class PromptAsyncInput {
     final json = _$PromptAsyncInputToJson(this);
     json.removeWhere((k, v) => v == null);
     json['parts'] = parts.map((e) {
-      if (e is TextPartInput)
+      if (e is TextPartInput) {
         return e.toJson()..removeWhere((k, v) => v == null);
-      if (e is FilePartInput)
+      }
+      if (e is FilePartInput) {
         return e.toJson()..removeWhere((k, v) => v == null);
-      if (e is AgentPartInput)
+      }
+      if (e is AgentPartInput) {
         return e.toJson()..removeWhere((k, v) => v == null);
-      if (e is SubtaskPartInput)
+      }
+      if (e is SubtaskPartInput) {
         return e.toJson()..removeWhere((k, v) => v == null);
+      }
       if (e is Map<String, dynamic>) return e;
       throw Exception('Unknown part input type: ${e.runtimeType}');
     }).toList();

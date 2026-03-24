@@ -1,7 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
 
-part 'parts.g.dart';
-
 class Part {
   final String id;
   final String sessionID;
@@ -16,7 +14,7 @@ class Part {
   });
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class PartTime {
   final int? start;
   final int? end;
@@ -33,7 +31,7 @@ class PartTime {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class TextPart {
   final String id;
   final String sessionID;
@@ -83,7 +81,7 @@ class TextPart {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class ReasoningPart {
   final String id;
   final String sessionID;
@@ -123,17 +121,13 @@ class ReasoningPart {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class FilePartSourceText {
   final String value;
   final int? start;
   final int? end;
 
-  FilePartSourceText({
-    required this.value,
-    this.start,
-    this.end,
-  });
+  FilePartSourceText({required this.value, this.start, this.end});
 
   factory FilePartSourceText.fromJson(Map<String, dynamic> json) =>
       FilePartSourceText(
@@ -148,7 +142,7 @@ class FilePartSourceText {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class Range {
   final RangeStart start;
   final RangeEnd end;
@@ -165,7 +159,7 @@ class Range {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class RangeStart {
   final int line;
   final int character;
@@ -179,7 +173,7 @@ class RangeStart {
   Map<String, dynamic> toJson() => {'line': line, 'character': character};
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class RangeEnd {
   final int line;
   final int character;
@@ -193,7 +187,7 @@ class RangeEnd {
   Map<String, dynamic> toJson() => {'line': line, 'character': character};
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class FileSource {
   final FilePartSourceText text;
   final String type;
@@ -213,7 +207,7 @@ class FileSource {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class SymbolSource {
   final FilePartSourceText text;
   final String type;
@@ -265,7 +259,7 @@ Map<String, dynamic> filePartSourceToJson(Object source) {
   throw Exception('Unknown FilePartSource type');
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class FilePart {
   final String id;
   final String sessionID;
@@ -311,7 +305,7 @@ class FilePart {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class ToolStatePending {
   final String status;
   final Map<String, dynamic> input;
@@ -336,7 +330,7 @@ class ToolStatePending {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class ToolStateRunning {
   final String status;
   final Map<String, dynamic> input;
@@ -369,7 +363,7 @@ class ToolStateRunning {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class ToolStateCompleted {
   final String status;
   final Map<String, dynamic> input;
@@ -417,7 +411,7 @@ class ToolStateCompleted {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class ToolStateCompletedTime {
   final int start;
   final int end;
@@ -442,7 +436,7 @@ class ToolStateCompletedTime {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class ToolStateError {
   final String status;
   final Map<String, dynamic> input;
@@ -498,7 +492,7 @@ Map<String, dynamic> toolStateToJson(Object state) {
   throw Exception('Unknown ToolState type');
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class ToolPart {
   final String id;
   final String sessionID;
@@ -542,7 +536,7 @@ class ToolPart {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class StepStartPart {
   final String id;
   final String sessionID;
@@ -574,7 +568,7 @@ class StepStartPart {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class StepFinishPart {
   final String id;
   final String sessionID;
@@ -618,7 +612,7 @@ class StepFinishPart {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class MessageTokens {
   final int? input;
   final int? output;
@@ -652,7 +646,7 @@ class MessageTokens {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class MessageCacheTokens {
   final int? read;
   final int? write;
@@ -670,7 +664,7 @@ class MessageCacheTokens {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class SnapshotPart {
   final String id;
   final String sessionID;
@@ -702,7 +696,7 @@ class SnapshotPart {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class PatchPart {
   final String id;
   final String sessionID;
@@ -738,7 +732,7 @@ class PatchPart {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class AgentPart {
   final String id;
   final String sessionID;
@@ -776,7 +770,7 @@ class AgentPart {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class AgentPartSource {
   final String value;
   final int start;
@@ -797,7 +791,7 @@ class AgentPartSource {
   Map<String, dynamic> toJson() => {'value': value, 'start': start, 'end': end};
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class RetryPart {
   final String id;
   final String sessionID;
@@ -837,7 +831,7 @@ class RetryPart {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class RetryPartTime {
   final int created;
 
@@ -875,7 +869,7 @@ Map<String, dynamic> messageErrorToJson(Object error) {
   throw Exception('Unknown error type');
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class ProviderAuthError {
   final String name;
   final String providerID;
@@ -899,7 +893,7 @@ class ProviderAuthError {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class UnknownError {
   final String name;
   final String message;
@@ -916,7 +910,7 @@ class UnknownError {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class MessageOutputLengthError {
   final String name;
   final Map<String, dynamic> data;
@@ -931,7 +925,7 @@ class MessageOutputLengthError {
   Map<String, dynamic> toJson() => {'name': name, 'data': data};
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class MessageAbortedError {
   final String name;
   final String message;
@@ -949,7 +943,7 @@ class MessageAbortedError {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class ApiError {
   final String name;
   final String message;
@@ -994,7 +988,7 @@ class ApiError {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class CompactionPart {
   final String id;
   final String sessionID;
@@ -1026,7 +1020,7 @@ class CompactionPart {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class SubtaskPart {
   final String id;
   final String sessionID;

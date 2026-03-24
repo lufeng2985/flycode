@@ -1,9 +1,7 @@
 import 'package:json_annotation/json_annotation.dart';
 import 'parts.dart';
 
-part 'message.g.dart';
-
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class MessageTime {
   final int created;
   final int? completed;
@@ -20,7 +18,7 @@ class MessageTime {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class MessageModel {
   final String providerID;
   final String modelID;
@@ -37,7 +35,7 @@ class MessageModel {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class MessagePath {
   final String cwd;
   final String root;
@@ -49,7 +47,7 @@ class MessagePath {
   Map<String, dynamic> toJson() => {'cwd': cwd, 'root': root};
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class MessageCacheTokens {
   final int? read;
   final int? write;
@@ -67,7 +65,7 @@ class MessageCacheTokens {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class MessageTokens {
   final int? input;
   final int? output;
@@ -101,7 +99,7 @@ class MessageTokens {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class FileDiff {
   final String file;
   final String before;
@@ -133,7 +131,7 @@ class FileDiff {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class UserMessageSummary {
   final String? title;
   final String? body;
@@ -156,7 +154,7 @@ class UserMessageSummary {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class ProviderAuthError {
   final String name;
   final String providerID;
@@ -180,7 +178,7 @@ class ProviderAuthError {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class UnknownError {
   final String name;
   final String message;
@@ -197,7 +195,7 @@ class UnknownError {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class MessageOutputLengthError {
   final String name;
   final Map<String, dynamic> data;
@@ -212,7 +210,7 @@ class MessageOutputLengthError {
   Map<String, dynamic> toJson() => {'name': name, 'data': data};
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class MessageAbortedError {
   final String name;
   final String message;
@@ -230,7 +228,7 @@ class MessageAbortedError {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class ApiError {
   final String name;
   final String message;
@@ -302,7 +300,7 @@ Map<String, dynamic> messageErrorToJson(Object error) {
   throw Exception('Unknown error type');
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class UserMessage {
   final String id;
   final String sessionID;
@@ -356,7 +354,7 @@ class UserMessage {
   };
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class AssistantMessage {
   final String id;
   final String sessionID;
@@ -437,7 +435,7 @@ Object parseMsg(Map<String, dynamic> json) {
   throw Exception('Unknown Message role: $role');
 }
 
-@JsonSerializable()
+@JsonSerializable(createFactory: false, createToJson: false)
 class MessageWithParts {
   final Object info;
   final List<Object> parts;

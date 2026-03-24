@@ -34,7 +34,7 @@ final class GlobalEventListenerProvider
 }
 
 String _$globalEventListenerHash() =>
-    r'7d6833abb7d138e0ce4bf61bef93dfe450aaa025';
+    r'c4679d2dbd4d1d1d32bb5c1fe88d30533d8e6aff';
 
 abstract class _$GlobalEventListener extends $StreamNotifier<GlobalEvent> {
   Stream<GlobalEvent> build();

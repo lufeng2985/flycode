@@ -55,7 +55,7 @@ final class SessionStatusNotifierProvider
 }
 
 String _$sessionStatusNotifierHash() =>
-    r'f338ad5e064b84bf82e7656c59f7047592f11212';
+    r'2f96b490f9b797f004c92719a8206b9afb72b3b2';
 
 /// Tracks the backend-reported status for each session.
 ///
