@@ -9,6 +9,7 @@ import 'pages/session_list_page.dart';
 import 'pages/session_context_page.dart';
 import 'pages/session_diff_page.dart';
 import 'pages/settings_page.dart';
+import 'pages/theme_mode_page.dart';
 import 'pages/server_config_page.dart';
 import 'pages/model_config_page.dart';
 import 'pages/sub_session_page.dart';
@@ -36,6 +37,11 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/settings',
       builder: (context, state) => const SettingsPage(),
+    ),
+    GoRoute(
+      path: '/settings/theme',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const ThemeModePage(),
     ),
     GoRoute(
       path: '/settings/server',

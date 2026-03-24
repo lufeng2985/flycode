@@ -7,14 +7,16 @@ class SettingsSectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Text(
         title,
         style: TextStyle(
           fontSize: 14,
-          fontWeight: FontWeight.bold,
-          color: Colors.grey[600],
+          fontWeight: FontWeight.w700,
+          color: colorScheme.onSurface.withValues(alpha: 0.7),
         ),
       ),
     );

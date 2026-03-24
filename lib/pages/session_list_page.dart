@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+import '../theme/app_tokens.dart';
 import '../providers/project_provider.dart';
 import '../providers/session_provider.dart';
 import '../service/api/models/session.dart';
@@ -16,6 +18,8 @@ class SessionListPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final tokens = context.tokens;
     final sessionsAsync = ref.watch(sessionsProvider);
     final selectedSession = ref.watch(selectedSessionProvider).session;
     final selectedProject = ref.watch(selectedProjectProvider).asData?.value;
@@ -28,7 +32,7 @@ class SessionListPage extends ConsumerWidget {
         ref.read(selectedProjectProvider.notifier).clear();
       },
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: colorScheme.surface,
         appBar: AppBar(
           title: Text(
             selectedProject == null
@@ -36,10 +40,6 @@ class SessionListPage extends ConsumerWidget {
                 : _projectDisplayName(selectedProject.worktree),
             style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 17),
           ),
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black87,
-          elevation: 0,
-          surfaceTintColor: Colors.transparent,
           actions: [
             IconButton(
               icon: const Icon(Icons.add_comment_outlined),
@@ -53,7 +53,10 @@ class SessionListPage extends ConsumerWidget {
           ],
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(1),
-            child: Container(color: Colors.grey[100], height: 1),
+            child: Container(
+              color: tokens.border.withValues(alpha: 0.45),
+              height: 1,
+            ),
           ),
         ),
         body: RefreshIndicator(
@@ -61,7 +64,10 @@ class SessionListPage extends ConsumerWidget {
           child: sessionsAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (error, stack) => Center(
-              child: Text('$error', style: TextStyle(color: Colors.grey[500])),
+              child: Text(
+                '$error',
+                style: TextStyle(color: tokens.mutedForeground),
+              ),
             ),
             data: (sessions) {
               if (sessions.isEmpty) {
@@ -77,20 +83,24 @@ class SessionListPage extends ConsumerWidget {
                             width: 72,
                             height: 72,
                             decoration: BoxDecoration(
-                              color: Colors.grey[100],
-                              borderRadius: BorderRadius.circular(18),
+                              color: tokens.card,
+                              borderRadius: BorderRadius.circular(
+                                tokens.radiusXs,
+                              ),
                             ),
                             child: Icon(
                               Icons.chat_bubble_outline_rounded,
                               size: 36,
-                              color: Colors.grey[350],
+                              color: tokens.mutedForeground.withValues(
+                                alpha: 0.55,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 16),
                           Text(
                             '暂无会话',
                             style: TextStyle(
-                              color: Colors.grey[500],
+                              color: tokens.mutedForeground,
                               fontSize: 15,
                               fontWeight: FontWeight.w500,
                             ),
@@ -99,7 +109,9 @@ class SessionListPage extends ConsumerWidget {
                           Text(
                             '点击右上角新建会话',
                             style: TextStyle(
-                              color: Colors.grey[400],
+                              color: tokens.mutedForeground.withValues(
+                                alpha: 0.8,
+                              ),
                               fontSize: 13,
                             ),
                           ),
@@ -130,8 +142,8 @@ class SessionListPage extends ConsumerWidget {
                           _formatDateHeader(date),
                           style: TextStyle(
                             fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w700,
+                            color: tokens.mutedForeground,
                           ),
                         ),
                       ),

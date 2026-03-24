@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../theme/app_tokens.dart';
 import 'project_list_page.dart';
 import 'settings_page.dart';
 
@@ -21,16 +23,16 @@ class _MainTabPageState extends State<MainTabPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final tokens = context.tokens;
+
     return Scaffold(
       body: IndexedStack(
         index: _index,
         children: const [ProjectListPage(), SettingsPage()],
       ),
       bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: Color(0x1A000000))),
-        ),
+        color: colorScheme.surface,
         child: SafeArea(
           top: false,
           child: SizedBox(
@@ -42,6 +44,8 @@ class _MainTabPageState extends State<MainTabPage> {
                   selected: _index == 0,
                   selectedIcon: Icons.folder_rounded,
                   icon: Icons.folder_outlined,
+                  activeColor: colorScheme.primary,
+                  inactiveColor: tokens.mutedForeground,
                   onTap: () => _onTabSelected(0),
                 ),
                 _BottomNavItem(
@@ -49,6 +53,8 @@ class _MainTabPageState extends State<MainTabPage> {
                   selected: _index == 1,
                   selectedIcon: Icons.settings,
                   icon: Icons.settings_outlined,
+                  activeColor: colorScheme.primary,
+                  inactiveColor: tokens.mutedForeground,
                   onTap: () => _onTabSelected(1),
                 ),
               ],
@@ -65,6 +71,8 @@ class _BottomNavItem extends StatelessWidget {
   final bool selected;
   final IconData icon;
   final IconData selectedIcon;
+  final Color activeColor;
+  final Color inactiveColor;
   final VoidCallback onTap;
 
   const _BottomNavItem({
@@ -72,14 +80,13 @@ class _BottomNavItem extends StatelessWidget {
     required this.selected,
     required this.icon,
     required this.selectedIcon,
+    required this.activeColor,
+    required this.inactiveColor,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    const activeColor = Color(0xFF007AFF);
-    const inactiveColor = Color(0xFF8E8E93);
-
     return Expanded(
       child: Material(
         color: Colors.transparent,

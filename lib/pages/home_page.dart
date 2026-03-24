@@ -6,6 +6,7 @@ import '../providers/global_event_provider.dart';
 import '../providers/permission_provider.dart';
 import '../providers/session_provider.dart';
 import '../providers/question_provider.dart';
+import '../theme/app_tokens.dart';
 import '../widgets/message/message_list.dart';
 import '../widgets/message/chat_input.dart';
 import '../widgets/permission/session_permission_dock.dart';
@@ -19,6 +20,8 @@ class MyHomePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final tokens = context.tokens;
+
     ref.watch(globalEventListenerProvider);
     final sessionsAsync = ref.watch(sessionsProvider);
     final selectedState = ref.watch(selectedSessionProvider);
@@ -38,7 +41,7 @@ class MyHomePage extends ConsumerWidget {
             Icon(
               Icons.chat_bubble_outline_rounded,
               size: 64,
-              color: Colors.grey[300],
+              color: tokens.mutedForeground.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 16),
             Text(
@@ -46,13 +49,16 @@ class MyHomePage extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: Colors.grey[600],
+                color: tokens.mutedForeground,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               '在下方输入消息，发送后将自动创建会话',
-              style: TextStyle(fontSize: 13, color: Colors.grey[400]),
+              style: TextStyle(
+                fontSize: 13,
+                color: tokens.mutedForeground.withValues(alpha: 0.8),
+              ),
             ),
           ],
         ),
@@ -67,18 +73,19 @@ class MyHomePage extends ConsumerWidget {
       },
       child: Scaffold(
         appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
           actions: [
             if (selectedSession != null) ...[
               IconButton(
-                icon: const Icon(Icons.difference_outlined, color: Colors.grey),
+                icon: Icon(
+                  Icons.difference_outlined,
+                  color: tokens.mutedForeground,
+                ),
                 tooltip: '文件变更',
                 onPressed: () =>
                     context.push('/diff', extra: selectedSession.id),
               ),
               IconButton(
-                icon: const Icon(Icons.info_outline, color: Colors.grey),
+                icon: Icon(Icons.info_outline, color: tokens.mutedForeground),
                 tooltip: '上下文',
                 onPressed: () => context.push('/session-context'),
               ),
@@ -88,7 +95,11 @@ class MyHomePage extends ConsumerWidget {
             preferredSize: const Size.fromHeight(1),
             child: Container(
               decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+                border: Border(
+                  bottom: BorderSide(
+                    color: tokens.border.withValues(alpha: 0.6),
+                  ),
+                ),
               ),
             ),
           ),
@@ -106,9 +117,15 @@ class MyHomePage extends ConsumerWidget {
                   : isPending
                   ? buildNewSessionWelcome()
                   : sessionsAsync.when(
-                      data: (sessions) => sessions.isEmpty
-                          ? const Center(child: Text('暂无会话'))
-                          : const Center(child: Text('请选择一个会话')),
+                      data: (sessions) {
+                        final text = sessions.isEmpty ? '暂无会话' : '请选择一个会话';
+                        return Center(
+                          child: Text(
+                            text,
+                            style: TextStyle(color: tokens.mutedForeground),
+                          ),
+                        );
+                      },
                       error: (error, stack) =>
                           Center(child: Text('$error, $stack')),
                       loading: () =>

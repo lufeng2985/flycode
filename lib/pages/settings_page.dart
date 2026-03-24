@@ -10,6 +10,7 @@ class SettingsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
     final asyncServerConfig = ref.watch(serverConfigProvider);
     final serverUrl =
         asyncServerConfig.value?.baseUrl ?? 'http://localhost:4096';
@@ -27,9 +28,11 @@ class SettingsPage extends ConsumerWidget {
           ),
           SettingsItem(
             icon: Icons.palette_outlined,
-            iconColor: Colors.orange,
+            iconColor: colorScheme.primary,
             title: '色彩主题',
-            onTap: () {},
+            onTap: () {
+              context.push('/settings/theme');
+            },
           ),
           SettingsItem(
             icon: Icons.notifications_none,

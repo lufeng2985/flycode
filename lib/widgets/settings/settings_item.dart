@@ -18,6 +18,8 @@ class SettingsItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return ListTile(
       leading: Container(
         padding: const EdgeInsets.all(8),
@@ -31,12 +33,18 @@ class SettingsItem extends StatelessWidget {
       subtitle: subtitle != null
           ? Text(
               subtitle!,
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              style: TextStyle(
+                fontSize: 12,
+                color: colorScheme.onSurface.withValues(alpha: 0.65),
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             )
           : null,
-      trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+      trailing: Icon(
+        Icons.chevron_right,
+        color: colorScheme.onSurface.withValues(alpha: 0.5),
+      ),
       onTap: onTap,
     );
   }

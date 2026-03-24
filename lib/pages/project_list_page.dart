@@ -11,6 +11,7 @@ import '../providers/project_provider.dart';
 import '../providers/session_provider.dart';
 import '../service/api/models/session.dart';
 import '../service/api/session_api.dart';
+import '../theme/app_tokens.dart';
 import '../widgets/project/open_project_sheet.dart';
 
 String _projectDisplayName(Project project) {
@@ -101,11 +102,14 @@ Future<void> _showProjectActionMenu(
   Project project,
   bool isPinned,
 ) async {
+  final colorScheme = Theme.of(context).colorScheme;
+  final tokens = context.tokens;
+
   HapticFeedback.lightImpact();
 
   final action = await showModalBottomSheet<String>(
     context: context,
-    backgroundColor: Colors.white,
+    backgroundColor: colorScheme.surface,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
@@ -117,11 +121,15 @@ Future<void> _showProjectActionMenu(
             ListTile(
               leading: Icon(
                 isPinned ? Icons.push_pin_outlined : Icons.push_pin,
+                color: colorScheme.onSurface,
               ),
-              title: Text(isPinned ? '取消置顶' : '置顶'),
+              title: Text(
+                isPinned ? '取消置顶' : '置顶',
+                style: TextStyle(color: colorScheme.onSurface),
+              ),
               onTap: () => Navigator.of(context).pop('toggle_pin'),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: tokens.radiusXs / 2),
           ],
         ),
       );
@@ -165,6 +173,8 @@ class ProjectListPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final tokens = context.tokens;
     final projectsAsync = ref.watch(projectsProvider);
     final asyncServerConfig = ref.watch(serverConfigProvider);
     final pinnedProjectsAsync = ref.watch(projectPinsProvider);
@@ -179,16 +189,12 @@ class ProjectListPage extends ConsumerWidget {
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
         title: const Text(
           '项目',
           style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17),
         ),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
         actions: [
           IconButton(
             icon: const Icon(Icons.add_rounded, size: 24),
@@ -199,7 +205,10 @@ class ProjectListPage extends ConsumerWidget {
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Container(color: Colors.grey[100], height: 1),
+          child: Container(
+            color: tokens.border.withValues(alpha: 0.45),
+            height: 1,
+          ),
         ),
       ),
       body: RefreshIndicator(
@@ -216,7 +225,11 @@ class ProjectListPage extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 24),
             children: [
               SizedBox(height: MediaQuery.of(context).size.height * 0.18),
-              Icon(Icons.cloud_off_outlined, size: 44, color: Colors.grey[350]),
+              Icon(
+                Icons.cloud_off_outlined,
+                size: 44,
+                color: tokens.mutedForeground.withValues(alpha: 0.55),
+              ),
               const SizedBox(height: 12),
               const Text(
                 '暂时无法加载项目',
@@ -227,7 +240,7 @@ class ProjectListPage extends ConsumerWidget {
               Text(
                 _connectionErrorText(error),
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                style: TextStyle(fontSize: 13, color: tokens.mutedForeground),
               ),
               const SizedBox(height: 18),
               FilledButton.icon(
@@ -252,7 +265,7 @@ class ProjectListPage extends ConsumerWidget {
               error: (error, stack) => Center(
                 child: Text(
                   '$error',
-                  style: TextStyle(color: Colors.grey[500]),
+                  style: TextStyle(color: tokens.mutedForeground),
                 ),
               ),
               data: (pinnedProjects) {
@@ -273,20 +286,22 @@ class ProjectListPage extends ConsumerWidget {
                               width: 72,
                               height: 72,
                               decoration: BoxDecoration(
-                                color: Colors.grey[100],
+                                color: tokens.card,
                                 borderRadius: BorderRadius.circular(18),
                               ),
                               child: Icon(
                                 Icons.folder_off_rounded,
                                 size: 36,
-                                color: Colors.grey[350],
+                                color: tokens.mutedForeground.withValues(
+                                  alpha: 0.55,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 16),
                             Text(
                               '暂无项目',
                               style: TextStyle(
-                                color: Colors.grey[500],
+                                color: tokens.mutedForeground,
                                 fontSize: 15,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -295,7 +310,9 @@ class ProjectListPage extends ConsumerWidget {
                             Text(
                               '请先添加一个项目',
                               style: TextStyle(
-                                color: Colors.grey[400],
+                                color: tokens.mutedForeground.withValues(
+                                  alpha: 0.8,
+                                ),
                                 fontSize: 13,
                               ),
                             ),
@@ -334,7 +351,7 @@ class ProjectListPage extends ConsumerWidget {
                     final iconColor = _parseColor(project.icon?.color);
 
                     return Material(
-                      color: Colors.grey[50],
+                      color: tokens.card,
                       borderRadius: BorderRadius.circular(12),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(12),
@@ -356,14 +373,18 @@ class ProjectListPage extends ConsumerWidget {
                                 width: 40,
                                 height: 40,
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: colorScheme.surface,
                                   borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: Colors.grey[200]!),
+                                  border: Border.all(color: tokens.border),
                                 ),
                                 child: Icon(
                                   Icons.folder_rounded,
                                   size: 22,
-                                  color: iconColor ?? Colors.grey[400],
+                                  color:
+                                      iconColor ??
+                                      tokens.mutedForeground.withValues(
+                                        alpha: 0.8,
+                                      ),
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -378,7 +399,7 @@ class ProjectListPage extends ConsumerWidget {
                                       style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w500,
-                                        color: Colors.black87,
+                                        color: colorScheme.onSurface,
                                       ),
                                     ),
                                     const SizedBox(height: 3),
@@ -388,7 +409,7 @@ class ProjectListPage extends ConsumerWidget {
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
                                         fontSize: 11,
-                                        color: Colors.grey[500],
+                                        color: tokens.mutedForeground,
                                       ),
                                     ),
                                   ],
@@ -403,7 +424,7 @@ class ProjectListPage extends ConsumerWidget {
                                     Icon(
                                       Icons.push_pin_rounded,
                                       size: 14,
-                                      color: Colors.grey[500],
+                                      color: tokens.mutedForeground,
                                     ),
                                     const SizedBox(height: 4),
                                   ],
@@ -411,7 +432,9 @@ class ProjectListPage extends ConsumerWidget {
                                     updatedText,
                                     style: TextStyle(
                                       fontSize: 11,
-                                      color: Colors.grey[400],
+                                      color: tokens.mutedForeground.withValues(
+                                        alpha: 0.8,
+                                      ),
                                     ),
                                   ),
                                 ],
