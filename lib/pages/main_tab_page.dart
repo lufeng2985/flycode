@@ -27,34 +27,50 @@ class _MainTabPageState extends State<MainTabPage> {
     final tokens = context.tokens;
 
     return Scaffold(
+      extendBody: true,
       body: IndexedStack(
         index: _index,
         children: const [ProjectListPage(), SettingsPage()],
       ),
-      bottomNavigationBar: Container(
-        color: colorScheme.surface,
-        child: SafeArea(
-          top: false,
-          child: SizedBox(
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 20),
+          child: Container(
             height: 56,
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: tokens.card,
+              borderRadius: BorderRadius.circular(tokens.radiusPill),
+              border: Border.all(color: tokens.border.withValues(alpha: 0.45)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 18,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
             child: Row(
               children: [
                 _BottomNavItem(
-                  label: '项目',
+                  label: 'PROJECTS',
                   selected: _index == 0,
-                  selectedIcon: Icons.folder_rounded,
-                  icon: Icons.folder_outlined,
+                  selectedIcon: Icons.folder,
+                  icon: Icons.folder,
                   activeColor: colorScheme.primary,
-                  inactiveColor: tokens.mutedForeground,
+                  inactiveColor: tokens.mutedForeground.withValues(alpha: 0.82),
+                  selectedBackgroundColor: colorScheme.surface,
                   onTap: () => _onTabSelected(0),
                 ),
                 _BottomNavItem(
-                  label: '设置',
+                  label: 'SETTINGS',
                   selected: _index == 1,
                   selectedIcon: Icons.settings,
-                  icon: Icons.settings_outlined,
+                  icon: Icons.settings,
                   activeColor: colorScheme.primary,
-                  inactiveColor: tokens.mutedForeground,
+                  inactiveColor: tokens.mutedForeground.withValues(alpha: 0.82),
+                  selectedBackgroundColor: colorScheme.surface,
                   onTap: () => _onTabSelected(1),
                 ),
               ],
@@ -73,6 +89,7 @@ class _BottomNavItem extends StatelessWidget {
   final IconData selectedIcon;
   final Color activeColor;
   final Color inactiveColor;
+  final Color selectedBackgroundColor;
   final VoidCallback onTap;
 
   const _BottomNavItem({
@@ -82,35 +99,43 @@ class _BottomNavItem extends StatelessWidget {
     required this.selectedIcon,
     required this.activeColor,
     required this.inactiveColor,
+    required this.selectedBackgroundColor,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                selected ? selectedIcon : icon,
-                size: 24,
-                color: selected ? activeColor : inactiveColor,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 10,
-                  height: 1.1,
-                  fontWeight: FontWeight.w500,
+      child: Container(
+        decoration: BoxDecoration(
+          color: selected ? selectedBackgroundColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(100),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(100),
+            onTap: onTap,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  selected ? selectedIcon : icon,
+                  size: 14,
                   color: selected ? activeColor : inactiveColor,
                 ),
-              ),
-            ],
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    height: 1.1,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                    color: selected ? activeColor : inactiveColor,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

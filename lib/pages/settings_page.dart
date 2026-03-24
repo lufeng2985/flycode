@@ -14,10 +14,12 @@ class SettingsPage extends ConsumerWidget {
     final asyncServerConfig = ref.watch(serverConfigProvider);
     final serverUrl =
         asyncServerConfig.value?.baseUrl ?? 'http://localhost:4096';
+    final contentBottomPadding = MediaQuery.paddingOf(context).bottom + 16;
 
     return Scaffold(
       appBar: AppBar(title: const Text('设置'), centerTitle: true),
       body: ListView(
+        padding: EdgeInsets.only(bottom: contentBottomPadding),
         children: [
           const SettingsSectionTitle(title: '通用'),
           SettingsItem(

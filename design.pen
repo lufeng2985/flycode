@@ -196,7 +196,8 @@
                               "fill": "$--muted-foreground",
                               "content": "/Users/jeffrey/project/flycode",
                               "fontFamily": "Inter",
-                              "fontSize": 12
+                              "fontSize": 12,
+                              "fontWeight": "normal"
                             }
                           ]
                         }
@@ -1102,7 +1103,7 @@
               "type": "rectangle",
               "id": "V73uA",
               "name": "div4",
-              "fill": "$--border",
+              "fill": "#F4F4F5",
               "width": "fill_container",
               "height": 1
             },
@@ -1249,7 +1250,7 @@
                   "type": "rectangle",
                   "id": "Cg1KS",
                   "name": "sectionDivider1",
-                  "fill": "$--border",
+                  "fill": "#F4F4F5",
                   "width": "fill_container",
                   "height": 1
                 },
@@ -1401,7 +1402,7 @@
                   "type": "rectangle",
                   "id": "cEqBs",
                   "name": "sectionDivider2",
-                  "fill": "$--border",
+                  "fill": "#F4F4F5",
                   "width": "fill_container",
                   "height": 1
                 },
