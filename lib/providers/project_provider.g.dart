@@ -20,7 +20,7 @@ final class SelectedProjectNotifierProvider
         argument: null,
         retry: null,
         name: r'selectedProjectProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -34,7 +34,7 @@ final class SelectedProjectNotifierProvider
 }
 
 String _$selectedProjectNotifierHash() =>
-    r'3dfcbb2f711519002e8807bbaf677d028818a859';
+    r'9535f8f9de605fe90719c214b174fad921463723';
 
 abstract class _$SelectedProjectNotifier extends $AsyncNotifier<Project?> {
   FutureOr<Project?> build();

@@ -20,7 +20,7 @@ final class SelectedSessionNotifierProvider
         argument: null,
         retry: null,
         name: r'selectedSessionProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -42,7 +42,7 @@ final class SelectedSessionNotifierProvider
 }
 
 String _$selectedSessionNotifierHash() =>
-    r'52f4e746753d0edee5ff84ab29d8d6372801bb9b';
+    r'6c8226b9df07086d93737edb7b12992ae0939a81';
 
 abstract class _$SelectedSessionNotifier
     extends $Notifier<SelectedSessionState> {

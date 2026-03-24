@@ -13,7 +13,7 @@ part 'session_provider.g.dart';
 /// - session!=null, isPending=false → 已选中一个真实会话
 typedef SelectedSessionState = ({Session? session, bool isPending});
 
-@riverpod
+@Riverpod(keepAlive: true)
 class SelectedSessionNotifier extends _$SelectedSessionNotifier {
   @override
   SelectedSessionState build() {
@@ -22,6 +22,19 @@ class SelectedSessionNotifier extends _$SelectedSessionNotifier {
       final nextProject = next.asData?.value;
       final changed = prevProject?.id != nextProject?.id;
       if (!changed) return;
+
+      final current = state;
+
+      // 项目切换流程中，如果已经选中了目标项目下的会话，保留它。
+      final selected = current.session;
+      if (selected != null &&
+          nextProject != null &&
+          selected.directory == nextProject.worktree) {
+        return;
+      }
+
+      // 项目切换流程中，如果已进入“新建会话”态，保留 pending。
+      if (current.isPending) return;
 
       // 项目切换后清空当前会话，由用户在会话页主动选择。
       state = (session: null, isPending: false);

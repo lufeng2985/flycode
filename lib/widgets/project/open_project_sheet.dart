@@ -9,6 +9,9 @@ import '../../service/api/file_api.dart';
 import '../../service/api/models/file_node.dart';
 import '../../service/api/project_api.dart';
 import '../../providers/project_provider.dart';
+import '../../providers/session_provider.dart';
+import '../../service/api/models/session.dart';
+import '../../service/api/session_api.dart';
 
 // ---------------------------------------------------------------------------
 // 公开入口：显示打开项目底部 Sheet
@@ -375,18 +378,29 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
 
       ref.read(selectedProjectProvider.notifier).select(project);
 
+      try {
+        final sessions = await ref.refresh(sessionsProvider.future);
+        if (sessions.isEmpty) {
+          ref.read(selectedSessionProvider.notifier).startNew();
+        } else {
+          final sortedSessions = List<Session>.from(sessions)
+            ..sort((a, b) => (b.updatedAt ?? 0).compareTo(a.updatedAt ?? 0));
+          ref
+              .read(selectedSessionProvider.notifier)
+              .select(sortedSessions.first);
+        }
+      } catch (_) {
+        ref.read(selectedSessionProvider.notifier).startNew();
+      }
+
+      if (!mounted) return;
+
       // 先关闭 Sheet，再在下一帧处理后续导航，避免 Navigator 锁冲突。
-      final navigator = Navigator.of(context);
-      navigator.pop();
+      Navigator.of(context).pop();
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!navigator.mounted) return;
-
-        if (navigator.canPop()) {
-          navigator.pop();
-        } else if (navigator.context.mounted) {
-          navigator.context.push('/sessions');
-        }
+        if (!mounted) return;
+        context.push('/chat');
       });
     } catch (e) {
       if (!mounted) return;

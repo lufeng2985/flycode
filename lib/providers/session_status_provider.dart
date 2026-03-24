@@ -10,7 +10,7 @@ part 'session_status_provider.g.dart';
 ///
 /// The map only contains entries for sessions that are non-idle.
 /// A missing key is equivalent to [SessionStatusIdle].
-@riverpod
+@Riverpod(keepAlive: true)
 class SessionStatusNotifier extends _$SessionStatusNotifier {
   static const Duration _pollInterval = Duration(seconds: 5);
 
@@ -50,14 +50,19 @@ class SessionStatusNotifier extends _$SessionStatusNotifier {
 
     try {
       final api = await ref.read(sessionApiProvider.future);
+      if (!ref.mounted) return;
       final project = await ref.read(selectedProjectProvider.future);
+      if (!ref.mounted) return;
       final raw = await api.getSessionStatus(directory: project?.worktree);
+      if (!ref.mounted) return;
       state = Map.unmodifiable(_parseStatusSnapshot(raw));
     } catch (_) {
       // Keep current state when snapshot fetch fails.
     } finally {
       _isRefreshing = false;
-      _syncPolling();
+      if (ref.mounted) {
+        _syncPolling();
+      }
     }
   }
 
@@ -73,6 +78,12 @@ class SessionStatusNotifier extends _$SessionStatusNotifier {
   }
 
   void _syncPolling() {
+    if (!ref.mounted) {
+      _pollTimer?.cancel();
+      _pollTimer = null;
+      return;
+    }
+
     final hasWorking = state.values.any((status) => status.isWorking);
     if (!hasWorking) {
       _pollTimer?.cancel();

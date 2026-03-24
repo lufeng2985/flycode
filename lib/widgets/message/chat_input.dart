@@ -20,6 +20,7 @@ import '../../providers/session_status_provider.dart';
 import '../../providers/model_variant_provider.dart';
 import '../../service/api/models/agent.dart';
 import '../../service/api/models/provider.dart';
+import '../../service/api/models/session.dart';
 import '../../service/api/models/session_status.dart';
 import 'at_mention_controller.dart';
 import 'model_selection_sheet.dart';
@@ -707,6 +708,24 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     _hideAtFileOverlay();
   }
 
+  void _startPendingSession() {
+    ref.read(selectedSessionProvider.notifier).startNew();
+  }
+
+  Future<void> _showSessionHistorySheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _SessionHistorySheet(
+        onSelectSession: (session) {
+          ref.read(selectedSessionProvider.notifier).select(session);
+          Navigator.of(context).pop();
+        },
+      ),
+    );
+  }
+
   // ─── Build ────────────────────────────────────────────────────
 
   @override
@@ -772,6 +791,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
               onCycleVariant: () {
                 ref.read(modelVariantProvider.notifier).cycleForCurrentModel();
               },
+              onShowSessionHistory: _showSessionHistorySheet,
+              onStartNewSession: _startPendingSession,
             ),
             const SizedBox(height: 12),
             CompositedTransformTarget(
@@ -1037,6 +1058,8 @@ class _ConfigToolBar extends StatelessWidget {
   final VoidCallback onShowModelSelector;
   final VoidCallback onShowVariantSelector;
   final VoidCallback onCycleVariant;
+  final VoidCallback onShowSessionHistory;
+  final VoidCallback onStartNewSession;
 
   const _ConfigToolBar({
     required this.chatConfig,
@@ -1048,6 +1071,8 @@ class _ConfigToolBar extends StatelessWidget {
     required this.onShowModelSelector,
     required this.onShowVariantSelector,
     required this.onCycleVariant,
+    required this.onShowSessionHistory,
+    required this.onStartNewSession,
   });
 
   String get _agentLabel {
@@ -1060,24 +1085,46 @@ class _ConfigToolBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        _SelectionChip(
-          onTap: agents.isNotEmpty ? () => onAgentTap(agents) : null,
-          label: _agentLabel,
-        ),
-        const SizedBox(width: 8),
-        _SelectionChip(
-          onTap: onShowModelSelector,
-          label: modelLabel,
-          icon: Icons.share_outlined,
-        ),
-        if (showVariantSelector) ...[
-          const SizedBox(width: 8),
-          _SelectionChip(
-            onTap: onShowVariantSelector,
-            onLongPress: onCycleVariant,
-            label: variantLabel,
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _SelectionChip(
+                  onTap: agents.isNotEmpty ? () => onAgentTap(agents) : null,
+                  label: _agentLabel,
+                ),
+                const SizedBox(width: 8),
+                _SelectionChip(
+                  onTap: onShowModelSelector,
+                  label: modelLabel,
+                  icon: Icons.share_outlined,
+                ),
+                if (showVariantSelector) ...[
+                  const SizedBox(width: 8),
+                  _SelectionChip(
+                    onTap: onShowVariantSelector,
+                    onLongPress: onCycleVariant,
+                    label: variantLabel,
+                  ),
+                ],
+              ],
+            ),
           ),
-        ],
+        ),
+        const SizedBox(width: 4),
+        IconButton(
+          tooltip: '会话历史',
+          onPressed: onShowSessionHistory,
+          icon: const Icon(Icons.history, size: 20),
+          visualDensity: VisualDensity.compact,
+        ),
+        IconButton(
+          tooltip: '新建会话',
+          onPressed: onStartNewSession,
+          icon: const Icon(Icons.add_comment_outlined, size: 20),
+          visualDensity: VisualDensity.compact,
+        ),
       ],
     );
   }
@@ -1125,6 +1172,201 @@ class _SelectionChip extends StatelessWidget {
       ),
     );
   }
+}
+
+class _SessionHistorySheet extends ConsumerWidget {
+  final ValueChanged<Session> onSelectSession;
+
+  const _SessionHistorySheet({required this.onSelectSession});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final sessionsAsync = ref.watch(sessionsProvider);
+    final selectedSession = ref.watch(selectedSessionProvider).session;
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.75,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      '会话历史',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: sessionsAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, _) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      '$error',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey[500]),
+                    ),
+                  ),
+                ),
+                data: (sessions) {
+                  if (sessions.isEmpty) {
+                    return Center(
+                      child: Text(
+                        '暂无会话',
+                        style: TextStyle(color: Colors.grey[500]),
+                      ),
+                    );
+                  }
+
+                  final grouped = _groupSessionsByDateForHistory(sessions);
+                  final dates = grouped.keys.toList();
+
+                  return ListView.builder(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    itemCount: dates.length,
+                    itemBuilder: (context, index) {
+                      final date = dates[index];
+                      final sessionsForDate = grouped[date]!;
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                            child: Text(
+                              _formatDateHeaderForHistory(date),
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ),
+                          ...sessionsForDate.map(
+                            (session) => ListTile(
+                              leading: const Icon(Icons.chat_bubble_outline),
+                              title: Text(
+                                session.title ?? session.id,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              subtitle: Text(
+                                _formatUpdatedTimeForHistory(session.updatedAt),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              selected: selectedSession?.id == session.id,
+                              onTap: () => onSelectSession(session),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+Map<String, List<Session>> _groupSessionsByDateForHistory(
+  List<Session> sessions,
+) {
+  final grouped = <String, List<Session>>{};
+  final sortedSessions = List<Session>.from(sessions)
+    ..sort((a, b) => (b.updatedAt ?? 0).compareTo(a.updatedAt ?? 0));
+
+  for (final session in sortedSessions) {
+    final dateKey = _getDateKeyForHistory(session.updatedAt);
+    grouped.putIfAbsent(dateKey, () => []).add(session);
+  }
+
+  return grouped;
+}
+
+String _getDateKeyForHistory(int? timestamp) {
+  if (timestamp == null || timestamp == 0) {
+    final now = DateTime.now();
+    return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+  }
+
+  final date = DateTime.fromMillisecondsSinceEpoch(timestamp);
+  return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+}
+
+String _formatDateHeaderForHistory(String dateKey) {
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final yesterday = today.subtract(const Duration(days: 1));
+
+  DateTime parseDate(String key) {
+    final parts = key.split('-');
+    if (parts.length < 3) return today;
+    return DateTime(
+      int.parse(parts[0]),
+      int.parse(parts[1]),
+      int.parse(parts[2]),
+    );
+  }
+
+  final date = parseDate(dateKey);
+  if (date == today) return '今天';
+  if (date == yesterday) return '昨天';
+
+  final parts = dateKey.split('-');
+  if (parts.length < 3) return dateKey;
+
+  final month = int.tryParse(parts[1]) ?? 1;
+  final day = int.tryParse(parts[2]) ?? 1;
+  return '$month月$day日';
+}
+
+String _formatUpdatedTimeForHistory(int? timestampMs) {
+  if (timestampMs == null || timestampMs == 0) return '刚刚';
+
+  final dt = DateTime.fromMillisecondsSinceEpoch(timestampMs);
+  final now = DateTime.now();
+  final diff = now.difference(dt);
+
+  if (diff.inMinutes < 1) return '刚刚';
+  if (diff.inMinutes < 60) return '${diff.inMinutes} 分钟前';
+  if (diff.inHours < 24) return '${diff.inHours} 小时前';
+  if (diff.inDays < 7) return '${diff.inDays} 天前';
+
+  final y = dt.year;
+  final m = dt.month.toString().padLeft(2, '0');
+  final d = dt.day.toString().padLeft(2, '0');
+  if (dt.year == now.year) return '$m-$d';
+  return '$y-$m-$d';
 }
 
 class _VariantSelectionSheet extends StatelessWidget {

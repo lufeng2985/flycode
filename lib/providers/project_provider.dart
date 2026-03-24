@@ -4,12 +4,16 @@ import 'server_config_provider.dart';
 
 part 'project_provider.g.dart';
 
-@riverpod
+@Riverpod(keepAlive: true)
 class SelectedProjectNotifier extends _$SelectedProjectNotifier {
   @override
   Future<Project?> build() async {
     // 监听服务器配置变化，配置变化时自动重置。
     await ref.watch(serverConfigProvider.future);
+
+    // 避免异步 build 覆盖用户在等待期间手动选择的项目。
+    final current = state.asData?.value;
+    if (current != null) return current;
 
     // 默认不自动选择项目，只有用户进入流程后手动选择。
     return null;

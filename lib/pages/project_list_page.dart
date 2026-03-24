@@ -8,6 +8,9 @@ import '../providers/project_pin_provider.dart';
 import '../providers/server_config_provider.dart';
 import '../service/api/project_api.dart';
 import '../providers/project_provider.dart';
+import '../providers/session_provider.dart';
+import '../service/api/models/session.dart';
+import '../service/api/session_api.dart';
 import '../widgets/project/open_project_sheet.dart';
 
 String _projectDisplayName(Project project) {
@@ -130,6 +133,33 @@ Future<void> _showProjectActionMenu(
   await ref.read(projectPinsProvider.notifier).togglePin(project);
 }
 
+Future<void> _openProjectChat(
+  BuildContext context,
+  WidgetRef ref,
+  Project project,
+) async {
+  ref.read(selectedProjectProvider.notifier).select(project);
+
+  try {
+    final sessions = await ref.refresh(sessionsProvider.future);
+    if (!context.mounted) return;
+
+    if (sessions.isEmpty) {
+      ref.read(selectedSessionProvider.notifier).startNew();
+    } else {
+      final sortedSessions = List<Session>.from(sessions)
+        ..sort((a, b) => (b.updatedAt ?? 0).compareTo(a.updatedAt ?? 0));
+      ref.read(selectedSessionProvider.notifier).select(sortedSessions.first);
+    }
+  } catch (_) {
+    if (!context.mounted) return;
+    ref.read(selectedSessionProvider.notifier).startNew();
+  }
+
+  if (!context.mounted) return;
+  context.push('/chat');
+}
+
 class ProjectListPage extends ConsumerWidget {
   const ProjectListPage({super.key});
 
@@ -138,9 +168,6 @@ class ProjectListPage extends ConsumerWidget {
     final projectsAsync = ref.watch(projectsProvider);
     final asyncServerConfig = ref.watch(serverConfigProvider);
     final pinnedProjectsAsync = ref.watch(projectPinsProvider);
-    final selectedProjectAsync = ref.watch(selectedProjectProvider);
-    final selectedProject = selectedProjectAsync.asData?.value;
-    final colorScheme = Theme.of(context).colorScheme;
 
     void openServerConfigPage() {
       final config = asyncServerConfig.value;
@@ -297,7 +324,6 @@ class ProjectListPage extends ConsumerWidget {
                       const SizedBox(height: 8),
                   itemBuilder: (context, index) {
                     final project = sortedProjects[index];
-                    final isSelected = selectedProject?.id == project.id;
                     final isPinned = pinnedProjects.containsKey(
                       project.worktree,
                     );
@@ -308,20 +334,11 @@ class ProjectListPage extends ConsumerWidget {
                     final iconColor = _parseColor(project.icon?.color);
 
                     return Material(
-                      color: isSelected
-                          ? (iconColor ?? colorScheme.primary).withValues(
-                              alpha: 0.06,
-                            )
-                          : Colors.grey[50],
+                      color: Colors.grey[50],
                       borderRadius: BorderRadius.circular(12),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(12),
-                        onTap: () {
-                          ref
-                              .read(selectedProjectProvider.notifier)
-                              .select(project);
-                          context.push('/sessions');
-                        },
+                        onTap: () => _openProjectChat(context, ref, project),
                         onLongPress: () => _showProjectActionMenu(
                           context,
                           ref,
@@ -339,21 +356,14 @@ class ProjectListPage extends ConsumerWidget {
                                 width: 40,
                                 height: 40,
                                 decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? (iconColor ?? colorScheme.primary)
-                                            .withValues(alpha: 0.12)
-                                      : Colors.white,
+                                  color: Colors.white,
                                   borderRadius: BorderRadius.circular(10),
-                                  border: !isSelected
-                                      ? Border.all(color: Colors.grey[200]!)
-                                      : null,
+                                  border: Border.all(color: Colors.grey[200]!),
                                 ),
                                 child: Icon(
                                   Icons.folder_rounded,
                                   size: 22,
-                                  color: isSelected
-                                      ? (iconColor ?? colorScheme.primary)
-                                      : Colors.grey[400],
+                                  color: iconColor ?? Colors.grey[400],
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -367,12 +377,8 @@ class ProjectListPage extends ConsumerWidget {
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
                                         fontSize: 14,
-                                        fontWeight: isSelected
-                                            ? FontWeight.w600
-                                            : FontWeight.w500,
-                                        color: isSelected
-                                            ? (iconColor ?? colorScheme.primary)
-                                            : Colors.black87,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.black87,
                                       ),
                                     ),
                                     const SizedBox(height: 3),
@@ -398,14 +404,6 @@ class ProjectListPage extends ConsumerWidget {
                                       Icons.push_pin_rounded,
                                       size: 14,
                                       color: Colors.grey[500],
-                                    ),
-                                    const SizedBox(height: 4),
-                                  ],
-                                  if (isSelected) ...[
-                                    Icon(
-                                      Icons.check_circle_rounded,
-                                      size: 16,
-                                      color: iconColor ?? colorScheme.primary,
                                     ),
                                     const SizedBox(height: 4),
                                   ],
