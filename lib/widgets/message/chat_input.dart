@@ -1237,41 +1237,54 @@ class _SessionHistorySheet extends ConsumerWidget {
     final tokens = context.tokens;
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.75,
+      height: MediaQuery.of(context).size.height * 0.73,
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
       ),
       child: SafeArea(
         top: false,
         child: Column(
           children: [
+            // Handle row
             Container(
-              margin: const EdgeInsets.only(top: 12, bottom: 8),
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: tokens.border,
-                borderRadius: BorderRadius.circular(2),
+              height: 24,
+              alignment: Alignment.center,
+              child: Container(
+                width: 44,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD4D4D8),
+                  borderRadius: BorderRadius.circular(tokens.radiusPill),
+                ),
               ),
             ),
+
+            // Header
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+              padding: const EdgeInsets.fromLTRB(24, 2, 24, 12),
               child: Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       '会话历史',
                       style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Plus Jakarta Sans',
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        height: 1.2,
+                        color: theme.colorScheme.onSurface,
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-            const Divider(height: 1),
+
+            // Divider
+            Divider(height: 1, thickness: 1, color: tokens.border),
+
+            // List
             Expanded(
               child: sessionsAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
@@ -1299,7 +1312,7 @@ class _SessionHistorySheet extends ConsumerWidget {
                   final dates = grouped.keys.toList();
 
                   return ListView.builder(
-                    padding: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 20),
                     itemCount: dates.length,
                     itemBuilder: (context, index) {
                       final date = dates[index];
@@ -1309,34 +1322,81 @@ class _SessionHistorySheet extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                            padding: EdgeInsets.only(
+                              top: index == 0 ? 0 : 16,
+                              bottom: 8,
+                            ),
                             child: Text(
                               _formatDateHeaderForHistory(date),
                               style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Inter',
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
                                 color: tokens.mutedForeground,
                               ),
                             ),
                           ),
-                          ...sessionsForDate.map(
-                            (session) => ListTile(
-                              leading: const Icon(Icons.chat_bubble_outline),
-                              title: Text(
-                                session.title ?? session.id,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                          ...sessionsForDate.map((session) {
+                            final isSelected =
+                                selectedSession?.id == session.id;
+
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 2),
+                              child: Material(
+                                color: isSelected
+                                    ? theme.colorScheme.primary.withValues(
+                                        alpha: 0.1,
+                                      )
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(14),
+                                child: InkWell(
+                                  onTap: () => onSelectSession(session),
+                                  borderRadius: BorderRadius.circular(14),
+                                  hoverColor: tokens.accent,
+                                  child: Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 8,
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          session.title ?? session.id,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontFamily: 'Inter',
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: isSelected
+                                                ? theme.colorScheme.primary
+                                                : theme.colorScheme.onSurface,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          _formatUpdatedTimeForHistory(
+                                            session.updatedAt,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontFamily: 'Inter',
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w500,
+                                            color: tokens.mutedForeground,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
                               ),
-                              subtitle: Text(
-                                _formatUpdatedTimeForHistory(session.updatedAt),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(color: tokens.mutedForeground),
-                              ),
-                              selected: selectedSession?.id == session.id,
-                              onTap: () => onSelectSession(session),
-                            ),
-                          ),
+                            );
+                          }),
                         ],
                       );
                     },
