@@ -786,7 +786,12 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: theme.colorScheme.surface),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        border: Border(
+          top: BorderSide(color: tokens.border.withValues(alpha: 0.5)),
+        ),
+      ),
       child: SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -844,7 +849,12 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                           fontFamily: isShellMode ? 'monospace' : null,
                         ),
                         contentPadding: const EdgeInsets.all(12),
+                        filled: false,
                         border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        errorBorder: InputBorder.none,
+                        focusedErrorBorder: InputBorder.none,
                       ),
                       onSubmitted: (_) => _handleSend(),
                     ),
