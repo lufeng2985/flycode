@@ -5,6 +5,7 @@ import '../../service/api/models/message.dart';
 import '../../providers/model_config_provider.dart';
 import '../../providers/chat_config_provider.dart';
 import '../../providers/provider_list_provider.dart';
+import '../../theme/app_tokens.dart';
 
 class ModelSelectionSheet extends ConsumerStatefulWidget {
   const ModelSelectionSheet({super.key});
@@ -17,6 +18,10 @@ class ModelSelectionSheet extends ConsumerStatefulWidget {
 class _ModelSelectionSheetState extends ConsumerState<ModelSelectionSheet> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  String _selectedFilterKey = _filterAll;
+
+  static const String _filterAll = 'all';
+  static const String _filterFavorite = 'favorite';
 
   @override
   void initState() {
@@ -38,134 +43,236 @@ class _ModelSelectionSheetState extends ConsumerState<ModelSelectionSheet> {
   Widget build(BuildContext context) {
     final providerListAsync = ref.watch(providerListProvider);
     final configsAsync = ref.watch(modelConfigProvider);
+    final theme = Theme.of(context);
+    final tokens = context.tokens;
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.75,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(tokens.radiusM + 2),
+        ),
       ),
-      child: Column(
-        children: [
-          // Handle bar
-          Center(
-            child: Container(
-              margin: const EdgeInsets.only(top: 12, bottom: 8),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          // Title
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                const Text(
-                  '选择模型',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
-                  visualDensity: VisualDensity.compact,
-                ),
-              ],
-            ),
-          ),
-          // Search bar
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: TextField(
-              controller: _searchController,
-              autofocus: false,
-              style: const TextStyle(fontSize: 14),
-              decoration: InputDecoration(
-                hintText: '搜索模型',
-                hintStyle: TextStyle(fontSize: 14, color: Colors.grey[400]),
-                prefixIcon: Icon(
-                  Icons.search,
-                  size: 20,
-                  color: Colors.grey[400],
-                ),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? GestureDetector(
-                        onTap: () => _searchController.clear(),
-                        child: Icon(
-                          Icons.cancel,
-                          size: 18,
-                          color: Colors.grey[400],
-                        ),
-                      )
-                    : null,
-                contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                filled: true,
-                fillColor: Colors.grey[100],
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide.none,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            Center(
+              child: Container(
+                margin: const EdgeInsets.only(top: 10, bottom: 8),
+                width: 56,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.secondary,
+                  borderRadius: BorderRadius.circular(tokens.radiusPill),
                 ),
               ),
             ),
-          ),
-          const Divider(height: 1),
-          // List
-          Expanded(
-            child: providerListAsync.when(
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 6, 10, 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '选择模型',
+                      style: TextStyle(
+                        fontFamily: 'Plus Jakarta Sans',
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.close, color: theme.colorScheme.onSurface),
+                    onPressed: () => Navigator.pop(context),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: TextField(
+                controller: _searchController,
+                autofocus: false,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: theme.colorScheme.onSurface,
+                ),
+                decoration: InputDecoration(
+                  hintText: '搜索模型',
+                  hintStyle: TextStyle(
+                    fontSize: 15,
+                    color: tokens.mutedForeground,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    size: 20,
+                    color: tokens.mutedForeground,
+                  ),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? GestureDetector(
+                          onTap: () => _searchController.clear(),
+                          child: Icon(
+                            Icons.cancel,
+                            size: 18,
+                            color: tokens.mutedForeground,
+                          ),
+                        )
+                      : null,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                  filled: true,
+                  fillColor: tokens.accent,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(tokens.radiusL),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(tokens.radiusL),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(tokens.radiusL),
+                    borderSide: BorderSide(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.35),
+                      width: 1.3,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            providerListAsync.when(
               data: (providerList) {
-                return configsAsync.when(
-                  data: (configs) =>
-                      _buildList(context, providerList, configs, _searchQuery),
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (e, s) =>
-                      Center(child: Text('Error loading configs: $e')),
-                );
+                final connectedProviders = providerList.all
+                    .where((p) => providerList.connected.contains(p.id))
+                    .toList();
+                return _buildFilterChips(context, connectedProviders);
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, s) =>
-                  Center(child: Text('Error loading providers: $e')),
+              loading: () => const SizedBox(height: 42),
+              error: (_, _) => const SizedBox(height: 42),
+            ),
+            Divider(height: 1, color: tokens.border.withValues(alpha: 0.5)),
+            Expanded(
+              child: providerListAsync.when(
+                data: (providerList) {
+                  return configsAsync.when(
+                    data: (configs) => _buildList(
+                      context,
+                      providerList,
+                      configs,
+                      _searchQuery,
+                      _selectedProviderId,
+                    ),
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (e, s) => _buildErrorState(context, '配置加载失败: $e'),
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, s) => _buildErrorState(context, '模型列表加载失败: $e'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String? get _selectedProviderId {
+    if (_selectedFilterKey == _filterAll ||
+        _selectedFilterKey == _filterFavorite) {
+      return null;
+    }
+    return _selectedFilterKey;
+  }
+
+  Widget _buildErrorState(BuildContext context, String message) {
+    final tokens = context.tokens;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: TextStyle(color: tokens.mutedForeground),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterChips(
+    BuildContext context,
+    List<ProviderModel> providers,
+  ) {
+    final theme = Theme.of(context);
+    final tokens = context.tokens;
+
+    Widget chip({required String key, required String label}) {
+      final selected = _selectedFilterKey == key;
+      return GestureDetector(
+        onTap: () {
+          setState(() {
+            _selectedFilterKey = key;
+          });
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: selected ? theme.colorScheme.primary : tokens.accent,
+            borderRadius: BorderRadius.circular(tokens.radiusPill),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: selected
+                  ? theme.colorScheme.onPrimary
+                  : theme.colorScheme.onSurface,
             ),
           ),
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      child: Row(
+        children: [
+          chip(key: _filterAll, label: '全部'),
+          const SizedBox(width: 8),
+          chip(key: _filterFavorite, label: '收藏'),
+          for (final provider in providers) ...[
+            const SizedBox(width: 8),
+            chip(key: provider.id, label: provider.name),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildList(
-    BuildContext context,
+  Map<ProviderModel, List<MapEntry<String, ModelInfo>>> _buildProviderGroups(
     ProviderListResponse providerList,
     Map<String, Map<String, bool>> configs,
-    String searchQuery,
+    String query,
   ) {
-    final query = searchQuery.trim().toLowerCase();
+    final normalizedQuery = query.trim().toLowerCase();
+    final selectedProviderId = _selectedProviderId;
 
     final connectedProviders = providerList.all
         .where((p) => providerList.connected.contains(p.id))
+        .where((p) => selectedProviderId == null || p.id == selectedProviderId)
         .toList();
 
-    if (connectedProviders.isEmpty) {
-      return const Center(child: Text('没有连接的模型提供商'));
-    }
-
-    final List<Widget> listItems = [];
+    final grouped = <ProviderModel, List<MapEntry<String, ModelInfo>>>{};
 
     for (final provider in connectedProviders) {
       final providerConfigs = configs[provider.id] ?? {};
 
-      // Filter by enabled config / recently released
       var availableModels = provider.models.entries.where((entry) {
         final modelId = entry.key;
         final model = entry.value;
@@ -176,52 +283,124 @@ class _ModelSelectionSheetState extends ConsumerState<ModelSelectionSheet> {
         return _isRecentlyReleased(model.releaseDate);
       }).toList();
 
-      // Apply local search filter
-      if (query.isNotEmpty) {
+      if (normalizedQuery.isNotEmpty) {
         availableModels = availableModels.where((entry) {
           final model = entry.value;
-          return model.name.toLowerCase().contains(query) ||
-              model.id.toLowerCase().contains(query);
+          return model.name.toLowerCase().contains(normalizedQuery) ||
+              model.id.toLowerCase().contains(normalizedQuery);
         }).toList();
       }
 
-      if (availableModels.isEmpty) continue;
+      if (availableModels.isNotEmpty) {
+        grouped[provider] = availableModels;
+      }
+    }
 
-      // Add Header
+    return grouped;
+  }
+
+  Widget _buildList(
+    BuildContext context,
+    ProviderListResponse providerList,
+    Map<String, Map<String, bool>> configs,
+    String searchQuery,
+    String? selectedProviderId,
+  ) {
+    final theme = Theme.of(context);
+    final tokens = context.tokens;
+    final providerGroups = _buildProviderGroups(
+      providerList,
+      configs,
+      searchQuery,
+    );
+
+    if (providerList.connected.isEmpty) {
+      return Center(
+        child: Text(
+          '没有连接的模型提供商',
+          style: TextStyle(color: tokens.mutedForeground),
+        ),
+      );
+    }
+
+    final List<Widget> listItems = [];
+
+    for (final entry in providerGroups.entries) {
+      final provider = entry.key;
+      final availableModels = entry.value;
+
       listItems.add(
-        Container(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          color: Colors.grey[50],
-          width: double.infinity,
-          child: Text(
-            provider.name,
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
+          child: Row(
+            children: [
+              Text(
+                provider.name,
+                style: TextStyle(
+                  color: tokens.mutedForeground,
+                  fontFamily: 'Plus Jakarta Sans',
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 3,
+                ),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(tokens.radiusPill),
+                ),
+                child: Text(
+                  '${availableModels.length}',
+                  style: TextStyle(
+                    color: theme.colorScheme.primary,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       );
 
-      // Add Models
-      for (final entry in availableModels) {
+      for (final modelEntry in availableModels) {
         listItems.add(
-          _ModelTile(providerId: provider.id, modelInfo: entry.value),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+            child: _ModelTile(
+              providerId: provider.id,
+              modelInfo: modelEntry.value,
+            ),
+          ),
         );
       }
     }
 
     if (listItems.isEmpty) {
+      final noMatchByQuery = searchQuery.trim().isNotEmpty;
+      final noMatchByProvider =
+          selectedProviderId != null && searchQuery.trim().isEmpty;
+      String message = '没有可用的模型';
+      if (noMatchByQuery) {
+        message = '没有匹配的模型';
+      } else if (noMatchByProvider) {
+        message = '该提供商下没有可用模型';
+      }
+
       return Center(
         child: Text(
-          query.isNotEmpty ? '没有匹配的模型' : '没有可用的模型',
-          style: TextStyle(color: Colors.grey[500], fontSize: 14),
+          message,
+          style: TextStyle(color: tokens.mutedForeground, fontSize: 14),
         ),
       );
     }
 
     return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(0, 4, 0, 20),
       itemCount: listItems.length,
       itemBuilder: (context, index) => listItems[index],
     );
@@ -253,51 +432,101 @@ class _ModelTile extends ConsumerWidget {
     final isSelected =
         currentConfig.model.providerID == providerId &&
         currentConfig.model.modelID == modelInfo.id;
+    final theme = Theme.of(context);
+    final tokens = context.tokens;
+    final isFavorite = _isFavoriteModel(modelInfo);
 
-    return InkWell(
-      onTap: () {
-        ref
-            .read(chatConfigProvider.notifier)
-            .setModel(
-              MessageModel(providerID: providerId, modelID: modelInfo.id),
-            );
-        Navigator.pop(context);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.blue.withValues(alpha: 0.05) : null,
-          border: Border(bottom: BorderSide(color: Colors.grey[100]!)),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    return Material(
+      color: isSelected
+          ? theme.colorScheme.primary.withValues(alpha: 0.08)
+          : Colors.transparent,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: () {
+          ref
+              .read(chatConfigProvider.notifier)
+              .setModel(
+                MessageModel(providerID: providerId, modelID: modelInfo.id),
+              );
+          Navigator.pop(context);
+        },
+        borderRadius: BorderRadius.circular(12),
+        hoverColor: tokens.accent,
+        splashColor: theme.colorScheme.primary.withValues(alpha: 0.08),
+        highlightColor: theme.colorScheme.primary.withValues(alpha: 0.05),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Text(
-                    modelInfo.name,
-                    style: TextStyle(
-                      fontWeight: isSelected
-                          ? FontWeight.bold
-                          : FontWeight.w500,
-                      fontSize: 16,
-                      color: isSelected ? Colors.blue : Colors.black87,
+                  Expanded(
+                    child: Text(
+                      modelInfo.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontWeight: isSelected
+                            ? FontWeight.w700
+                            : FontWeight.w600,
+                        fontSize: 14,
+                        color: isSelected
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurface,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    modelInfo.id,
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                  ),
+                  if (isFavorite && !isSelected)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withValues(
+                          alpha: 0.14,
+                        ),
+                        borderRadius: BorderRadius.circular(tokens.radiusPill),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.bookmark,
+                            color: theme.colorScheme.primary,
+                            size: 11,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            '已收藏',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                 ],
               ),
-            ),
-            if (isSelected)
-              const Icon(Icons.check, color: Colors.blue, size: 20),
-          ],
+              const SizedBox(height: 2),
+              Text(
+                modelInfo.id,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 11, color: tokens.mutedForeground),
+              ),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  bool _isFavoriteModel(ModelInfo model) {
+    final dynamic raw = model.options['favorite'] ?? model.options['favourite'];
+    return raw == true;
   }
 }
