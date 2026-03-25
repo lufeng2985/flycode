@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -27,15 +28,10 @@ import 'at_mention_controller.dart';
 import 'model_selection_sheet.dart';
 
 class _ImageAttachment {
+  final String path;
   final String filename;
-  final String mime;
-  final String dataUrl; // "data:image/jpeg;base64,..."
 
-  _ImageAttachment({
-    required this.filename,
-    required this.mime,
-    required this.dataUrl,
-  });
+  const _ImageAttachment({required this.path, required this.filename});
 }
 
 enum _InputMode { chat, shell }
@@ -356,27 +352,24 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   // ─── 图片附件 ─────────────────────────────────────────────────
 
   Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final List<XFile> files = await picker.pickMultiImage();
-    if (files.isEmpty) return;
+    try {
+      final picker = ImagePicker();
+      final List<XFile> files = await picker.pickMultiImage();
+      if (files.isEmpty) return;
 
-    for (final file in files) {
-      final bytes = await file.readAsBytes();
-      final base64Str = base64Encode(bytes);
-      final mimeType =
-          lookupMimeType(file.name, headerBytes: bytes) ?? 'image/jpeg';
-      final dataUrl = 'data:$mimeType;base64,$base64Str';
-      if (mounted) {
-        setState(() {
-          _attachments.add(
-            _ImageAttachment(
-              filename: file.name,
-              mime: mimeType,
-              dataUrl: dataUrl,
-            ),
-          );
-        });
-      }
+      final nextAttachments = files
+          .map((file) => _ImageAttachment(path: file.path, filename: file.name))
+          .toList(growable: false);
+
+      if (!mounted || nextAttachments.isEmpty) return;
+      setState(() {
+        _attachments.addAll(nextAttachments);
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('选择图片失败: $e')));
     }
   }
 
@@ -388,7 +381,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   void _showImagePreview(BuildContext context, _ImageAttachment attachment) {
     final theme = Theme.of(context);
-    final bytes = base64Decode(attachment.dataUrl.split(',').last);
     showDialog<void>(
       context: context,
       builder: (ctx) => Dialog(
@@ -398,7 +390,12 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           children: [
             Center(
               child: InteractiveViewer(
-                child: Image.memory(bytes, fit: BoxFit.contain),
+                child: Image.file(
+                  File(attachment.path),
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) =>
+                      const SizedBox.shrink(),
+                ),
               ),
             ),
             Positioned(
@@ -608,16 +605,12 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       );
     }).toList();
 
+    final attachmentParts = await _buildAttachmentParts();
+
     final List<Object> parts = [
       if (text.isNotEmpty) TextPartInput(text: text),
       ...fileParts,
-      ..._attachments.map(
-        (att) => FilePartInput(
-          mime: att.mime,
-          filename: att.filename,
-          url: att.dataUrl,
-        ),
-      ),
+      ...attachmentParts,
     ];
 
     await api.sendPromptAsync(
@@ -630,6 +623,24 @@ class _ChatInputState extends ConsumerState<ChatInput> {
         parts: parts,
       ),
     );
+  }
+
+  Future<List<FilePartInput>> _buildAttachmentParts() async {
+    final parts = <FilePartInput>[];
+    for (final attachment in _attachments) {
+      final bytes = await XFile(attachment.path).readAsBytes();
+      final mimeType =
+          lookupMimeType(attachment.path, headerBytes: bytes) ?? 'image/jpeg';
+      final dataUrl = 'data:$mimeType;base64,${base64Encode(bytes)}';
+      parts.add(
+        FilePartInput(
+          mime: mimeType,
+          filename: attachment.filename,
+          url: dataUrl,
+        ),
+      );
+    }
+    return parts;
   }
 
   // ─── Agent / Model 切换 ───────────────────────────────────────
@@ -930,57 +941,86 @@ class _AttachmentList extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: List.generate(attachments.length, (i) {
+    return SizedBox(
+      height: 80,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          clipBehavior: Clip.hardEdge,
+          padding: const EdgeInsets.only(right: 8),
+          itemCount: attachments.length,
+          separatorBuilder: (_, _) => const SizedBox(width: 4),
+          itemBuilder: (context, i) {
             final att = attachments[i];
-            final bytes = base64Decode(att.dataUrl.split(',').last);
-            return Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  GestureDetector(
-                    onTap: () => onPreview(att),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
-                      child: Image.memory(
-                        bytes,
-                        width: 64,
-                        height: 64,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    top: -6,
-                    right: -6,
-                    child: GestureDetector(
-                      onTap: () => onRemove(i),
-                      child: Container(
-                        width: 18,
-                        height: 18,
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.scrim.withValues(
-                            alpha: 0.72,
+            return RepaintBoundary(
+              key: ValueKey(att.path),
+              child: SizedBox(
+                width: 72,
+                height: 72,
+                child: Stack(
+                  children: [
+                    Positioned(
+                      left: 0,
+                      bottom: 0,
+                      child: GestureDetector(
+                        onTap: () => onPreview(att),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: Image.file(
+                            File(att.path),
+                            width: 64,
+                            height: 64,
+                            fit: BoxFit.cover,
+                            gaplessPlayback: true,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Container(
+                                  width: 64,
+                                  height: 64,
+                                  color:
+                                      theme.colorScheme.surfaceContainerHighest,
+                                  alignment: Alignment.center,
+                                  child: Icon(
+                                    Icons.broken_image_outlined,
+                                    size: 18,
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
                           ),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.close,
-                          size: 12,
-                          color: theme.colorScheme.onPrimary,
                         ),
                       ),
                     ),
-                  ),
-                ],
+                    Positioned(
+                      top: 0,
+                      right: 0,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => onRemove(i),
+                          borderRadius: BorderRadius.circular(9),
+                          child: Container(
+                            width: 18,
+                            height: 18,
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.scrim.withValues(
+                                alpha: 0.72,
+                              ),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.close,
+                              size: 12,
+                              color: theme.colorScheme.onPrimary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             );
-          }),
+          },
         ),
       ),
     );
