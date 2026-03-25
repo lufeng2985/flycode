@@ -40,6 +40,7 @@ class SettingsPage extends ConsumerWidget {
       body: ListView(
         padding: EdgeInsets.fromLTRB(24, 12, 24, contentBottomPadding),
         children: [
+          const _SectionTitle(title: '通用设置'),
           _SettingsRow(
             icon: Icons.language,
             title: '语言',
@@ -55,6 +56,7 @@ class SettingsPage extends ConsumerWidget {
             },
           ),
           Divider(height: 1, thickness: 1, color: dividerColor),
+          const _SectionTitle(title: '连接与模型'),
           _SettingsRow(
             icon: Icons.dns_outlined,
             title: '服务器',
@@ -72,13 +74,13 @@ class SettingsPage extends ConsumerWidget {
           _SettingsRow(
             icon: Icons.memory_outlined,
             title: '模型',
-            value: '已配置',
             iconColor: mutedColor,
             onTap: () {
               context.push('/settings/model');
             },
           ),
           Divider(height: 1, thickness: 1, color: dividerColor),
+          const _SectionTitle(title: '更多'),
           _SettingsRow(
             icon: Icons.info_outline,
             title: '关于',
@@ -97,6 +99,28 @@ class SettingsPage extends ConsumerWidget {
     }
     final port = parsed.hasPort ? ':${parsed.port}' : '';
     return '${parsed.host}$port';
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    return Padding(
+      padding: const EdgeInsets.only(top: 10, bottom: 6),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: tokens.mutedForeground,
+        ),
+      ),
+    );
   }
 }
 
@@ -132,40 +156,42 @@ class _SettingsRow extends StatelessWidget {
 
     return SizedBox(
       height: 56,
-      child: InkWell(
-        onTap: onTap,
-        splashFactory: NoSplash.splashFactory,
-        splashColor: Colors.transparent,
-        highlightColor: Colors.transparent,
-        hoverColor: Colors.transparent,
-        focusColor: Colors.transparent,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: Row(
-            children: [
-              Icon(icon, size: 20, color: iconColor),
-              const SizedBox(width: 12),
-              Text(title, style: titleStyle),
-              if (value != null) ...[
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(tokens.radiusXs),
+          splashColor: tokens.accent,
+          highlightColor: tokens.accent,
+          hoverColor: tokens.accent,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: [
+                Icon(icon, size: 20, color: iconColor),
                 const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    value!,
-                    style: valueStyle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.end,
+                Text(title, style: titleStyle),
+                if (value != null) ...[
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      value!,
+                      style: valueStyle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.end,
+                    ),
                   ),
+                  const SizedBox(width: 8),
+                ] else
+                  const Spacer(),
+                Icon(
+                  Icons.chevron_right,
+                  size: 18,
+                  color: tokens.mutedForeground,
                 ),
-                const SizedBox(width: 8),
-              ] else
-                const Spacer(),
-              Icon(
-                Icons.chevron_right,
-                size: 18,
-                color: tokens.mutedForeground,
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
