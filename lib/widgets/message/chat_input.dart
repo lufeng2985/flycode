@@ -22,6 +22,7 @@ import '../../service/api/models/agent.dart';
 import '../../service/api/models/provider.dart';
 import '../../service/api/models/session.dart';
 import '../../service/api/models/session_status.dart';
+import '../../theme/app_tokens.dart';
 import 'at_mention_controller.dart';
 import 'model_selection_sheet.dart';
 
@@ -386,11 +387,12 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   }
 
   void _showImagePreview(BuildContext context, _ImageAttachment attachment) {
+    final theme = Theme.of(context);
     final bytes = base64Decode(attachment.dataUrl.split(',').last);
     showDialog<void>(
       context: context,
       builder: (ctx) => Dialog(
-        backgroundColor: Colors.black,
+        backgroundColor: theme.colorScheme.scrim,
         insetPadding: EdgeInsets.zero,
         child: Stack(
           children: [
@@ -404,7 +406,11 @@ class _ChatInputState extends ConsumerState<ChatInput> {
               right: 16,
               child: IconButton(
                 onPressed: () => Navigator.of(ctx).pop(),
-                icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                icon: Icon(
+                  Icons.close,
+                  color: theme.colorScheme.onPrimary,
+                  size: 28,
+                ),
               ),
             ),
           ],
@@ -654,7 +660,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: Theme.of(
+        context,
+      ).colorScheme.surface.withValues(alpha: 0),
       builder: (context) => _AgentSelectionSheet(
         agents: agents,
         currentAgent: ref.read(chatConfigProvider).agent,
@@ -672,7 +680,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: Theme.of(
+        context,
+      ).colorScheme.surface.withValues(alpha: 0),
       builder: (context) => const ModelSelectionSheet(),
     );
   }
@@ -682,7 +692,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: Theme.of(
+        context,
+      ).colorScheme.surface.withValues(alpha: 0),
       builder: (context) => _VariantSelectionSheet(
         variants: variantState.available,
         current: variantState.current,
@@ -716,7 +728,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: Theme.of(
+        context,
+      ).colorScheme.surface.withValues(alpha: 0),
       builder: (_) => _SessionHistorySheet(
         onSelectSession: (session) {
           ref.read(selectedSessionProvider.notifier).select(session);
@@ -732,6 +746,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   Widget build(BuildContext context) {
     final chatConfig = ref.watch(chatConfigProvider);
     final theme = Theme.of(context);
+    final tokens = context.tokens;
     final isShellMode = _inputMode == _InputMode.shell;
     final providerList = ref.watch(providerListProvider).asData?.value;
     final variantState = ref.watch(modelVariantProvider);
@@ -771,10 +786,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        border: Border(top: BorderSide(color: theme.dividerColor)),
-      ),
+      decoration: BoxDecoration(color: theme.colorScheme.surface),
       child: SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -794,14 +806,16 @@ class _ChatInputState extends ConsumerState<ChatInput> {
               onShowSessionHistory: _showSessionHistorySheet,
               onStartNewSession: _startPendingSession,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             CompositedTransformTarget(
               link: _layerLink,
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey[300]!),
+                  color: tokens.card.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: tokens.border.withValues(alpha: 0.5),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -825,7 +839,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       decoration: InputDecoration(
                         hintText: isShellMode ? '输入 shell 命令...' : '随便问点什么...',
                         hintStyle: TextStyle(
-                          color: Colors.grey,
+                          color: tokens.mutedForeground,
                           fontSize: 14,
                           fontFamily: isShellMode ? 'monospace' : null,
                         ),
@@ -904,6 +918,8 @@ class _AttachmentList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
       child: SingleChildScrollView(
@@ -937,14 +953,16 @@ class _AttachmentList extends StatelessWidget {
                       child: Container(
                         width: 18,
                         height: 18,
-                        decoration: const BoxDecoration(
-                          color: Colors.black54,
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.scrim.withValues(
+                            alpha: 0.72,
+                          ),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.close,
                           size: 12,
-                          color: Colors.white,
+                          color: theme.colorScheme.onPrimary,
                         ),
                       ),
                     ),
@@ -982,65 +1000,79 @@ class _InputToolBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool showStop = isWorking || isAborting;
     final bool actionDisabled = isAborting || isLoading;
-    final Color buttonColor;
-    if (showStop) {
-      buttonColor = actionDisabled
-          ? Colors.red.withValues(alpha: 0.5)
-          : Colors.red;
-    } else {
-      buttonColor = actionDisabled ? Colors.grey : Colors.grey[600]!;
-    }
+    final theme = Theme.of(context);
+    final tokens = context.tokens;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.fromLTRB(8, 4, 8, 6),
       child: Row(
         children: [
           Text(
             isShellMode ? r'$' : '>>',
             style: TextStyle(
-              color: isShellMode ? const Color(0xFF0F766E) : Colors.green,
+              color: tokens.successForeground,
               fontWeight: FontWeight.bold,
               fontFamily: isShellMode ? 'monospace' : null,
             ),
           ),
           const Spacer(),
-          if (!isShellMode)
-            IconButton(
-              onPressed: (isLoading || isWorking) ? null : onPickImage,
-              icon: const Icon(Icons.add, size: 20, color: Colors.grey),
-              visualDensity: VisualDensity.compact,
-            ),
-          Container(
-            margin: const EdgeInsets.only(left: 4),
-            decoration: BoxDecoration(
-              color: buttonColor,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                if (isLoading || isAborting)
-                  const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white54),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!isShellMode)
+                InkWell(
+                  onTap: (isLoading || isWorking) ? null : onPickImage,
+                  borderRadius: BorderRadius.circular(4),
+                  child: Padding(
+                    padding: const EdgeInsets.all(2),
+                    child: Icon(
+                      Icons.add,
+                      size: 18,
+                      color: (isLoading || isWorking)
+                          ? tokens.mutedForeground.withValues(alpha: 0.5)
+                          : tokens.mutedForeground,
                     ),
                   ),
-                IconButton(
-                  onPressed: actionDisabled
-                      ? null
-                      : (showStop ? onAbort : onSend),
-                  icon: Icon(
-                    showStop ? Icons.stop_rounded : Icons.arrow_upward,
-                    size: 20,
-                    color: Colors.white,
-                  ),
-                  visualDensity: VisualDensity.compact,
                 ),
-              ],
-            ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: actionDisabled ? null : (showStop ? onAbort : onSend),
+                child: Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: showStop
+                        ? theme.colorScheme.error
+                        : theme.colorScheme.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      if (isLoading || isAborting)
+                        SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 1.6,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              theme.colorScheme.onPrimary.withValues(
+                                alpha: 0.8,
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        Icon(
+                          showStop ? Icons.stop_rounded : Icons.arrow_upward,
+                          size: 16,
+                          color: theme.colorScheme.onPrimary,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -1083,7 +1115,10 @@ class _ConfigToolBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
+
     return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Expanded(
           child: SingleChildScrollView(
@@ -1095,11 +1130,7 @@ class _ConfigToolBar extends StatelessWidget {
                   label: _agentLabel,
                 ),
                 const SizedBox(width: 8),
-                _SelectionChip(
-                  onTap: onShowModelSelector,
-                  label: modelLabel,
-                  icon: Icons.share_outlined,
-                ),
+                _SelectionChip(onTap: onShowModelSelector, label: modelLabel),
                 if (showVariantSelector) ...[
                   const SizedBox(width: 8),
                   _SelectionChip(
@@ -1112,18 +1143,32 @@ class _ConfigToolBar extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(width: 4),
-        IconButton(
-          tooltip: '会话历史',
-          onPressed: onShowSessionHistory,
-          icon: const Icon(Icons.history, size: 20),
-          visualDensity: VisualDensity.compact,
-        ),
-        IconButton(
-          tooltip: '新建会话',
-          onPressed: onStartNewSession,
-          icon: const Icon(Icons.add_comment_outlined, size: 20),
-          visualDensity: VisualDensity.compact,
+        const SizedBox(width: 10),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            InkWell(
+              onTap: onShowSessionHistory,
+              borderRadius: BorderRadius.circular(4),
+              child: Padding(
+                padding: const EdgeInsets.all(2),
+                child: Icon(
+                  Icons.history,
+                  size: 17,
+                  color: tokens.mutedForeground,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            InkWell(
+              onTap: onStartNewSession,
+              borderRadius: BorderRadius.circular(4),
+              child: Padding(
+                padding: const EdgeInsets.all(2),
+                child: Icon(Icons.add, size: 17, color: tokens.mutedForeground),
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -1132,41 +1177,36 @@ class _ConfigToolBar extends StatelessWidget {
 
 class _SelectionChip extends StatelessWidget {
   final String label;
-  final IconData? icon;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
-  const _SelectionChip({
-    required this.label,
-    this.icon,
-    this.onTap,
-    this.onLongPress,
-  });
+  const _SelectionChip({required this.label, this.onTap, this.onLongPress});
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final tokens = context.tokens;
+
     return GestureDetector(
       onTap: onTap,
       onLongPress: onLongPress,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: Colors.grey[300]!),
-          borderRadius: BorderRadius.circular(4),
+          color: tokens.card,
+          borderRadius: BorderRadius.circular(100),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (icon != null) ...[
-              Icon(icon, size: 14, color: Colors.grey),
-              const SizedBox(width: 4),
-            ],
             Text(
               label,
-              style: const TextStyle(fontSize: 12, color: Colors.black87),
+              style: TextStyle(
+                fontSize: 12,
+                color: theme.colorScheme.onSurface,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-            const Icon(Icons.keyboard_arrow_down, size: 14, color: Colors.grey),
           ],
         ),
       ),
@@ -1183,12 +1223,14 @@ class _SessionHistorySheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final sessionsAsync = ref.watch(sessionsProvider);
     final selectedSession = ref.watch(selectedSessionProvider).session;
+    final theme = Theme.of(context);
+    final tokens = context.tokens;
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.75,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
       ),
       child: SafeArea(
         top: false,
@@ -1199,7 +1241,7 @@ class _SessionHistorySheet extends ConsumerWidget {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey[300],
+                color: tokens.border,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -1229,7 +1271,7 @@ class _SessionHistorySheet extends ConsumerWidget {
                     child: Text(
                       '$error',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey[500]),
+                      style: TextStyle(color: tokens.mutedForeground),
                     ),
                   ),
                 ),
@@ -1238,7 +1280,7 @@ class _SessionHistorySheet extends ConsumerWidget {
                     return Center(
                       child: Text(
                         '暂无会话',
-                        style: TextStyle(color: Colors.grey[500]),
+                        style: TextStyle(color: tokens.mutedForeground),
                       ),
                     );
                   }
@@ -1263,7 +1305,7 @@ class _SessionHistorySheet extends ConsumerWidget {
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.grey[600],
+                                color: tokens.mutedForeground,
                               ),
                             ),
                           ),
@@ -1279,6 +1321,7 @@ class _SessionHistorySheet extends ConsumerWidget {
                                 _formatUpdatedTimeForHistory(session.updatedAt),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
+                                style: TextStyle(color: tokens.mutedForeground),
                               ),
                               selected: selectedSession?.id == session.id,
                               onTap: () => onSelectSession(session),
@@ -1389,10 +1432,11 @@ class _VariantSelectionSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final options = <String?>[null, ...variants];
     final theme = Theme.of(context);
+    final tokens = context.tokens;
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
       ),
       child: SafeArea(
         child: Column(
@@ -1403,7 +1447,7 @@ class _VariantSelectionSheet extends StatelessWidget {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey[300],
+                color: tokens.border,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -1421,8 +1465,10 @@ class _VariantSelectionSheet extends StatelessWidget {
               shrinkWrap: true,
               padding: const EdgeInsets.symmetric(vertical: 8),
               itemCount: options.length,
-              separatorBuilder: (_, _) =>
-                  Divider(height: 1, color: Colors.grey[100]),
+              separatorBuilder: (_, _) => Divider(
+                height: 1,
+                color: tokens.border.withValues(alpha: 0.4),
+              ),
               itemBuilder: (ctx, i) {
                 final value = options[i];
                 final selected = current == value;
@@ -1443,7 +1489,7 @@ class _VariantSelectionSheet extends StatelessWidget {
                               fontWeight: FontWeight.w500,
                               color: selected
                                   ? theme.colorScheme.primary
-                                  : Colors.black87,
+                                  : theme.colorScheme.onSurface,
                             ),
                           ),
                         ),
@@ -1481,10 +1527,13 @@ class _CommandSuggestionList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final tokens = context.tokens;
+
     return Material(
       elevation: 8,
       borderRadius: BorderRadius.circular(10),
-      color: Colors.white,
+      color: theme.colorScheme.surface,
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: maxHeight),
         child: ListView.separated(
@@ -1492,7 +1541,7 @@ class _CommandSuggestionList extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 6),
           itemCount: commands.length,
           separatorBuilder: (_, _) =>
-              Divider(height: 1, color: Colors.grey[100]),
+              Divider(height: 1, color: tokens.border.withValues(alpha: 0.4)),
           itemBuilder: (ctx, i) {
             final cmd = commands[i];
             return InkWell(
@@ -1514,7 +1563,6 @@ class _CommandSuggestionList extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Colors.black87,
                       ),
                     ),
                     if (cmd.description != null &&
@@ -1523,10 +1571,7 @@ class _CommandSuggestionList extends StatelessWidget {
                       Expanded(
                         child: Text(
                           cmd.description!,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey,
-                          ),
+                          style: const TextStyle(fontSize: 13),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -1558,10 +1603,11 @@ class _AgentSelectionSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final tokens = context.tokens;
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
       ),
       child: SafeArea(
         child: Column(
@@ -1573,7 +1619,7 @@ class _AgentSelectionSheet extends StatelessWidget {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey[300],
+                color: tokens.border,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -1591,8 +1637,10 @@ class _AgentSelectionSheet extends StatelessWidget {
               shrinkWrap: true,
               padding: const EdgeInsets.symmetric(vertical: 8),
               itemCount: agents.length,
-              separatorBuilder: (_, _) =>
-                  Divider(height: 1, color: Colors.grey[100]),
+              separatorBuilder: (_, _) => Divider(
+                height: 1,
+                color: tokens.border.withValues(alpha: 0.4),
+              ),
               itemBuilder: (ctx, i) {
                 final agent = agents[i];
                 final isSelected = agent.name == currentAgent;
@@ -1614,7 +1662,10 @@ class _AgentSelectionSheet extends StatelessWidget {
                             width: 10,
                             height: 10,
                             decoration: BoxDecoration(
-                              color: _parseColor(agent.color!),
+                              color: _parseColor(
+                                agent.color!,
+                                fallback: tokens.mutedForeground,
+                              ),
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -1631,7 +1682,7 @@ class _AgentSelectionSheet extends StatelessWidget {
                                   fontWeight: FontWeight.w500,
                                   color: isSelected
                                       ? theme.colorScheme.primary
-                                      : Colors.black87,
+                                      : theme.colorScheme.onSurface,
                                 ),
                               ),
                               if (agent.description != null &&
@@ -1640,9 +1691,9 @@ class _AgentSelectionSheet extends StatelessWidget {
                                   padding: const EdgeInsets.only(top: 2),
                                   child: Text(
                                     agent.description!,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 13,
-                                      color: Colors.grey,
+                                      color: tokens.mutedForeground,
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
@@ -1669,14 +1720,14 @@ class _AgentSelectionSheet extends StatelessWidget {
     );
   }
 
-  Color _parseColor(String hex) {
+  Color _parseColor(String hex, {required Color fallback}) {
     try {
       final buffer = StringBuffer();
       if (hex.length == 7) buffer.write('ff');
       buffer.write(hex.replaceFirst('#', ''));
       return Color(int.parse(buffer.toString(), radix: 16));
     } catch (_) {
-      return Colors.grey;
+      return fallback;
     }
   }
 }
@@ -1699,11 +1750,13 @@ class _AtFileSuggestionList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (results.isEmpty) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    final tokens = context.tokens;
 
     return Material(
       elevation: 8,
       borderRadius: BorderRadius.circular(10),
-      color: Colors.white,
+      color: theme.colorScheme.surface,
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: maxHeight),
         child: ListView.separated(
@@ -1711,7 +1764,7 @@ class _AtFileSuggestionList extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 6),
           itemCount: results.length,
           separatorBuilder: (_, _) =>
-              Divider(height: 1, color: Colors.grey[100]),
+              Divider(height: 1, color: tokens.border.withValues(alpha: 0.4)),
           itemBuilder: (ctx, i) {
             final path = results[i];
             final isHighlighted = i == highlightIndex;
@@ -1726,8 +1779,8 @@ class _AtFileSuggestionList extends StatelessWidget {
               onTap: () => onSelect(path),
               child: Container(
                 color: isHighlighted
-                    ? const Color(0xFFEFF6FF)
-                    : Colors.transparent,
+                    ? theme.colorScheme.primary.withValues(alpha: 0.1)
+                    : theme.colorScheme.surface.withValues(alpha: 0),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 14,
                   vertical: 10,
@@ -1738,8 +1791,8 @@ class _AtFileSuggestionList extends StatelessWidget {
                       Icons.insert_drive_file_outlined,
                       size: 16,
                       color: isHighlighted
-                          ? const Color(0xFF2563EB)
-                          : Colors.grey[500],
+                          ? theme.colorScheme.primary
+                          : tokens.mutedForeground,
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -1753,16 +1806,16 @@ class _AtFileSuggestionList extends StatelessWidget {
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
                                 color: isHighlighted
-                                    ? const Color(0xFF1D4ED8)
-                                    : Colors.black87,
+                                    ? theme.colorScheme.primary
+                                    : theme.colorScheme.onSurface,
                               ),
                             ),
                             if (dir != null)
                               TextSpan(
                                 text: '  $dir',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 12,
-                                  color: Colors.grey,
+                                  color: tokens.mutedForeground,
                                 ),
                               ),
                           ],

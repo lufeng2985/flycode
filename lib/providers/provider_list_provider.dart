@@ -13,9 +13,7 @@ class ProviderList extends _$ProviderList {
 
   Future<void> refresh() async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(
-      () => _load(forceRefresh: true),
-    );
+    state = await AsyncValue.guard(() => _load(forceRefresh: true));
   }
 
   Future<ProviderListResponse> _load({required bool forceRefresh}) async {

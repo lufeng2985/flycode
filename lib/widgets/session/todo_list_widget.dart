@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/todo_provider.dart';
 import '../../service/api/models/global_event.dart' show Todo;
+import '../../theme/app_tokens.dart';
 
 /// 展示当前 session 的 AI Todo 任务列表。
 ///
@@ -33,6 +34,8 @@ class _TodoListWidgetState extends ConsumerState<TodoListWidget> {
   }
 
   Widget _buildContent(BuildContext context, List<Todo> todos) {
+    final tokens = context.tokens;
+
     // 只有存在非 completed 的 todo 时才显示
     final hasActive = todos.any((t) => t.status != 'completed');
     if (!hasActive) return const SizedBox.shrink();
@@ -45,25 +48,24 @@ class _TodoListWidgetState extends ConsumerState<TodoListWidget> {
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F9FA),
-        border: Border.all(color: const Color(0xFFE8EAED)),
-        borderRadius: BorderRadius.circular(10),
+        color: tokens.card,
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           _buildHeader(context, sorted),
           if (_expanded) ...[
-            const Divider(height: 1, color: Color(0xFFE8EAED)),
+            Divider(height: 1, color: tokens.border.withValues(alpha: 0.45)),
             ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               padding: const EdgeInsets.symmetric(vertical: 4),
               itemCount: sorted.length,
-              separatorBuilder: (_, idx) => const Divider(
+              separatorBuilder: (_, idx) => Divider(
                 height: 1,
                 indent: 40,
-                color: Color(0xFFEEEEEE),
+                color: tokens.border.withValues(alpha: 0.25),
               ),
               itemBuilder: (context, index) => _buildTodoItem(sorted[index]),
             ),
@@ -74,6 +76,8 @@ class _TodoListWidgetState extends ConsumerState<TodoListWidget> {
   }
 
   Widget _buildHeader(BuildContext context, List<Todo> todos) {
+    final theme = Theme.of(context);
+    final tokens = context.tokens;
     final inProgressCount = todos
         .where((t) => t.status == 'in_progress')
         .length;
@@ -82,38 +86,38 @@ class _TodoListWidgetState extends ConsumerState<TodoListWidget> {
 
     return InkWell(
       borderRadius: _expanded
-          ? const BorderRadius.vertical(top: Radius.circular(10))
-          : BorderRadius.circular(10),
+          ? const BorderRadius.vertical(top: Radius.circular(16))
+          : BorderRadius.circular(16),
       onTap: () => setState(() => _expanded = !_expanded),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Row(
           children: [
-            const Icon(
+            Icon(
               Icons.checklist_rounded,
               size: 16,
-              color: Color(0xFF5F6368),
+              color: tokens.mutedForeground,
             ),
             const SizedBox(width: 6),
             Text(
               'AI 任务规划',
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                 fontWeight: FontWeight.w600,
-                color: const Color(0xFF3C4043),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
               ),
             ),
             const SizedBox(width: 8),
             if (inProgressCount > 0)
-              _buildBadge('$inProgressCount 进行中', const Color(0xFF1A73E8)),
+              _buildBadge('$inProgressCount 进行中', tokens.infoForeground),
             if (pendingCount > 0)
-              _buildBadge('$pendingCount 待处理', const Color(0xFF80868B)),
+              _buildBadge('$pendingCount 待处理', tokens.mutedForeground),
             if (completedCount > 0)
-              _buildBadge('$completedCount 已完成', const Color(0xFF34A853)),
+              _buildBadge('$completedCount 已完成', tokens.successForeground),
             const Spacer(),
             Icon(
               _expanded ? Icons.expand_less : Icons.expand_more,
               size: 18,
-              color: const Color(0xFF80868B),
+              color: tokens.mutedForeground,
             ),
           ],
         ),
@@ -141,6 +145,7 @@ class _TodoListWidgetState extends ConsumerState<TodoListWidget> {
   }
 
   Widget _buildTodoItem(Todo todo) {
+    final tokens = context.tokens;
     final statusInfo = _statusInfo(todo.status);
     final isCompleted = todo.status == 'completed';
     final priorityInfo = _priorityInfo(todo.priority);
@@ -163,10 +168,12 @@ class _TodoListWidgetState extends ConsumerState<TodoListWidget> {
               style: TextStyle(
                 fontSize: 13,
                 color: isCompleted
-                    ? const Color(0xFFADADAD)
-                    : const Color(0xFF3C4043),
+                    ? tokens.mutedForeground.withValues(alpha: 0.6)
+                    : Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.9),
                 decoration: isCompleted ? TextDecoration.lineThrough : null,
-                decorationColor: const Color(0xFFADADAD),
+                decorationColor: tokens.mutedForeground.withValues(alpha: 0.6),
                 height: 1.4,
               ),
             ),
@@ -214,35 +221,43 @@ class _TodoListWidgetState extends ConsumerState<TodoListWidget> {
   }
 
   _StatusInfo _statusInfo(String status) {
+    final tokens = context.tokens;
     switch (status) {
       case 'in_progress':
         return _StatusInfo(
           icon: Icons.radio_button_checked,
-          color: const Color(0xFF1A73E8),
+          color: tokens.infoForeground,
         );
       case 'completed':
         return _StatusInfo(
           icon: Icons.check_circle,
-          color: const Color(0xFF34A853),
+          color: tokens.successForeground,
         );
       case 'cancelled':
-        return _StatusInfo(icon: Icons.cancel, color: const Color(0xFFEA4335));
+        return _StatusInfo(
+          icon: Icons.cancel,
+          color: Theme.of(context).colorScheme.error,
+        );
       default: // pending
         return _StatusInfo(
           icon: Icons.radio_button_unchecked,
-          color: const Color(0xFF80868B),
+          color: tokens.mutedForeground,
         );
     }
   }
 
   _PriorityInfo _priorityInfo(String priority) {
+    final tokens = context.tokens;
     switch (priority) {
       case 'high':
-        return _PriorityInfo(label: '高优', color: const Color(0xFFEA4335));
+        return _PriorityInfo(
+          label: '高优',
+          color: Theme.of(context).colorScheme.error,
+        );
       case 'medium':
-        return _PriorityInfo(label: '中', color: const Color(0xFFFB8C00));
+        return _PriorityInfo(label: '中', color: tokens.warningForeground);
       default: // low
-        return _PriorityInfo(label: '低', color: const Color(0xFF80868B));
+        return _PriorityInfo(label: '低', color: tokens.mutedForeground);
     }
   }
 }

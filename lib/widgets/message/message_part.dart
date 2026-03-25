@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import '../../service/api/models/parts.dart';
+import '../../theme/app_tokens.dart';
 import 'code_block_widget.dart';
 import 'tool_use_widget.dart';
 
@@ -160,15 +161,22 @@ class _TypewriterMarkdownTextState extends State<_TypewriterMarkdownText> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final tokens = context.tokens;
     final text = _chars.take(_visibleCount).join();
     return MarkdownBody(
       data: text,
       selectable: true,
       builders: {'pre': CodeBlockBuilder()},
       styleSheet: MarkdownStyleSheet(
-        p: const TextStyle(fontSize: 14, height: 1.5),
+        p: TextStyle(
+          fontSize: 14,
+          height: 1.5,
+          color: theme.colorScheme.onSurface,
+        ),
         code: TextStyle(
-          backgroundColor: Colors.grey[200],
+          backgroundColor: tokens.accent,
+          color: theme.colorScheme.onSurface,
           fontFamily: 'monospace',
           fontSize: 13,
         ),
@@ -183,23 +191,35 @@ class _CompactionDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
         children: [
-          Expanded(child: Divider(color: Colors.grey[300], height: 1)),
+          Expanded(
+            child: Divider(
+              color: tokens.border.withValues(alpha: 0.8),
+              height: 1,
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10),
             child: Text(
               'Context compacted',
               style: TextStyle(
                 fontSize: 11,
-                color: Colors.grey[500],
+                color: tokens.mutedForeground,
                 letterSpacing: 0.2,
               ),
             ),
           ),
-          Expanded(child: Divider(color: Colors.grey[300], height: 1)),
+          Expanded(
+            child: Divider(
+              color: tokens.border.withValues(alpha: 0.8),
+              height: 1,
+            ),
+          ),
         ],
       ),
     );
@@ -212,10 +232,12 @@ class _ImagePartWidget extends StatelessWidget {
   const _ImagePartWidget({required this.url});
 
   void _showFullscreen(BuildContext context, ImageProvider imageProvider) {
+    final theme = Theme.of(context);
+
     showDialog<void>(
       context: context,
       builder: (ctx) => Dialog(
-        backgroundColor: Colors.black,
+        backgroundColor: theme.colorScheme.scrim,
         insetPadding: EdgeInsets.zero,
         child: Stack(
           children: [
@@ -229,7 +251,11 @@ class _ImagePartWidget extends StatelessWidget {
               right: 16,
               child: IconButton(
                 onPressed: () => Navigator.of(ctx).pop(),
-                icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                icon: Icon(
+                  Icons.close,
+                  color: theme.colorScheme.onPrimary,
+                  size: 28,
+                ),
               ),
             ),
           ],
@@ -240,6 +266,7 @@ class _ImagePartWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     final ImageProvider imageProvider;
 
     if (url.startsWith('data:')) {
@@ -261,8 +288,8 @@ class _ImagePartWidget extends StatelessWidget {
           errorBuilder: (context, error, stackTrace) => Container(
             width: 200,
             height: 200,
-            color: Colors.grey[200],
-            child: const Icon(Icons.broken_image, color: Colors.grey),
+            color: tokens.accent,
+            child: Icon(Icons.broken_image, color: tokens.mutedForeground),
           ),
         ),
       ),

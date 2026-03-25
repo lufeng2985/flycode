@@ -27,16 +27,16 @@ class ModelConfigPage extends ConsumerWidget {
                       if (!context.mounted) {
                         return;
                       }
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('模型列表已刷新')),
-                      );
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(const SnackBar(content: Text('模型列表已刷新')));
                     } catch (error) {
                       if (!context.mounted) {
                         return;
                       }
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('刷新失败: $error')),
-                      );
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(SnackBar(content: Text('刷新失败: $error')));
                     }
                   },
             icon: const Icon(Icons.refresh),

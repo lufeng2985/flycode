@@ -11,6 +11,7 @@ import '../../service/api/models/parts.dart'
         MessageOutputLengthError,
         MessageAbortedError,
         ApiError;
+import '../../theme/app_tokens.dart';
 import 'message_part.dart';
 
 class MessageBubble extends ConsumerStatefulWidget {
@@ -113,22 +114,30 @@ class _MessageBubbleState extends ConsumerState<MessageBubble> {
   Widget _buildErrorWidget(BuildContext context, Object error) {
     final errorMessage = _getErrorMessage(error);
     final errorName = _getErrorName(error);
+    final theme = Theme.of(context);
+    final tokens = context.tokens;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.red[50],
+          color: tokens.errorSoft,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.red[200]!),
+          border: Border.all(
+            color: tokens.errorSoftForeground.withValues(alpha: 0.25),
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(Icons.error_outline, size: 14, color: Colors.red[600]),
+                Icon(
+                  Icons.error_outline,
+                  size: 14,
+                  color: theme.colorScheme.error,
+                ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -136,7 +145,7 @@ class _MessageBubbleState extends ConsumerState<MessageBubble> {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Colors.red[700],
+                      color: tokens.errorSoftForeground,
                     ),
                   ),
                 ),
@@ -146,7 +155,10 @@ class _MessageBubbleState extends ConsumerState<MessageBubble> {
               const SizedBox(height: 6),
               Text(
                 errorMessage,
-                style: TextStyle(fontSize: 12, color: Colors.red[700]),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: tokens.errorSoftForeground,
+                ),
               ),
             ],
           ],
@@ -182,6 +194,7 @@ class _MessageBubbleState extends ConsumerState<MessageBubble> {
     UserMessage userMessage,
     ProviderListResponse? providerList,
   ) {
+    final tokens = context.tokens;
     final modelLabel = _resolveModelLabel(
       providerList,
       userMessage.model.providerID,
@@ -205,9 +218,7 @@ class _MessageBubbleState extends ConsumerState<MessageBubble> {
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.primary.withValues(alpha: 0.1),
+                  color: tokens.info,
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(16),
                     topRight: Radius.circular(16),
@@ -306,20 +317,25 @@ class _CopyButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
+
     return GestureDetector(
       onTap: onCopy,
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 200),
         child: copied
-            ? const Row(
+            ? Row(
                 key: ValueKey('copied'),
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.check, size: 14, color: Colors.green),
+                  Icon(Icons.check, size: 14, color: tokens.successForeground),
                   SizedBox(width: 4),
                   Text(
                     'Copied',
-                    style: TextStyle(color: Colors.green, fontSize: 12),
+                    style: TextStyle(
+                      color: tokens.successForeground,
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               )
@@ -327,11 +343,18 @@ class _CopyButton extends StatelessWidget {
                 key: const ValueKey('copy'),
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.copy_outlined, size: 14, color: Colors.grey),
+                  Icon(
+                    Icons.copy_outlined,
+                    size: 14,
+                    color: tokens.mutedForeground,
+                  ),
                   const SizedBox(width: 4),
-                  const Text(
+                  Text(
                     'Copy',
-                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                    style: TextStyle(
+                      color: tokens.mutedForeground,
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               ),
@@ -364,9 +387,10 @@ class _AssistantFooter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final completedTimeLabel = _formatCompletedTime(message.time.completed);
+    final tokens = context.tokens;
 
     return DefaultTextStyle(
-      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+      style: TextStyle(fontSize: 12, color: tokens.mutedForeground),
       child: Row(
         children: [
           _CopyButton(copied: copied, onCopy: onCopy),
@@ -411,9 +435,10 @@ class _UserFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     final timeLabel = _formatTime(message.time.created);
     final maxModelWidth = MediaQuery.of(context).size.width * 0.35;
+    final tokens = context.tokens;
 
     return DefaultTextStyle(
-      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+      style: TextStyle(fontSize: 12, color: tokens.mutedForeground),
       child: Align(
         alignment: Alignment.centerRight,
         child: Row(

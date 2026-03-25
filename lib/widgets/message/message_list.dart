@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/session_provider.dart';
 import '../../service/api/models/message.dart';
 import '../../service/api/models/parts.dart';
+import '../../theme/app_tokens.dart';
 import 'message_bubble.dart';
 
 class MessageList extends ConsumerWidget {
@@ -21,17 +22,26 @@ class MessageList extends ConsumerWidget {
         return Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                const SizedBox(height: 16),
-                SelectableText(
-                  'Error: $error\n\nStack trace:\n$stack',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 12),
-                ),
-              ],
+            child: Builder(
+              builder: (context) {
+                final theme = Theme.of(context);
+                return Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: theme.colorScheme.error,
+                    ),
+                    const SizedBox(height: 16),
+                    SelectableText(
+                      'Error: $error\n\nStack trace:\n$stack',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         );
@@ -67,8 +77,16 @@ Widget _buildList(
       .toList();
 
   if (visibleMessages.isEmpty) {
-    return const Center(
-      child: Text('No messages yet', style: TextStyle(color: Colors.grey)),
+    return Center(
+      child: Builder(
+        builder: (context) {
+          final tokens = context.tokens;
+          return Text(
+            'No messages yet',
+            style: TextStyle(color: tokens.mutedForeground),
+          );
+        },
+      ),
     );
   }
 

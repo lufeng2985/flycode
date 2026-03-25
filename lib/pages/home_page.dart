@@ -75,20 +75,18 @@ class MyHomePage extends ConsumerWidget {
         appBar: AppBar(
           actions: [
             if (selectedSession != null) ...[
-              IconButton(
-                icon: Icon(
-                  Icons.difference_outlined,
-                  color: tokens.mutedForeground,
-                ),
+              _HeaderActionButton(
+                icon: Icons.difference_outlined,
                 tooltip: '文件变更',
-                onPressed: () =>
-                    context.push('/diff', extra: selectedSession.id),
+                onTap: () => context.push('/diff', extra: selectedSession.id),
               ),
-              IconButton(
-                icon: Icon(Icons.info_outline, color: tokens.mutedForeground),
+              const SizedBox(width: 8),
+              _HeaderActionButton(
+                icon: Icons.info_outline,
                 tooltip: '上下文',
-                onPressed: () => context.push('/session-context'),
+                onTap: () => context.push('/session-context'),
               ),
+              const SizedBox(width: 12),
             ],
           ],
           bottom: PreferredSize(
@@ -146,6 +144,32 @@ class MyHomePage extends ConsumerWidget {
               const ChatInput(),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _HeaderActionButton extends StatelessWidget {
+  const _HeaderActionButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+
+    return Tooltip(
+      message: tooltip,
+      child: IconButton(
+        onPressed: onTap,
+        icon: Icon(icon, size: 20, color: tokens.mutedForeground),
+        splashRadius: 20,
       ),
     );
   }
