@@ -35,6 +35,36 @@ class MessageBubble extends ConsumerStatefulWidget {
 class _MessageBubbleState extends ConsumerState<MessageBubble> {
   bool _copied = false;
 
+  String get _messageId {
+    final info = widget.messageWithParts.info;
+    if (info is UserMessage) {
+      return info.id;
+    }
+    if (info is AssistantMessage) {
+      return info.id;
+    }
+    return info.hashCode.toString();
+  }
+
+  Key _partKey(Object part, int index) {
+    final id = switch (part) {
+      TextPart p => p.id,
+      FilePart p => p.id,
+      ToolPart p => p.id,
+      ReasoningPart p => p.id,
+      StepStartPart p => p.id,
+      StepFinishPart p => p.id,
+      SnapshotPart p => p.id,
+      PatchPart p => p.id,
+      AgentPart p => p.id,
+      RetryPart p => p.id,
+      CompactionPart p => p.id,
+      SubtaskPart p => p.id,
+      _ => index.toString(),
+    };
+    return ValueKey('$_messageId/$id');
+  }
+
   String _extractText() {
     final buffer = StringBuffer();
     for (final part in widget.messageWithParts.parts) {
@@ -229,9 +259,12 @@ class _MessageBubbleState extends ConsumerState<MessageBubble> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: widget.messageWithParts.parts
+                      .asMap()
+                      .entries
                       .map(
-                        (part) => MessagePart(
-                          part: part,
+                        (entry) => MessagePart(
+                          key: _partKey(entry.value, entry.key),
+                          part: entry.value,
                           isUser: true,
                           onNavigateToSubSession: widget.onNavigateToSubSession,
                         ),
@@ -282,6 +315,7 @@ class _MessageBubbleState extends ConsumerState<MessageBubble> {
         children: [
           for (var i = 0; i < parts.length; i++) ...[
             MessagePart(
+              key: _partKey(parts[i], i),
               part: parts[i],
               isUser: false,
               isStreaming: isStreaming,

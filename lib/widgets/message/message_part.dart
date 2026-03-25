@@ -226,10 +226,43 @@ class _CompactionDivider extends StatelessWidget {
   }
 }
 
-class _ImagePartWidget extends StatelessWidget {
+class _ImagePartWidget extends StatefulWidget {
   final String url;
 
   const _ImagePartWidget({required this.url});
+
+  @override
+  State<_ImagePartWidget> createState() => _ImagePartWidgetState();
+}
+
+class _ImagePartWidgetState extends State<_ImagePartWidget> {
+  late ImageProvider _imageProvider;
+
+  @override
+  void initState() {
+    super.initState();
+    _imageProvider = _buildImageProvider(widget.url);
+  }
+
+  @override
+  void didUpdateWidget(covariant _ImagePartWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.url != widget.url) {
+      _imageProvider = _buildImageProvider(widget.url);
+    }
+  }
+
+  ImageProvider _buildImageProvider(String url) {
+    if (!url.startsWith('data:')) {
+      return NetworkImage(url);
+    }
+    final commaIndex = url.indexOf(',');
+    if (commaIndex == -1 || commaIndex == url.length - 1) {
+      return NetworkImage(url);
+    }
+    final base64Data = url.substring(commaIndex + 1);
+    return MemoryImage(base64Decode(base64Data));
+  }
 
   void _showFullscreen(BuildContext context, ImageProvider imageProvider) {
     final theme = Theme.of(context);
@@ -267,24 +300,17 @@ class _ImagePartWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final ImageProvider imageProvider;
-
-    if (url.startsWith('data:')) {
-      final base64Data = url.split(',').last;
-      imageProvider = MemoryImage(base64Decode(base64Data));
-    } else {
-      imageProvider = NetworkImage(url);
-    }
 
     return GestureDetector(
-      onTap: () => _showFullscreen(context, imageProvider),
+      onTap: () => _showFullscreen(context, _imageProvider),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(6),
         child: Image(
-          image: imageProvider,
+          image: _imageProvider,
           width: 200,
           height: 200,
           fit: BoxFit.cover,
+          gaplessPlayback: true,
           errorBuilder: (context, error, stackTrace) => Container(
             width: 200,
             height: 200,

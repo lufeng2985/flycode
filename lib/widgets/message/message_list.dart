@@ -101,6 +101,7 @@ Widget _buildList(
       final prevMessage = prevIndex >= 0 ? visibleMessages[prevIndex] : null;
       final prevIsUser = prevMessage?.info is UserMessage;
       return MessageBubble(
+        key: ValueKey(_messageId(messageWithParts)),
         messageWithParts: messageWithParts,
         prevIsUser: prevIsUser,
         isLatestMessage: index == 0,
@@ -108,6 +109,17 @@ Widget _buildList(
       );
     },
   );
+}
+
+String _messageId(MessageWithParts message) {
+  final info = message.info;
+  if (info is UserMessage) {
+    return info.id;
+  }
+  if (info is AssistantMessage) {
+    return info.id;
+  }
+  return info.hashCode.toString();
 }
 
 bool _isSyntheticOnlyUserMessage(MessageWithParts message) {
