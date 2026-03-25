@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:clipboard/clipboard.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mime/mime.dart';
 import '../../service/api/session_api.dart';
@@ -48,6 +50,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   final FocusNode _focusNode = FocusNode();
   final LayerLink _layerLink = LayerLink();
   bool _isLoading = false;
+  bool _isHandlingPaste = false;
 
   /// True while an abort request has been sent and we are waiting for the
   /// backend to confirm the session is idle (via SSE session.status event).
@@ -304,6 +307,16 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       return KeyEventResult.ignored;
     }
 
+    final isPasteShortcut =
+        event is KeyDownEvent &&
+        event.logicalKey == LogicalKeyboardKey.keyV &&
+        (HardwareKeyboard.instance.isMetaPressed ||
+            HardwareKeyboard.instance.isControlPressed);
+    if (isPasteShortcut) {
+      unawaited(_handlePasteShortcut());
+      return KeyEventResult.handled;
+    }
+
     // @ file overlay navigation.
     if (_atFileOverlay != null) {
       if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
@@ -332,7 +345,110 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       }
     }
 
+    // Enter to send on desktop/web; keep mobile IME enter as newline.
+    if (_shouldSendOnEnter(event)) {
+      unawaited(_handleSend());
+      return KeyEventResult.handled;
+    }
+
     return KeyEventResult.ignored;
+  }
+
+  bool _shouldSendOnEnter(KeyEvent event) {
+    final isEnter =
+        event.logicalKey == LogicalKeyboardKey.enter ||
+        event.logicalKey == LogicalKeyboardKey.numpadEnter;
+    if (!isEnter) return false;
+
+    final platform = defaultTargetPlatform;
+    final isMobilePlatform =
+        platform == TargetPlatform.android || platform == TargetPlatform.iOS;
+    if (isMobilePlatform) return false;
+
+    if (HardwareKeyboard.instance.isShiftPressed) return false;
+    return true;
+  }
+
+  Future<void> _handlePasteShortcut() async {
+    if (_isHandlingPaste) return;
+    _isHandlingPaste = true;
+    try {
+      if (_inputMode != _InputMode.shell) {
+        final imageBytes = await FlutterClipboard.pasteImage();
+        if (imageBytes != null && imageBytes.isNotEmpty) {
+          final attachment = await _attachmentFromClipboardImage(imageBytes);
+          if (!mounted) return;
+          setState(() {
+            _attachments.add(attachment);
+          });
+          return;
+        }
+      }
+
+      final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
+      final pastedText = clipboardData?.text;
+      if (pastedText == null || pastedText.isEmpty) return;
+      _insertTextAtSelection(pastedText);
+    } catch (_) {
+      // Ignore paste failures to avoid interrupting typing.
+    } finally {
+      _isHandlingPaste = false;
+    }
+  }
+
+  Future<_ImageAttachment> _attachmentFromClipboardImage(
+    Uint8List imageBytes,
+  ) async {
+    final mimeType = lookupMimeType('clipboard-image', headerBytes: imageBytes);
+    final ext = _fileExtForImageMime(mimeType);
+    final filename =
+        'pasted-image-${DateTime.now().millisecondsSinceEpoch}.$ext';
+    final path = '${Directory.systemTemp.path}/$filename';
+    final file = File(path);
+    await file.writeAsBytes(imageBytes, flush: true);
+    return _ImageAttachment(path: path, filename: filename);
+  }
+
+  String _fileExtForImageMime(String? mimeType) {
+    switch (mimeType) {
+      case 'image/jpeg':
+        return 'jpg';
+      case 'image/webp':
+        return 'webp';
+      case 'image/gif':
+        return 'gif';
+      case 'image/heic':
+        return 'heic';
+      case 'image/heif':
+        return 'heif';
+      default:
+        return 'png';
+    }
+  }
+
+  void _insertTextAtSelection(String value) {
+    final editingValue = _controller.value;
+    final selection = editingValue.selection;
+    final text = editingValue.text;
+
+    if (!selection.isValid) {
+      final nextText = '$text$value';
+      _controller.value = TextEditingValue(
+        text: nextText,
+        selection: TextSelection.collapsed(offset: nextText.length),
+      );
+      return;
+    }
+
+    final start = selection.start;
+    final end = selection.end;
+    final nextText = text.replaceRange(start, end, value);
+    final cursorOffset = start + value.length;
+
+    _controller.value = TextEditingValue(
+      text: nextText,
+      selection: TextSelection.collapsed(offset: cursorOffset),
+    );
   }
 
   void _syncInputModeByBangPrefix(String text) {
