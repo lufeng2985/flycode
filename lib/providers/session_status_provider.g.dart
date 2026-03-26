@@ -33,7 +33,7 @@ final class SessionStatusNotifierProvider
         argument: null,
         retry: null,
         name: r'sessionStatusProvider',
-        isAutoDispose: false,
+        isAutoDispose: true,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -55,7 +55,7 @@ final class SessionStatusNotifierProvider
 }
 
 String _$sessionStatusNotifierHash() =>
-    r'107ac15f4d4412cb39bfd26dc3d87b7a4b35259e';
+    r'be305c4490d841a632ddfe558f62c3f4501502e0';
 
 /// Tracks the backend-reported status for each session.
 ///

@@ -1,27 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../providers/project_provider.dart';
+import '../../providers/current_directory_provider.dart';
 import '../../providers/question_provider.dart';
-import '../../providers/session_provider.dart';
 import '../../service/api/models/question.dart';
 
 /// Displays all pending questions for the current session as a step-by-step
 /// card overlay at the bottom of the chat view.
 class QuestionOverlay extends ConsumerWidget {
-  const QuestionOverlay({super.key});
+  const QuestionOverlay({super.key, required this.sessionID});
+
+  final String sessionID;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final questionsAsync = ref.watch(pendingQuestionsProvider);
-    final selectedState = ref.watch(selectedSessionProvider);
-    final sessionId = selectedState.session?.id;
 
     return questionsAsync.when(
       data: (questions) {
-        if (sessionId == null) return const SizedBox.shrink();
-
         final sessionQuestions = questions
-            .where((q) => q.sessionID == sessionId)
+            .where((q) => q.sessionID == sessionID)
             .toList();
         if (sessionQuestions.isEmpty) return const SizedBox.shrink();
 
@@ -129,21 +126,17 @@ class _QuestionRequestCardState extends ConsumerState<QuestionRequestCard> {
   }
 
   Future<void> _submit() async {
-    final project = await ref.read(selectedProjectProvider.future);
+    final directory = ref.read(currentDirectoryProvider);
     await ref
         .read(pendingQuestionsProvider.notifier)
-        .reply(
-          widget.request.id,
-          answers: _answers,
-          directory: project?.worktree,
-        );
+        .reply(widget.request.id, answers: _answers, directory: directory);
   }
 
   Future<void> _reject() async {
-    final project = await ref.read(selectedProjectProvider.future);
+    final directory = ref.read(currentDirectoryProvider);
     await ref
         .read(pendingQuestionsProvider.notifier)
-        .reject(widget.request.id, directory: project?.worktree);
+        .reject(widget.request.id, directory: directory);
   }
 
   @override

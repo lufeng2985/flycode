@@ -12,9 +12,6 @@ part of 'todo_provider.dart';
 ///
 /// - build(sessionID): 通过 REST GET /session/{id}/todo 初始化加载
 /// - updateTodos(todos): 由 SSE todo.updated 事件调用，全量替换列表
-///
-/// 使用 keepAlive: true，确保即使 TodoListWidget 未挂载（如切换路由），
-/// SSE 通过 ref.read 写入的 updateTodos 数据不会因 provider 销毁而丢失。
 
 @ProviderFor(SessionTodosNotifier)
 final sessionTodosProvider = SessionTodosNotifierFamily._();
@@ -23,25 +20,19 @@ final sessionTodosProvider = SessionTodosNotifierFamily._();
 ///
 /// - build(sessionID): 通过 REST GET /session/{id}/todo 初始化加载
 /// - updateTodos(todos): 由 SSE todo.updated 事件调用，全量替换列表
-///
-/// 使用 keepAlive: true，确保即使 TodoListWidget 未挂载（如切换路由），
-/// SSE 通过 ref.read 写入的 updateTodos 数据不会因 provider 销毁而丢失。
 final class SessionTodosNotifierProvider
     extends $AsyncNotifierProvider<SessionTodosNotifier, List<Todo>> {
   /// 按 sessionID 管理 todo 列表的 family provider。
   ///
   /// - build(sessionID): 通过 REST GET /session/{id}/todo 初始化加载
   /// - updateTodos(todos): 由 SSE todo.updated 事件调用，全量替换列表
-  ///
-  /// 使用 keepAlive: true，确保即使 TodoListWidget 未挂载（如切换路由），
-  /// SSE 通过 ref.read 写入的 updateTodos 数据不会因 provider 销毁而丢失。
   SessionTodosNotifierProvider._({
     required SessionTodosNotifierFamily super.from,
     required String super.argument,
   }) : super(
          retry: null,
          name: r'sessionTodosProvider',
-         isAutoDispose: false,
+         isAutoDispose: true,
          dependencies: null,
          $allTransitiveDependencies: null,
        );
@@ -72,15 +63,12 @@ final class SessionTodosNotifierProvider
 }
 
 String _$sessionTodosNotifierHash() =>
-    r'62ea7de9d0d94678b2b6dd712d5dd26bc047ffef';
+    r'9e82b817c2442e1410a0c24cc5ff9c5f4175aa52';
 
 /// 按 sessionID 管理 todo 列表的 family provider。
 ///
 /// - build(sessionID): 通过 REST GET /session/{id}/todo 初始化加载
 /// - updateTodos(todos): 由 SSE todo.updated 事件调用，全量替换列表
-///
-/// 使用 keepAlive: true，确保即使 TodoListWidget 未挂载（如切换路由），
-/// SSE 通过 ref.read 写入的 updateTodos 数据不会因 provider 销毁而丢失。
 
 final class SessionTodosNotifierFamily extends $Family
     with
@@ -97,16 +85,13 @@ final class SessionTodosNotifierFamily extends $Family
         name: r'sessionTodosProvider',
         dependencies: null,
         $allTransitiveDependencies: null,
-        isAutoDispose: false,
+        isAutoDispose: true,
       );
 
   /// 按 sessionID 管理 todo 列表的 family provider。
   ///
   /// - build(sessionID): 通过 REST GET /session/{id}/todo 初始化加载
   /// - updateTodos(todos): 由 SSE todo.updated 事件调用，全量替换列表
-  ///
-  /// 使用 keepAlive: true，确保即使 TodoListWidget 未挂载（如切换路由），
-  /// SSE 通过 ref.read 写入的 updateTodos 数据不会因 provider 销毁而丢失。
 
   SessionTodosNotifierProvider call(String sessionID) =>
       SessionTodosNotifierProvider._(argument: sessionID, from: this);
@@ -119,9 +104,6 @@ final class SessionTodosNotifierFamily extends $Family
 ///
 /// - build(sessionID): 通过 REST GET /session/{id}/todo 初始化加载
 /// - updateTodos(todos): 由 SSE todo.updated 事件调用，全量替换列表
-///
-/// 使用 keepAlive: true，确保即使 TodoListWidget 未挂载（如切换路由），
-/// SSE 通过 ref.read 写入的 updateTodos 数据不会因 provider 销毁而丢失。
 
 abstract class _$SessionTodosNotifier extends $AsyncNotifier<List<Todo>> {
   late final _$args = ref.$arg as String;

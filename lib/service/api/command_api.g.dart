@@ -84,4 +84,4 @@ final class CommandsProvider
   }
 }
 
-String _$commandsHash() => r'3120a2d5941190350bb645ad108b2d46547a488e';
+String _$commandsHash() => r'05d1b153e3721c83b7d0b7415b9ff6a8dfa15a6e';

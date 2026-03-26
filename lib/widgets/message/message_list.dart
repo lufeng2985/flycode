@@ -7,13 +7,18 @@ import '../../theme/app_tokens.dart';
 import 'message_bubble.dart';
 
 class MessageList extends ConsumerWidget {
+  final String sessionID;
   final void Function(String sessionId)? onNavigateToSubSession;
 
-  const MessageList({super.key, this.onNavigateToSubSession});
+  const MessageList({
+    super.key,
+    required this.sessionID,
+    this.onNavigateToSubSession,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final messagesAsync = ref.watch(sessionMessagesProvider);
+    final messagesAsync = ref.watch(sessionMessagesProvider(sessionID));
 
     return messagesAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),

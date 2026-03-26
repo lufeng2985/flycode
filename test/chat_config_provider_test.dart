@@ -5,11 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:flycode/providers/chat_config_provider.dart';
-import 'package:flycode/providers/project_provider.dart';
+import 'package:flycode/providers/chat_view_state_provider.dart';
 import 'package:flycode/providers/session_provider.dart';
 import 'package:flycode/service/api/models/message.dart';
-import 'package:flycode/service/api/models/project.dart';
-import 'package:flycode/service/api/models/session.dart';
 
 const _kCacheKey = 'chat_config_last_used_model';
 const _kFallbackProvider = 'opencode';
@@ -17,25 +15,10 @@ const _kFallbackModel = 'minimax-m2.5-free';
 
 List<MessageWithParts> _fakeSessionMessages = <MessageWithParts>[];
 
-class _FakeSelectedProjectNotifier extends SelectedProjectNotifier {
-  @override
-  Future<Project?> build() async => null;
-}
-
 class _FakeSessionMessagesNotifier extends SessionMessagesNotifier {
   @override
-  Future<List<MessageWithParts>> build() async => _fakeSessionMessages;
-}
-
-Session _session(String id) {
-  return Session(
-    id: id,
-    slug: id,
-    projectID: 'project-1',
-    directory: '/tmp/project',
-    version: '1',
-    time: SessionTime(created: 1, updated: 1),
-  );
+  Future<List<MessageWithParts>> build(String sessionID) async =>
+      _fakeSessionMessages;
 }
 
 MessageWithParts _userMessage({
@@ -85,19 +68,21 @@ Future<void> _flushAsyncWork() async {
 ProviderContainer _makeContainer() {
   return ProviderContainer(
     overrides: [
-      selectedProjectProvider.overrideWith(_FakeSelectedProjectNotifier.new),
-      sessionMessagesProvider.overrideWith(_FakeSessionMessagesNotifier.new),
+      sessionMessagesProvider(
+        'sess-1',
+      ).overrideWith(_FakeSessionMessagesNotifier.new),
     ],
   );
 }
 
-ProviderContainer _makeContainerWithSelectedSession(Session session) {
+ProviderContainer _makeContainerWithSelectedSession(String sessionID) {
   return ProviderContainer(
     overrides: [
-      selectedProjectProvider.overrideWith(_FakeSelectedProjectNotifier.new),
-      sessionMessagesProvider.overrideWith(_FakeSessionMessagesNotifier.new),
-      selectedSessionProvider.overrideWithValue((
-        session: session,
+      sessionMessagesProvider(
+        sessionID,
+      ).overrideWith(_FakeSessionMessagesNotifier.new),
+      chatViewStateProvider.overrideWithValue((
+        sessionId: sessionID,
         isPending: false,
       )),
     ],
@@ -177,7 +162,7 @@ void main() {
     container.read(chatConfigProvider);
     await _flushAsyncWork();
 
-    container.read(selectedSessionProvider.notifier).select(_session('sess-1'));
+    container.read(chatViewStateProvider.notifier).selectSessionId('sess-1');
     await _flushAsyncWork();
 
     final config = container.read(chatConfigProvider);
@@ -203,7 +188,7 @@ void main() {
         ),
       ];
 
-      final container = _makeContainerWithSelectedSession(_session('sess-1'));
+      final container = _makeContainerWithSelectedSession('sess-1');
       addTearDown(container.dispose);
 
       container.read(chatConfigProvider);
@@ -236,7 +221,7 @@ void main() {
     container.read(chatConfigProvider);
     await _flushAsyncWork();
 
-    container.read(selectedSessionProvider.notifier).select(_session('sess-1'));
+    container.read(chatViewStateProvider.notifier).selectSessionId('sess-1');
     await _flushAsyncWork();
 
     final config = container.read(chatConfigProvider);
@@ -265,7 +250,7 @@ void main() {
     container.read(chatConfigProvider);
     await _flushAsyncWork();
 
-    container.read(selectedSessionProvider.notifier).select(_session('sess-1'));
+    container.read(chatViewStateProvider.notifier).selectSessionId('sess-1');
     await _flushAsyncWork();
 
     final prefs = await SharedPreferences.getInstance();
@@ -274,7 +259,7 @@ void main() {
       jsonEncode({'providerID': 'cached-provider', 'modelID': 'cached-model'}),
     );
 
-    container.read(selectedSessionProvider.notifier).startNew();
+    container.read(chatViewStateProvider.notifier).startNew();
     await _flushAsyncWork();
 
     final config = container.read(chatConfigProvider);

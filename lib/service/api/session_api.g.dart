@@ -84,4 +84,4 @@ final class SessionsProvider
   }
 }
 
-String _$sessionsHash() => r'5dfda0842eec4ae988f97f57fe4886058da48a9e';
+String _$sessionsHash() => r'84822902c9a5ac7a14b2cf58ddc31488e3bfcdcc';

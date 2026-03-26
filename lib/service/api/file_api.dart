@@ -1,5 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import '../../providers/project_provider.dart';
+import '../../providers/current_directory_provider.dart';
 import 'api_client.dart';
 import 'models/file_content.dart';
 import 'models/file_node.dart';
@@ -9,8 +9,8 @@ part 'file_api.g.dart';
 @riverpod
 Future<FileApi> fileApi(Ref ref) async {
   final client = await ref.watch(apiClientProvider.future);
-  final project = await ref.watch(selectedProjectProvider.future);
-  return FileApi(client, directory: project?.worktree);
+  final directory = ref.watch(currentDirectoryProvider);
+  return FileApi(client, directory: directory);
 }
 
 class FileApi {

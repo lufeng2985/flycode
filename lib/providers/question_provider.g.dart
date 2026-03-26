@@ -30,7 +30,7 @@ final class PendingQuestionsNotifierProvider
         argument: null,
         retry: null,
         name: r'pendingQuestionsProvider',
-        isAutoDispose: false,
+        isAutoDispose: true,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -44,7 +44,7 @@ final class PendingQuestionsNotifierProvider
 }
 
 String _$pendingQuestionsNotifierHash() =>
-    r'76c58dfc5a48b68c2234e5c2865f88c05d4b3fa8';
+    r'a11195ca5ed99c2668709d5d32fb134733144753';
 
 /// Holds the list of pending QuestionRequests for the current project directory.
 /// SSE events add/remove entries; initial load comes from GET /question.
@@ -74,24 +74,31 @@ abstract class _$PendingQuestionsNotifier
 }
 
 @ProviderFor(currentSessionHasQuestion)
-final currentSessionHasQuestionProvider = CurrentSessionHasQuestionProvider._();
+final currentSessionHasQuestionProvider = CurrentSessionHasQuestionFamily._();
 
 final class CurrentSessionHasQuestionProvider
     extends $FunctionalProvider<bool, bool, bool>
     with $Provider<bool> {
-  CurrentSessionHasQuestionProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'currentSessionHasQuestionProvider',
-        isAutoDispose: false,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
+  CurrentSessionHasQuestionProvider._({
+    required CurrentSessionHasQuestionFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'currentSessionHasQuestionProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
 
   @override
   String debugGetCreateSourceHash() => _$currentSessionHasQuestionHash();
+
+  @override
+  String toString() {
+    return r'currentSessionHasQuestionProvider'
+        ''
+        '($argument)';
+  }
 
   @$internal
   @override
@@ -100,7 +107,8 @@ final class CurrentSessionHasQuestionProvider
 
   @override
   bool create(Ref ref) {
-    return currentSessionHasQuestion(ref);
+    final argument = this.argument as String;
+    return currentSessionHasQuestion(ref, argument);
   }
 
   /// {@macro riverpod.override_with_value}
@@ -110,7 +118,36 @@ final class CurrentSessionHasQuestionProvider
       providerOverride: $SyncValueProvider<bool>(value),
     );
   }
+
+  @override
+  bool operator ==(Object other) {
+    return other is CurrentSessionHasQuestionProvider &&
+        other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
 }
 
 String _$currentSessionHasQuestionHash() =>
-    r'7a93927062bf1ddc81470ecd2624758fe1288b93';
+    r'6faed8d6d0745bdd087c44009a79db677efb2155';
+
+final class CurrentSessionHasQuestionFamily extends $Family
+    with $FunctionalFamilyOverride<bool, String> {
+  CurrentSessionHasQuestionFamily._()
+    : super(
+        retry: null,
+        name: r'currentSessionHasQuestionProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  CurrentSessionHasQuestionProvider call(String sessionId) =>
+      CurrentSessionHasQuestionProvider._(argument: sessionId, from: this);
+
+  @override
+  String toString() => r'currentSessionHasQuestionProvider';
+}

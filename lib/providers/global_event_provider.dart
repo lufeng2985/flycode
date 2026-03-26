@@ -98,7 +98,8 @@ class GlobalEventListener extends _$GlobalEventListener {
     }
 
     // 保留已有的 parts，只更新消息 info
-    final current = ref.read(sessionMessagesProvider).asData?.value ?? [];
+    final current =
+        ref.read(sessionMessagesProvider(sessionID)).asData?.value ?? [];
     final existing = current.firstWhere(
       (m) => _messageId(m) == messageID,
       orElse: () => MessageWithParts(info: info, parts: []),
@@ -106,7 +107,7 @@ class GlobalEventListener extends _$GlobalEventListener {
     final message = MessageWithParts(info: info, parts: existing.parts);
 
     ref
-        .read(sessionMessagesProvider.notifier)
+        .read(sessionMessagesProvider(sessionID).notifier)
         .updateMessage(sessionID, message);
 
     // 同时分发给子 Session provider（如果已订阅）
@@ -118,7 +119,7 @@ class GlobalEventListener extends _$GlobalEventListener {
 
   void _handleMessageRemoved(EventMessageRemoved event) {
     ref
-        .read(sessionMessagesProvider.notifier)
+        .read(sessionMessagesProvider(event.sessionID).notifier)
         .removeMessage(event.sessionID, event.messageID);
 
     _dispatchToSubSession(
@@ -140,7 +141,7 @@ class GlobalEventListener extends _$GlobalEventListener {
     if (partMsgId == null) return;
 
     ref
-        .read(sessionMessagesProvider.notifier)
+        .read(sessionMessagesProvider(sessionID).notifier)
         .updatePart(sessionID, partMsgId, newPart);
 
     _dispatchToSubSession(
@@ -151,7 +152,7 @@ class GlobalEventListener extends _$GlobalEventListener {
 
   void _handleMessagePartRemoved(EventMessagePartRemoved event) {
     ref
-        .read(sessionMessagesProvider.notifier)
+        .read(sessionMessagesProvider(event.sessionID).notifier)
         .removePart(event.sessionID, event.messageID, event.partID);
 
     _dispatchToSubSession(

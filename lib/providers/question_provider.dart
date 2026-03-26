@@ -1,20 +1,19 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../service/api/models/question.dart';
 import '../service/api/question_api.dart';
-import '../providers/project_provider.dart';
-import 'session_provider.dart';
+import 'current_directory_provider.dart';
 
 part 'question_provider.g.dart';
 
 /// Holds the list of pending QuestionRequests for the current project directory.
 /// SSE events add/remove entries; initial load comes from GET /question.
-@Riverpod(keepAlive: true)
+@Riverpod()
 class PendingQuestionsNotifier extends _$PendingQuestionsNotifier {
   @override
   Future<List<QuestionRequest>> build() async {
-    final project = await ref.watch(selectedProjectProvider.future);
+    final directory = ref.watch(currentDirectoryProvider);
     final api = await ref.watch(questionApiProvider.future);
-    return api.getQuestions(directory: project?.worktree);
+    return api.getQuestions(directory: directory);
   }
 
   /// SSE: question.asked — add a new question to the list.
@@ -50,12 +49,8 @@ class PendingQuestionsNotifier extends _$PendingQuestionsNotifier {
   }
 }
 
-@Riverpod(keepAlive: true)
-bool currentSessionHasQuestion(Ref ref) {
-  final selectedState = ref.watch(selectedSessionProvider);
-  final sessionId = selectedState.session?.id;
-  if (sessionId == null) return false;
-
+@Riverpod()
+bool currentSessionHasQuestion(Ref ref, String sessionId) {
   final questions = ref.watch(pendingQuestionsProvider);
-  return questions.asData?.value?.any((q) => q.sessionID == sessionId) ?? false;
+  return questions.asData?.value.any((q) => q.sessionID == sessionId) ?? false;
 }

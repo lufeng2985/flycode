@@ -1,19 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:flycode/providers/project_provider.dart';
+import 'package:flycode/providers/current_directory_provider.dart';
 import 'package:flycode/providers/session_status_provider.dart';
 import 'package:flycode/service/api/api_client.dart';
-import 'package:flycode/service/api/models/project.dart';
 import 'package:flycode/service/api/models/session_status.dart';
 import 'package:flycode/service/api/session_api.dart';
-
-class _FakeSelectedProjectNotifier extends SelectedProjectNotifier {
-  @override
-  Future<Project?> build() async {
-    return Project.fromDirectory('/tmp/worktree');
-  }
-}
 
 class _FakeSessionApi extends SessionApi {
   _FakeSessionApi(this.snapshot)
@@ -34,7 +26,7 @@ void main() {
     final fakeApi = _FakeSessionApi(<String, dynamic>{});
     final container = ProviderContainer(
       overrides: [
-        selectedProjectProvider.overrideWith(_FakeSelectedProjectNotifier.new),
+        currentDirectoryProvider.overrideWith(() => _FakeCurrentDirectory()),
         sessionApiProvider.overrideWith((ref) async => fakeApi),
       ],
     );
@@ -67,7 +59,7 @@ void main() {
 
     final container = ProviderContainer(
       overrides: [
-        selectedProjectProvider.overrideWith(_FakeSelectedProjectNotifier.new),
+        currentDirectoryProvider.overrideWith(() => _FakeCurrentDirectory()),
         sessionApiProvider.overrideWith((ref) async => fakeApi),
       ],
     );
@@ -80,4 +72,9 @@ void main() {
     expect(state.keys, contains('sess-retry'));
     expect(state.keys, isNot(contains('sess-idle')));
   });
+}
+
+class _FakeCurrentDirectory extends CurrentDirectory {
+  @override
+  String? build() => '/tmp/worktree';
 }

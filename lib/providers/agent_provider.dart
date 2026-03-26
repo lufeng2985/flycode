@@ -1,7 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../service/api/global_api.dart';
 import '../service/api/models/agent.dart';
-import 'project_provider.dart';
+import 'current_directory_provider.dart';
 
 part 'agent_provider.g.dart';
 
@@ -11,8 +11,8 @@ part 'agent_provider.g.dart';
 @riverpod
 Future<List<Agent>> agents(Ref ref) async {
   final api = await ref.watch(globalApiProvider.future);
-  final project = await ref.watch(selectedProjectProvider.future);
+  final directory = ref.watch(currentDirectoryProvider);
 
-  final all = await api.getAgents(directory: project?.worktree);
+  final all = await api.getAgents(directory: directory);
   return all.where((a) => a.mode != 'subagent' && !a.hidden).toList();
 }

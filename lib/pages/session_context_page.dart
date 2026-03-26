@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/session_provider.dart';
+import '../service/api/session_api.dart';
 import '../providers/provider_list_provider.dart';
 import '../service/api/models/message.dart'
     hide MessageTokens, MessageCacheTokens;
@@ -118,13 +119,15 @@ _ContextMetrics _computeMetrics(
 // ---------------------------------------------------------------------------
 
 class SessionContextPage extends ConsumerWidget {
-  const SessionContextPage({super.key});
+  const SessionContextPage({super.key, required this.sessionID});
+
+  final String sessionID;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final messagesAsync = ref.watch(sessionMessagesProvider);
+    final messagesAsync = ref.watch(sessionMessagesProvider(sessionID));
+    final sessionsAsync = ref.watch(sessionsProvider);
     final providerListAsync = ref.watch(providerListProvider);
-    final session = ref.watch(selectedSessionProvider).session;
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -152,6 +155,15 @@ class SessionContextPage extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('加载失败: $e')),
         data: (messages) {
+          final sessions = sessionsAsync.asData?.value ?? const <Session>[];
+          Session? session;
+          for (final item in sessions) {
+            if (item.id == sessionID) {
+              session = item;
+              break;
+            }
+          }
+
           ModelInfo? modelInfo;
           String? lastModelID;
           String? lastProviderID;
@@ -179,7 +191,7 @@ class SessionContextPage extends ConsumerWidget {
 
           return RefreshIndicator(
             onRefresh: () async {
-              ref.invalidate(sessionMessagesProvider);
+              ref.invalidate(sessionMessagesProvider(sessionID));
               await ref.read(providerListProvider.notifier).refresh();
             },
             child: ListView(

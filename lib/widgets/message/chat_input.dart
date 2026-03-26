@@ -15,10 +15,10 @@ import '../../service/api/models/prompt_input.dart';
 import '../../service/api/models/command_input.dart';
 import '../../service/api/models/command.dart';
 import '../../providers/agent_provider.dart';
-import '../../providers/session_provider.dart';
+import '../../providers/chat_view_state_provider.dart';
 import '../../providers/chat_config_provider.dart';
 import '../../providers/provider_list_provider.dart';
-import '../../providers/project_provider.dart';
+import '../../providers/current_directory_provider.dart';
 import '../../providers/session_status_provider.dart';
 import '../../providers/model_variant_provider.dart';
 import '../../service/api/models/agent.dart';
@@ -542,25 +542,25 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     if (!isShellMode && text.isEmpty && _attachments.isEmpty) return;
     if (_isLoading) return;
 
-    final selectedState = ref.read(selectedSessionProvider);
-    if (selectedState.session == null && !selectedState.isPending) return;
+    final chatState = ref.read(chatViewStateProvider);
+    if (chatState.sessionId == null && !chatState.isPending) return;
 
     setState(() => _isLoading = true);
 
     try {
       final api = await ref.read(sessionApiProvider.future);
-      final project = await ref.read(selectedProjectProvider.future);
+      final directory = ref.read(currentDirectoryProvider);
       final chatConfig = ref.read(chatConfigProvider);
       final variant = ref.read(modelVariantProvider).current;
 
-      final session = await _ensureSession(api, project, selectedState);
-      if (session == null) return;
+      final sessionId = await _ensureSession(api, directory, chatState);
+      if (sessionId == null) return;
 
       if (isShellMode) {
         await _dispatchShell(
           api,
-          session,
-          project,
+          sessionId,
+          directory,
           chatConfig,
           shellCommand,
           variant,
@@ -570,15 +570,15 @@ class _ChatInputState extends ConsumerState<ChatInput> {
         if (matchedCommand != null) {
           await _dispatchCommand(
             api,
-            session,
-            project,
+            sessionId,
+            directory,
             chatConfig,
             variant,
             matchedCommand,
             text,
           );
         } else {
-          await _dispatchPrompt(api, session, project, chatConfig, variant);
+          await _dispatchPrompt(api, sessionId, directory, chatConfig, variant);
         }
       }
 
@@ -603,15 +603,15 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   /// Sends an abort request to the backend for the current session.
   Future<void> _handleAbort() async {
     if (_isAborting) return;
-    final session = ref.read(selectedSessionProvider).session;
-    if (session == null) return;
+    final sessionId = ref.read(chatViewStateProvider).sessionId;
+    if (sessionId == null) return;
 
     setState(() => _isAborting = true);
 
     try {
       final api = await ref.read(sessionApiProvider.future);
-      final project = await ref.read(selectedProjectProvider.future);
-      await api.abortSession(session.id, directory: project?.worktree);
+      final directory = ref.read(currentDirectoryProvider);
+      await api.abortSession(sessionId, directory: directory);
     } catch (e) {
       if (mounted) {
         setState(() => _isAborting = false);
@@ -624,21 +624,22 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   Future<String?> _ensureSession(
     SessionApi api,
-    dynamic project,
-    SelectedSessionState selectedState,
+    String? directory,
+    ChatViewState chatState,
   ) async {
-    var session = selectedState.session;
-    if (session == null && selectedState.isPending) {
-      session = await api.createSession(directory: project?.worktree);
-      ref.read(selectedSessionProvider.notifier).select(session);
+    var sessionId = chatState.sessionId;
+    if (sessionId == null && chatState.isPending) {
+      final session = await api.createSession(directory: directory);
+      sessionId = session.id;
+      ref.read(chatViewStateProvider.notifier).selectSessionId(sessionId);
     }
-    return session?.id;
+    return sessionId;
   }
 
   Future<void> _dispatchCommand(
     SessionApi api,
     String sessionId,
-    dynamic project,
+    String? directory,
     ChatConfig chatConfig,
     String? variant,
     Command matchedCommand,
@@ -655,7 +656,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
     await api.sendCommand(
       sessionId,
-      directory: project?.worktree,
+      directory: directory,
       data: CommandInput(
         command: matchedCommand.name,
         arguments: arguments,
@@ -669,14 +670,14 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   Future<void> _dispatchShell(
     SessionApi api,
     String sessionId,
-    dynamic project,
+    String? directory,
     ChatConfig chatConfig,
     String command,
     String? variant,
   ) async {
     await api.runShell(
       sessionId,
-      directory: project?.worktree,
+      directory: directory,
       data: {
         'agent': chatConfig.agent,
         'command': command,
@@ -692,12 +693,12 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   Future<void> _dispatchPrompt(
     SessionApi api,
     String sessionId,
-    dynamic project,
+    String? directory,
     ChatConfig chatConfig,
     String? variant,
   ) async {
     final text = _controller.text;
-    final rootDir = (project?.worktree as String?) ?? '';
+    final rootDir = directory ?? '';
 
     // Build file parts from @ pills.
     final fileParts = _controller.pills.map((pill) {
@@ -731,7 +732,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
     await api.sendPromptAsync(
       sessionId,
-      directory: project?.worktree,
+      directory: directory,
       data: PromptAsyncInput(
         agent: chatConfig.agent,
         model: chatConfig.model,
@@ -848,7 +849,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   }
 
   void _startPendingSession() {
-    ref.read(selectedSessionProvider.notifier).startNew();
+    ref.read(chatViewStateProvider.notifier).startNew();
   }
 
   Future<void> _showSessionHistorySheet() async {
@@ -860,7 +861,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       ).colorScheme.surface.withValues(alpha: 0),
       builder: (_) => _SessionHistorySheet(
         onSelectSession: (session) {
-          ref.read(selectedSessionProvider.notifier).select(session);
+          ref.read(chatViewStateProvider.notifier).selectSessionId(session.id);
           Navigator.of(context).pop();
         },
       ),
@@ -882,14 +883,14 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     final modelLabel = _resolveModelLabel(providerList, chatConfig);
 
     final sessionId = ref.watch(
-      selectedSessionProvider.select((s) => s.session?.id),
+      chatViewStateProvider.select((s) => s.sessionId),
     );
     final sessionStatuses = ref.watch(sessionStatusProvider);
     final isWorking =
         sessionId != null && (sessionStatuses[sessionId]?.isWorking ?? false);
 
     // Reconcile status snapshot on session switch to recover from missed SSE.
-    ref.listen<String?>(selectedSessionProvider.select((s) => s.session?.id), (
+    ref.listen<String?>(chatViewStateProvider.select((s) => s.sessionId), (
       previous,
       next,
     ) {
@@ -1388,7 +1389,7 @@ class _SessionHistorySheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sessionsAsync = ref.watch(sessionsProvider);
-    final selectedSession = ref.watch(selectedSessionProvider).session;
+    final selectedSessionId = ref.watch(chatViewStateProvider).sessionId;
     final theme = Theme.of(context);
     final tokens = context.tokens;
 
@@ -1493,8 +1494,7 @@ class _SessionHistorySheet extends ConsumerWidget {
                             ),
                           ),
                           ...sessionsForDate.map((session) {
-                            final isSelected =
-                                selectedSession?.id == session.id;
+                            final isSelected = selectedSessionId == session.id;
 
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 2),

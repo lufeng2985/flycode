@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'current_directory_provider.dart';
 import '../service/api/session_api.dart';
-import 'project_provider.dart';
 import '../service/api/models/session_status.dart';
 
 part 'session_status_provider.g.dart';
@@ -10,7 +10,7 @@ part 'session_status_provider.g.dart';
 ///
 /// The map only contains entries for sessions that are non-idle.
 /// A missing key is equivalent to [SessionStatusIdle].
-@Riverpod(keepAlive: true)
+@Riverpod()
 class SessionStatusNotifier extends _$SessionStatusNotifier {
   static const Duration _pollInterval = Duration(seconds: 5);
 
@@ -23,6 +23,7 @@ class SessionStatusNotifier extends _$SessionStatusNotifier {
       _pollTimer?.cancel();
       _pollTimer = null;
     });
+    unawaited(refreshFromServer());
     return const {};
   }
 
@@ -51,9 +52,9 @@ class SessionStatusNotifier extends _$SessionStatusNotifier {
     try {
       final api = await ref.read(sessionApiProvider.future);
       if (!ref.mounted) return;
-      final project = await ref.read(selectedProjectProvider.future);
+      final directory = ref.read(currentDirectoryProvider);
       if (!ref.mounted) return;
-      final raw = await api.getSessionStatus(directory: project?.worktree);
+      final raw = await api.getSessionStatus(directory: directory);
       if (!ref.mounted) return;
       state = Map.unmodifiable(_parseStatusSnapshot(raw));
     } catch (_) {

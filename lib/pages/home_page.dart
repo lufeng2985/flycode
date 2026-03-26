@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../models/chat_route_args.dart';
+import '../providers/chat_view_state_provider.dart';
+import '../providers/current_directory_provider.dart';
+import '../service/api/models/session.dart';
 import '../service/api/session_api.dart';
 import '../providers/global_event_provider.dart';
 import '../providers/permission_provider.dart';
-import '../providers/session_provider.dart';
 import '../providers/question_provider.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/message/message_list.dart';
@@ -13,25 +16,100 @@ import '../widgets/permission/session_permission_dock.dart';
 import '../widgets/question/question_card.dart';
 import '../widgets/session/todo_list_widget.dart';
 
-class MyHomePage extends ConsumerWidget {
-  const MyHomePage({super.key, required this.title});
+class MyHomePage extends ConsumerStatefulWidget {
+  const MyHomePage({super.key, required this.title, this.args});
 
   final String title;
+  final ChatRouteArgs? args;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MyHomePage> createState() => _MyHomePageState();
+}
+
+class _MyHomePageState extends ConsumerState<MyHomePage> {
+  bool _didBootstrap = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_didBootstrap) return;
+    _didBootstrap = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _bootstrapChatContext();
+    });
+  }
+
+  Future<void> _bootstrapChatContext() async {
+    final args = widget.args;
+    final directory = args?.directory.trim();
+    if (directory == null || directory.isEmpty) {
+      return;
+    }
+
+    ref.read(currentDirectoryProvider.notifier).set(directory);
+
+    final stateNotifier = ref.read(chatViewStateProvider.notifier);
+    if (args?.startNew == true) {
+      stateNotifier.startNew();
+      return;
+    }
+
+    stateNotifier.clear();
+
+    try {
+      final sessions = await ref.refresh(sessionsProvider.future);
+      if (!mounted) return;
+
+      if (sessions.isEmpty) {
+        stateNotifier.startNew();
+        return;
+      }
+
+      final initialSessionId = args?.initialSessionId;
+      if (initialSessionId != null && initialSessionId.isNotEmpty) {
+        for (final session in sessions) {
+          if (session.id == initialSessionId) {
+            stateNotifier.selectSessionId(session.id);
+            return;
+          }
+        }
+      }
+
+      final sortedSessions = List<Session>.from(sessions)
+        ..sort((a, b) => (b.updatedAt ?? 0).compareTo(a.updatedAt ?? 0));
+      stateNotifier.selectSessionId(sortedSessions.first.id);
+    } catch (_) {
+      if (!mounted) return;
+      stateNotifier.startNew();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final tokens = context.tokens;
 
     ref.watch(globalEventListenerProvider);
     final sessionsAsync = ref.watch(sessionsProvider);
-    final selectedState = ref.watch(selectedSessionProvider);
-    final selectedSession = selectedState.session;
-    final isPending = selectedState.isPending;
-    final permissionRequest = ref.watch(
-      currentSessionPermissionRequestProvider,
-    );
+    final chatState = ref.watch(chatViewStateProvider);
+    final sessionId = chatState.sessionId;
+    final isPending = chatState.isPending;
+    Session? selectedSession;
+    final sessions = sessionsAsync.asData?.value;
+    if (sessions != null && sessionId != null) {
+      for (final session in sessions) {
+        if (session.id == sessionId) {
+          selectedSession = session;
+          break;
+        }
+      }
+    }
+    final permissionRequest = sessionId == null
+        ? null
+        : ref.watch(currentSessionPermissionRequestProvider(sessionId));
     final hasPermissionBlock = permissionRequest != null;
-    final hasQuestion = ref.watch(currentSessionHasQuestionProvider);
+    final hasQuestion = sessionId == null
+        ? false
+        : ref.watch(currentSessionHasQuestionProvider(sessionId));
 
     Widget buildNewSessionWelcome() {
       return Center(
@@ -69,7 +147,8 @@ class MyHomePage extends ConsumerWidget {
       canPop: true,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) return;
-        ref.read(selectedSessionProvider.notifier).select(null);
+        ref.read(chatViewStateProvider.notifier).clear();
+        ref.read(currentDirectoryProvider.notifier).clear();
       },
       child: Scaffold(
         appBar: AppBar(
@@ -78,13 +157,16 @@ class MyHomePage extends ConsumerWidget {
               _HeaderActionButton(
                 icon: Icons.difference_outlined,
                 tooltip: '文件变更',
-                onTap: () => context.push('/diff', extra: selectedSession.id),
+                onTap: () => context.push('/diff', extra: selectedSession!.id),
               ),
               const SizedBox(width: 8),
               _HeaderActionButton(
                 icon: Icons.info_outline,
                 tooltip: '上下文',
-                onTap: () => context.push('/session-context'),
+                onTap: () => context.push(
+                  '/session-context',
+                  extra: selectedSession!.id,
+                ),
               ),
               const SizedBox(width: 12),
             ],
@@ -109,6 +191,7 @@ class MyHomePage extends ConsumerWidget {
             Expanded(
               child: selectedSession != null
                   ? MessageList(
+                      sessionID: selectedSession.id,
                       onNavigateToSubSession: (sessionId) =>
                           context.push('/sub-session', extra: sessionId),
                     )
@@ -137,7 +220,7 @@ class MyHomePage extends ConsumerWidget {
             if ((selectedSession != null || isPending) &&
                 !hasPermissionBlock &&
                 hasQuestion)
-              const QuestionOverlay(),
+              QuestionOverlay(sessionID: sessionId),
             if ((selectedSession != null || isPending) &&
                 !hasPermissionBlock &&
                 !hasQuestion)

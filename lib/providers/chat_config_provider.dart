@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'chat_view_state_provider.dart';
 import '../service/api/models/agent.dart' as agent_model;
 import '../service/api/models/message.dart';
 import 'session_provider.dart';
@@ -29,34 +30,34 @@ class ChatConfig {
       ' modelID: ${model.modelID})';
 }
 
-@Riverpod(keepAlive: true)
+@Riverpod()
 class ChatConfigNotifier extends _$ChatConfigNotifier {
   @override
   ChatConfig build() {
-    final initialSelected = ref.read(selectedSessionProvider);
+    final initialState = ref.read(chatViewStateProvider);
 
     // Listen for session changes and sync the model when switching to an
     // existing session. Uses listen (not watch) so that message updates never
     // trigger a full rebuild of this notifier.
-    ref.listen(selectedSessionProvider, (previous, next) async {
-      final newSession = next.session;
+    ref.listen<ChatViewState>(chatViewStateProvider, (previous, next) async {
+      final newSessionId = next.sessionId;
 
       // New-session flow (isPending=true) or nothing selected: restore from
       // cache so input can fallback to the last-used model.
-      if (next.isPending || newSession == null) {
+      if (next.isPending || newSessionId == null) {
         await _restoreModelFromCacheIfNoSession();
         return;
       }
 
       // Same session selected again – nothing to do.
-      if (newSession.id == previous?.session?.id) return;
+      if (newSessionId == previous?.sessionId) return;
 
       // Switched to an existing session: try to restore its last-used model.
-      await _syncModelFromSession();
+      await _syncModelFromSession(newSessionId);
     });
 
-    if (initialSelected.session != null && !initialSelected.isPending) {
-      unawaited(_syncModelFromSession());
+    if (initialState.sessionId != null && !initialState.isPending) {
+      unawaited(_syncModelFromSession(initialState.sessionId!));
     } else {
       unawaited(_restoreModelFromCacheIfNoSession());
     }
@@ -75,8 +76,8 @@ class ChatConfigNotifier extends _$ChatConfigNotifier {
   /// 1) Prefer the last UserMessage (agent + model are both available).
   /// 2) Fallback to the last AssistantMessage's provider/model.
   /// If no suitable message exists, current config is preserved.
-  Future<void> _syncModelFromSession() async {
-    final messages = await ref.read(sessionMessagesProvider.future);
+  Future<void> _syncModelFromSession(String sessionID) async {
+    final messages = await ref.read(sessionMessagesProvider(sessionID).future);
     if (messages.isEmpty) return;
 
     for (final message in messages.reversed) {
@@ -121,8 +122,8 @@ class ChatConfigNotifier extends _$ChatConfigNotifier {
   }
 
   Future<void> _restoreModelFromCacheIfNoSession() async {
-    final selectedState = ref.read(selectedSessionProvider);
-    if (selectedState.session != null) return;
+    final chatState = ref.read(chatViewStateProvider);
+    if (chatState.sessionId != null) return;
 
     final cachedModel = await _readCachedModel();
     if (!ref.mounted || cachedModel == null) return;

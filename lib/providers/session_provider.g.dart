@@ -9,62 +9,8 @@ part of 'session_provider.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 
-@ProviderFor(SelectedSessionNotifier)
-final selectedSessionProvider = SelectedSessionNotifierProvider._();
-
-final class SelectedSessionNotifierProvider
-    extends $NotifierProvider<SelectedSessionNotifier, SelectedSessionState> {
-  SelectedSessionNotifierProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'selectedSessionProvider',
-        isAutoDispose: false,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$selectedSessionNotifierHash();
-
-  @$internal
-  @override
-  SelectedSessionNotifier create() => SelectedSessionNotifier();
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(SelectedSessionState value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<SelectedSessionState>(value),
-    );
-  }
-}
-
-String _$selectedSessionNotifierHash() =>
-    r'6c8226b9df07086d93737edb7b12992ae0939a81';
-
-abstract class _$SelectedSessionNotifier
-    extends $Notifier<SelectedSessionState> {
-  SelectedSessionState build();
-  @$mustCallSuper
-  @override
-  void runBuild() {
-    final ref = this.ref as $Ref<SelectedSessionState, SelectedSessionState>;
-    final element =
-        ref.element
-            as $ClassProviderElement<
-              AnyNotifier<SelectedSessionState, SelectedSessionState>,
-              SelectedSessionState,
-              Object?,
-              Object?
-            >;
-    element.handleCreate(ref, build);
-  }
-}
-
 @ProviderFor(SessionMessagesNotifier)
-final sessionMessagesProvider = SessionMessagesNotifierProvider._();
+final sessionMessagesProvider = SessionMessagesNotifierFamily._();
 
 final class SessionMessagesNotifierProvider
     extends
@@ -72,31 +18,77 @@ final class SessionMessagesNotifierProvider
           SessionMessagesNotifier,
           List<MessageWithParts>
         > {
-  SessionMessagesNotifierProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'sessionMessagesProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
+  SessionMessagesNotifierProvider._({
+    required SessionMessagesNotifierFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'sessionMessagesProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
 
   @override
   String debugGetCreateSourceHash() => _$sessionMessagesNotifierHash();
 
+  @override
+  String toString() {
+    return r'sessionMessagesProvider'
+        ''
+        '($argument)';
+  }
+
   @$internal
   @override
   SessionMessagesNotifier create() => SessionMessagesNotifier();
+
+  @override
+  bool operator ==(Object other) {
+    return other is SessionMessagesNotifierProvider &&
+        other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
 }
 
 String _$sessionMessagesNotifierHash() =>
-    r'd1bcb69d402c50aeb2a9fd3b5a219f20e850167b';
+    r'bccc97b63379130f8ba5f1a275fc57f6ffe461b9';
+
+final class SessionMessagesNotifierFamily extends $Family
+    with
+        $ClassFamilyOverride<
+          SessionMessagesNotifier,
+          AsyncValue<List<MessageWithParts>>,
+          List<MessageWithParts>,
+          FutureOr<List<MessageWithParts>>,
+          String
+        > {
+  SessionMessagesNotifierFamily._()
+    : super(
+        retry: null,
+        name: r'sessionMessagesProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  SessionMessagesNotifierProvider call(String sessionID) =>
+      SessionMessagesNotifierProvider._(argument: sessionID, from: this);
+
+  @override
+  String toString() => r'sessionMessagesProvider';
+}
 
 abstract class _$SessionMessagesNotifier
     extends $AsyncNotifier<List<MessageWithParts>> {
-  FutureOr<List<MessageWithParts>> build();
+  late final _$args = ref.$arg as String;
+  String get sessionID => _$args;
+
+  FutureOr<List<MessageWithParts>> build(String sessionID);
   @$mustCallSuper
   @override
   void runBuild() {
@@ -114,7 +106,7 @@ abstract class _$SessionMessagesNotifier
               Object?,
               Object?
             >;
-    element.handleCreate(ref, build);
+    element.handleCreate(ref, () => build(_$args));
   }
 }
 

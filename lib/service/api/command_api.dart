@@ -1,5 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import '../../providers/project_provider.dart';
+import '../../providers/current_directory_provider.dart';
 import 'api_client.dart';
 import 'models/command.dart';
 
@@ -14,8 +14,8 @@ Future<CommandApi> commandApi(Ref ref) async {
 @riverpod
 Future<List<Command>> commands(Ref ref) async {
   final api = await ref.watch(commandApiProvider.future);
-  final project = await ref.watch(selectedProjectProvider.future);
-  return api.getCommands(directory: project?.worktree);
+  final directory = ref.watch(currentDirectoryProvider);
+  return api.getCommands(directory: directory);
 }
 
 class CommandApi {

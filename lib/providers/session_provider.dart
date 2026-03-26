@@ -1,95 +1,22 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../service/api/models/message.dart' hide FileDiff;
 import '../service/api/models/parts.dart';
-import '../service/api/models/session.dart';
 import '../service/api/session_api.dart';
-import 'project_provider.dart';
+import '../service/api/models/session.dart';
 
 part 'session_provider.g.dart';
-
-/// 当前选中会话的状态：
-/// - session=null, isPending=false → 未选中任何会话
-/// - session=null, isPending=true  → 用户点了"新建会话"，等待首次发送消息时再创建
-/// - session!=null, isPending=false → 已选中一个真实会话
-typedef SelectedSessionState = ({Session? session, bool isPending});
-
-@Riverpod(keepAlive: true)
-class SelectedSessionNotifier extends _$SelectedSessionNotifier {
-  @override
-  SelectedSessionState build() {
-    ref.listen(selectedProjectProvider, (previous, next) {
-      final prevProject = previous?.asData?.value;
-      final nextProject = next.asData?.value;
-      final changed = prevProject?.id != nextProject?.id;
-      if (!changed) return;
-
-      final current = state;
-
-      // 项目切换流程中，如果已经选中了目标项目下的会话，保留它。
-      final selected = current.session;
-      if (selected != null &&
-          nextProject != null &&
-          selected.directory == nextProject.worktree) {
-        return;
-      }
-
-      // 项目切换流程中，如果已进入“新建会话”态，保留 pending。
-      if (current.isPending) return;
-
-      // 项目切换后清空当前会话，由用户在会话页主动选择。
-      state = (session: null, isPending: false);
-    });
-
-    ref.listen(sessionsProvider, (previous, next) {
-      next.whenData((sessions) {
-        final current = state;
-
-        // 用户手动进入“新建会话”态时，不自动变更选择。
-        if (current.isPending) return;
-
-        final selected = current.session;
-        if (selected == null) return;
-
-        if (sessions.isEmpty) {
-          state = (session: null, isPending: false);
-          return;
-        }
-
-        final stillExists = sessions.any((s) => s.id == selected.id);
-        if (!stillExists) {
-          state = (session: null, isPending: false);
-        }
-      });
-    }, fireImmediately: true);
-
-    return (session: null, isPending: false);
-  }
-
-  void select(Session? session) {
-    state = (session: session, isPending: false);
-  }
-
-  void startNew() {
-    state = (session: null, isPending: true);
-  }
-}
 
 @riverpod
 class SessionMessagesNotifier extends _$SessionMessagesNotifier {
   @override
-  Future<List<MessageWithParts>> build() async {
-    final selectedState = ref.watch(selectedSessionProvider);
-    final session = selectedState.session;
-    if (session == null) return [];
-
+  Future<List<MessageWithParts>> build(String sessionID) async {
     final api = await ref.watch(sessionApiProvider.future);
-    return api.getSessionMessages(session.id);
+    return api.getSessionMessages(sessionID);
   }
 
   /// SSE: message.updated — 新增或更新一条消息（保留已有 parts）
   void updateMessage(String sessionID, MessageWithParts message) {
-    final session = ref.read(selectedSessionProvider).session;
-    if (session == null || session.id != sessionID) return;
+    if (this.sessionID != sessionID) return;
 
     final current = state.asData?.value ?? [];
     final index = current.indexWhere(
@@ -107,8 +34,7 @@ class SessionMessagesNotifier extends _$SessionMessagesNotifier {
 
   /// SSE: message.removed — 删除一条消息
   void removeMessage(String sessionID, String messageID) {
-    final session = ref.read(selectedSessionProvider).session;
-    if (session == null || session.id != sessionID) return;
+    if (this.sessionID != sessionID) return;
 
     final current = state.asData?.value ?? [];
     final updated = current.where((m) => _messageId(m) != messageID).toList();
@@ -117,8 +43,7 @@ class SessionMessagesNotifier extends _$SessionMessagesNotifier {
 
   /// SSE: message.part.updated — 新增或更新某条消息的一个 part
   void updatePart(String sessionID, String messageID, Object newPart) {
-    final session = ref.read(selectedSessionProvider).session;
-    if (session == null || session.id != sessionID) return;
+    if (this.sessionID != sessionID) return;
 
     final current = state.asData?.value ?? [];
     final msgIndex = current.indexWhere((m) => _messageId(m) == messageID);
@@ -143,8 +68,7 @@ class SessionMessagesNotifier extends _$SessionMessagesNotifier {
 
   /// SSE: message.part.removed — 删除某条消息的一个 part
   void removePart(String sessionID, String messageID, String partID) {
-    final session = ref.read(selectedSessionProvider).session;
-    if (session == null || session.id != sessionID) return;
+    if (this.sessionID != sessionID) return;
 
     final current = state.asData?.value ?? [];
     final msgIndex = current.indexWhere((m) => _messageId(m) == messageID);

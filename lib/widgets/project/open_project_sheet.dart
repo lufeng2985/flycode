@@ -4,14 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../models/chat_route_args.dart';
+import '../../providers/current_directory_provider.dart';
 import '../../service/api/api_client.dart';
 import '../../service/api/file_api.dart';
 import '../../service/api/models/file_node.dart';
 import '../../service/api/project_api.dart';
-import '../../providers/project_provider.dart';
-import '../../providers/session_provider.dart';
-import '../../service/api/models/session.dart';
-import '../../service/api/session_api.dart';
 
 // ---------------------------------------------------------------------------
 // 公开入口：显示打开项目底部 Sheet
@@ -250,8 +248,8 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
       return fromPathApi;
     }
 
-    final selectedProject = ref.read(selectedProjectProvider).asData?.value;
-    final fromProject = _inferHomeFromPath(selectedProject?.worktree);
+    final currentDirectory = ref.read(currentDirectoryProvider);
+    final fromProject = _inferHomeFromPath(currentDirectory);
     if (fromProject != null) {
       _homeDir = fromProject;
       return fromProject;
@@ -376,22 +374,7 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
 
       if (!mounted) return;
 
-      ref.read(selectedProjectProvider.notifier).select(project);
-
-      try {
-        final sessions = await ref.refresh(sessionsProvider.future);
-        if (sessions.isEmpty) {
-          ref.read(selectedSessionProvider.notifier).startNew();
-        } else {
-          final sortedSessions = List<Session>.from(sessions)
-            ..sort((a, b) => (b.updatedAt ?? 0).compareTo(a.updatedAt ?? 0));
-          ref
-              .read(selectedSessionProvider.notifier)
-              .select(sortedSessions.first);
-        }
-      } catch (_) {
-        ref.read(selectedSessionProvider.notifier).startNew();
-      }
+      ref.read(currentDirectoryProvider.notifier).set(project.worktree);
 
       if (!mounted) return;
 
@@ -400,7 +383,10 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        context.push('/chat');
+        context.push(
+          '/chat',
+          extra: ChatRouteArgs(directory: project.worktree),
+        );
       });
     } catch (e) {
       if (!mounted) return;

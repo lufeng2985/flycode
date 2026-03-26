@@ -2,15 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../models/chat_route_args.dart';
 import '../service/api/models/project.dart';
 import '../service/api/api_client.dart';
+import '../providers/current_directory_provider.dart';
 import '../providers/project_pin_provider.dart';
 import '../providers/server_config_provider.dart';
 import '../service/api/project_api.dart';
-import '../providers/project_provider.dart';
-import '../providers/session_provider.dart';
-import '../service/api/models/session.dart';
-import '../service/api/session_api.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/project/open_project_sheet.dart';
 
@@ -141,31 +139,9 @@ Future<void> _showProjectActionMenu(
   await ref.read(projectPinsProvider.notifier).togglePin(project);
 }
 
-Future<void> _openProjectChat(
-  BuildContext context,
-  WidgetRef ref,
-  Project project,
-) async {
-  ref.read(selectedProjectProvider.notifier).select(project);
-
-  try {
-    final sessions = await ref.refresh(sessionsProvider.future);
-    if (!context.mounted) return;
-
-    if (sessions.isEmpty) {
-      ref.read(selectedSessionProvider.notifier).startNew();
-    } else {
-      final sortedSessions = List<Session>.from(sessions)
-        ..sort((a, b) => (b.updatedAt ?? 0).compareTo(a.updatedAt ?? 0));
-      ref.read(selectedSessionProvider.notifier).select(sortedSessions.first);
-    }
-  } catch (_) {
-    if (!context.mounted) return;
-    ref.read(selectedSessionProvider.notifier).startNew();
-  }
-
-  if (!context.mounted) return;
-  context.push('/chat');
+void _openProjectChat(BuildContext context, WidgetRef ref, Project project) {
+  ref.read(currentDirectoryProvider.notifier).set(project.worktree);
+  context.push('/chat', extra: ChatRouteArgs(directory: project.worktree));
 }
 
 class ProjectListPage extends ConsumerWidget {

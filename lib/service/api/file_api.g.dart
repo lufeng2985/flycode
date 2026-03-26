@@ -40,4 +40,4 @@ final class FileApiProvider
   }
 }
 
-String _$fileApiHash() => r'fc1c071632699052f784edd35d15c56ef86ae94f';
+String _$fileApiHash() => r'647527bd10ab36a0d25bd5bb34873237672d7454';

@@ -1,5 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import '../../providers/project_provider.dart';
+import '../../providers/current_directory_provider.dart';
 import 'api_client.dart';
 import 'models/global_event.dart' show Todo;
 import 'models/session.dart';
@@ -18,13 +18,10 @@ Future<SessionApi> sessionApi(Ref ref) async {
 @riverpod
 Future<List<Session>> sessions(Ref ref) async {
   final api = await ref.watch(sessionApiProvider.future);
-  final project = await ref.watch(selectedProjectProvider.future);
-  if (project == null) return [];
+  final directory = ref.watch(currentDirectoryProvider);
+  if (directory == null || directory.isEmpty) return [];
 
-  final sessions = await api.getSessions(
-    directory: project.worktree,
-    roots: true,
-  );
+  final sessions = await api.getSessions(directory: directory, roots: true);
   return sessions;
 }
 

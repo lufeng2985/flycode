@@ -1,11 +1,11 @@
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 
+import 'models/chat_route_args.dart';
 import 'pages/app_entry_page.dart';
 import 'pages/file_content_page.dart';
 import 'pages/home_page.dart';
 import 'pages/project_list_page.dart';
-import 'pages/session_list_page.dart';
 import 'pages/session_context_page.dart';
 import 'pages/session_diff_page.dart';
 import 'pages/settings_page.dart';
@@ -25,14 +25,12 @@ final GoRouter appRouter = GoRouter(
   routes: <RouteBase>[
     GoRoute(path: '/', builder: (context, state) => const AppEntryPage()),
     GoRoute(
-      path: '/sessions',
-      parentNavigatorKey: _rootNavigatorKey,
-      builder: (context, state) => const SessionListPage(),
-    ),
-    GoRoute(
       path: '/chat',
       parentNavigatorKey: _rootNavigatorKey,
-      builder: (context, state) => const MyHomePage(title: '会话'),
+      builder: (context, state) {
+        final args = state.extra as ChatRouteArgs?;
+        return MyHomePage(title: '会话', args: args);
+      },
     ),
     GoRoute(
       path: '/settings',
@@ -88,7 +86,10 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/session-context',
       parentNavigatorKey: _rootNavigatorKey,
-      builder: (context, state) => const SessionContextPage(),
+      builder: (context, state) {
+        final sessionID = state.extra as String;
+        return SessionContextPage(sessionID: sessionID);
+      },
     ),
   ],
 );
