@@ -65,6 +65,16 @@ Future<void> _flushAsyncWork() async {
   await Future<void>.delayed(Duration.zero);
 }
 
+ProviderSubscription<ChatConfig> _listenChatConfig(
+  ProviderContainer container,
+) {
+  return container.listen<ChatConfig>(
+    chatConfigProvider,
+    (previous, next) {},
+    fireImmediately: true,
+  );
+}
+
 ProviderContainer _makeContainer() {
   return ProviderContainer(
     overrides: [
@@ -105,7 +115,8 @@ void main() {
     final container = _makeContainer();
     addTearDown(container.dispose);
 
-    container.read(chatConfigProvider);
+    final sub = _listenChatConfig(container);
+    addTearDown(sub.close);
     await _flushAsyncWork();
 
     final config = container.read(chatConfigProvider);
@@ -119,7 +130,8 @@ void main() {
     final container = _makeContainer();
     addTearDown(container.dispose);
 
-    container.read(chatConfigProvider);
+    final sub = _listenChatConfig(container);
+    addTearDown(sub.close);
     await _flushAsyncWork();
 
     final config = container.read(chatConfigProvider);
@@ -133,7 +145,8 @@ void main() {
     final container = _makeContainer();
     addTearDown(container.dispose);
 
-    container.read(chatConfigProvider);
+    final sub = _listenChatConfig(container);
+    addTearDown(sub.close);
     await _flushAsyncWork();
 
     final config = container.read(chatConfigProvider);
@@ -159,7 +172,8 @@ void main() {
     final container = _makeContainer();
     addTearDown(container.dispose);
 
-    container.read(chatConfigProvider);
+    final sub = _listenChatConfig(container);
+    addTearDown(sub.close);
     await _flushAsyncWork();
 
     container.read(chatViewStateProvider.notifier).selectSessionId('sess-1');
@@ -191,7 +205,8 @@ void main() {
       final container = _makeContainerWithSelectedSession('sess-1');
       addTearDown(container.dispose);
 
-      container.read(chatConfigProvider);
+      final sub = _listenChatConfig(container);
+      addTearDown(sub.close);
       await _flushAsyncWork();
 
       final config = container.read(chatConfigProvider);
@@ -218,7 +233,8 @@ void main() {
     final container = _makeContainer();
     addTearDown(container.dispose);
 
-    container.read(chatConfigProvider);
+    final sub = _listenChatConfig(container);
+    addTearDown(sub.close);
     await _flushAsyncWork();
 
     container.read(chatViewStateProvider.notifier).selectSessionId('sess-1');
@@ -247,7 +263,8 @@ void main() {
     final container = _makeContainer();
     addTearDown(container.dispose);
 
-    container.read(chatConfigProvider);
+    final sub = _listenChatConfig(container);
+    addTearDown(sub.close);
     await _flushAsyncWork();
 
     container.read(chatViewStateProvider.notifier).selectSessionId('sess-1');
@@ -286,7 +303,8 @@ void main() {
 
       final container2 = _makeContainer();
       addTearDown(container2.dispose);
-      container2.read(chatConfigProvider);
+      final sub = _listenChatConfig(container2);
+      addTearDown(sub.close);
       await _flushAsyncWork();
 
       final config = container2.read(chatConfigProvider);

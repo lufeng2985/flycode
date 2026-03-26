@@ -632,6 +632,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       final session = await api.createSession(directory: directory);
       sessionId = session.id;
       ref.read(chatViewStateProvider.notifier).selectSessionId(sessionId);
+      ref.invalidate(sessionsProvider);
     }
     return sessionId;
   }

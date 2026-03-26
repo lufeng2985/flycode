@@ -39,21 +39,8 @@ class ChatConfigNotifier extends _$ChatConfigNotifier {
     // Listen for session changes and sync the model when switching to an
     // existing session. Uses listen (not watch) so that message updates never
     // trigger a full rebuild of this notifier.
-    ref.listen<ChatViewState>(chatViewStateProvider, (previous, next) async {
-      final newSessionId = next.sessionId;
-
-      // New-session flow (isPending=true) or nothing selected: restore from
-      // cache so input can fallback to the last-used model.
-      if (next.isPending || newSessionId == null) {
-        await _restoreModelFromCacheIfNoSession();
-        return;
-      }
-
-      // Same session selected again – nothing to do.
-      if (newSessionId == previous?.sessionId) return;
-
-      // Switched to an existing session: try to restore its last-used model.
-      await _syncModelFromSession(newSessionId);
+    ref.listen<ChatViewState>(chatViewStateProvider, (previous, next) {
+      unawaited(_handleChatStateChanged(previous, next));
     });
 
     if (initialState.sessionId != null && !initialState.isPending) {
@@ -71,6 +58,26 @@ class ChatConfigNotifier extends _$ChatConfigNotifier {
     );
   }
 
+  Future<void> _handleChatStateChanged(
+    ChatViewState? previous,
+    ChatViewState next,
+  ) async {
+    final newSessionId = next.sessionId;
+
+    // New-session flow (isPending=true) or nothing selected: restore from
+    // cache so input can fallback to the last-used model.
+    if (next.isPending || newSessionId == null) {
+      await _restoreModelFromCacheIfNoSession();
+      return;
+    }
+
+    // Same session selected again – nothing to do.
+    if (newSessionId == previous?.sessionId) return;
+
+    // Switched to an existing session: try to restore its last-used model.
+    await _syncModelFromSession(newSessionId);
+  }
+
   /// Reads selected-session messages once (no watch) and syncs model from the
   /// latest message context:
   /// 1) Prefer the last UserMessage (agent + model are both available).
@@ -78,7 +85,7 @@ class ChatConfigNotifier extends _$ChatConfigNotifier {
   /// If no suitable message exists, current config is preserved.
   Future<void> _syncModelFromSession(String sessionID) async {
     final messages = await ref.read(sessionMessagesProvider(sessionID).future);
-    if (messages.isEmpty) return;
+    if (!ref.mounted || messages.isEmpty) return;
 
     for (final message in messages.reversed) {
       if (message.info case final UserMessage user) {
@@ -128,6 +135,9 @@ class ChatConfigNotifier extends _$ChatConfigNotifier {
     final cachedModel = await _readCachedModel();
     if (!ref.mounted || cachedModel == null) return;
 
+    final latestState = ref.read(chatViewStateProvider);
+    if (latestState.sessionId != null) return;
+
     _setState(model: cachedModel);
   }
 
@@ -159,7 +169,13 @@ class ChatConfigNotifier extends _$ChatConfigNotifier {
     MessageModel? model,
     bool persistModel = false,
   }) {
+    if (!ref.mounted) return;
     final next = state.copyWith(agent: agent, model: model);
+    if (next.agent == state.agent &&
+        next.model.providerID == state.model.providerID &&
+        next.model.modelID == state.model.modelID) {
+      return;
+    }
     state = next;
 
     if (persistModel && model != null) {

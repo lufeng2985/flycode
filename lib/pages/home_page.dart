@@ -93,6 +93,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
     final chatState = ref.watch(chatViewStateProvider);
     final sessionId = chatState.sessionId;
     final isPending = chatState.isPending;
+    final hasActiveOrPendingSession = sessionId != null || isPending;
     Session? selectedSession;
     final sessions = sessionsAsync.asData?.value;
     if (sessions != null && sessionId != null) {
@@ -197,6 +198,8 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
                     )
                   : isPending
                   ? buildNewSessionWelcome()
+                  : sessionId != null
+                  ? const Center(child: CircularProgressIndicator())
                   : sessionsAsync.when(
                       data: (sessions) {
                         final text = sessions.isEmpty ? '暂无会话' : '请选择一个会话';
@@ -213,15 +216,11 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
                           const Center(child: CircularProgressIndicator()),
                     ),
             ),
-            if ((selectedSession != null || isPending) &&
-                selectedSession != null &&
-                hasPermissionBlock)
+            if (selectedSession != null && hasPermissionBlock)
               SessionPermissionDock(request: permissionRequest),
-            if ((selectedSession != null || isPending) &&
-                !hasPermissionBlock &&
-                hasQuestion)
+            if (hasActiveOrPendingSession && !hasPermissionBlock && hasQuestion)
               QuestionOverlay(sessionID: sessionId),
-            if ((selectedSession != null || isPending) &&
+            if (hasActiveOrPendingSession &&
                 !hasPermissionBlock &&
                 !hasQuestion)
               const ChatInput(),
