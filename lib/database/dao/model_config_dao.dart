@@ -35,6 +35,29 @@ class ModelConfigDao {
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
+  Future<void> upsertProviderConfigs(
+    String providerId,
+    Iterable<String> modelIds,
+    bool enabled,
+  ) async {
+    final ids = modelIds.toList();
+    if (ids.isEmpty) {
+      return;
+    }
+
+    await db.transaction((txn) async {
+      final batch = txn.batch();
+      for (final modelId in ids) {
+        batch.insert(tableName, {
+          columnProviderId: providerId,
+          columnModelId: modelId,
+          columnEnabled: enabled ? 1 : 0,
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+      await batch.commit(noResult: true);
+    });
+  }
+
   Future<Map<String, Map<String, bool>>> getAllModelConfigs() async {
     final result = await db.query(
       tableName,

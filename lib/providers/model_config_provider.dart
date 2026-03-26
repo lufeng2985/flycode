@@ -32,4 +32,14 @@ class ModelConfigNotifier extends _$ModelConfigNotifier {
     await dao.upsertModelConfig(providerId, modelId, enabled);
     ref.invalidateSelf();
   }
+
+  Future<void> updateProviderModelsConfig(
+    String providerId,
+    Iterable<String> modelIds,
+    bool enabled,
+  ) async {
+    final dao = await ref.read(modelConfigDaoProvider.future);
+    await dao.upsertProviderConfigs(providerId, modelIds, enabled);
+    ref.invalidateSelf();
+  }
 }

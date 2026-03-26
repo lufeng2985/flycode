@@ -2605,7 +2605,8 @@
                           "fill": "$--muted-foreground",
                           "content": "nvidia/nemotron-3-super-120b-a12b",
                           "fontFamily": "Inter",
-                          "fontSize": 11
+                          "fontSize": 11,
+                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -2642,7 +2643,8 @@
                           "fill": "$--muted-foreground",
                           "content": "xiaomi/mimo-v2-omni",
                           "fontFamily": "Inter",
-                          "fontSize": 11
+                          "fontSize": 11,
+                          "fontWeight": "normal"
                         }
                       ]
                     }
@@ -2794,7 +2796,8 @@
                           "fill": "$--muted-foreground",
                           "content": "deepseek/deepseek-chat",
                           "fontFamily": "Inter",
-                          "fontSize": 11
+                          "fontSize": 11,
+                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -2831,7 +2834,8 @@
                           "fill": "$--muted-foreground",
                           "content": "deepseek/deepseek-r1",
                           "fontFamily": "Inter",
-                          "fontSize": 11
+                          "fontSize": 11,
+                          "fontWeight": "normal"
                         }
                       ]
                     }
@@ -2937,7 +2941,8 @@
                           "fill": "$--muted-foreground",
                           "content": "anthropic/claude-3.7-sonnet",
                           "fontFamily": "Inter",
-                          "fontSize": 11
+                          "fontSize": 11,
+                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -2974,7 +2979,8 @@
                           "fill": "$--muted-foreground",
                           "content": "anthropic/claude-3.5-haiku",
                           "fontFamily": "Inter",
-                          "fontSize": 11
+                          "fontSize": 11,
+                          "fontWeight": "normal"
                         }
                       ]
                     }
