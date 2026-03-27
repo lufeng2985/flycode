@@ -78,6 +78,10 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  assets:
+    - assets/fonts/OFL.txt
+    - assets/app_icon/app_logo.jpg
+
   fonts:
     - family: Inter
       fonts:

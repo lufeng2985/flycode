@@ -85,7 +85,9 @@ class SettingsPage extends ConsumerWidget {
             icon: Icons.info_outline,
             title: '关于',
             iconColor: mutedColor,
-            onTap: () {},
+            onTap: () {
+              context.push('/settings/about');
+            },
           ),
         ],
       ),

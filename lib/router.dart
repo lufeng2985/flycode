@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'models/chat_route_args.dart';
 import 'pages/app_entry_page.dart';
+import 'pages/about_page.dart';
 import 'pages/file_content_page.dart';
 import 'pages/home_page.dart';
 import 'pages/project_list_page.dart';
@@ -53,6 +54,11 @@ final GoRouter appRouter = GoRouter(
       path: '/settings/model',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const ModelConfigPage(),
+    ),
+    GoRoute(
+      path: '/settings/about',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const AboutPage(),
     ),
     GoRoute(
       path: '/projects',
