@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/session_completion_notification_provider.dart';
+import '../service/notification/local_notification_service.dart';
 
 class SessionCompletionNotificationPage extends ConsumerWidget {
   const SessionCompletionNotificationPage({super.key});
@@ -14,11 +15,15 @@ class SessionCompletionNotificationPage extends ConsumerWidget {
       appBar: AppBar(title: const Text('会话完成通知')),
       body: RadioGroup<SessionCompletionNotificationMode>(
         groupValue: selected,
-        onChanged: (value) {
+        onChanged: (value) async {
           if (value == null) return;
-          ref
+          await ref
               .read(sessionCompletionNotificationModeProvider.notifier)
               .setMode(value);
+          if (value == SessionCompletionNotificationMode.none) return;
+          await ref
+              .read(localNotificationServiceProvider)
+              .ensurePermissionPrompted();
         },
         child: ListView(
           children: [

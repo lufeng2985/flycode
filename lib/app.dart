@@ -1,10 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'providers/app_lifecycle_provider.dart';
 import 'providers/global_event_provider.dart';
+import 'providers/session_completion_notification_provider.dart';
 import 'router.dart';
+import 'service/notification/local_notification_service.dart';
 import 'theme/app_theme.dart';
 import 'theme/app_theme_mode.dart';
 import 'theme/theme_mode_provider.dart';
@@ -28,6 +32,15 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     if (initialState != null) {
       ref.read(appLifecycleStateProvider.notifier).setState(initialState);
     }
+
+    unawaited(_ensureNotificationPermissionOnStartup());
+  }
+
+  Future<void> _ensureNotificationPermissionOnStartup() async {
+    final mode = await readSessionCompletionNotificationModeFromStorage();
+    if (mode == SessionCompletionNotificationMode.none) return;
+    if (!mounted) return;
+    await ref.read(localNotificationServiceProvider).ensurePermissionPrompted();
   }
 
   @override
@@ -45,6 +58,15 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     ref.watch(globalEventListenerProvider);
     ref.watch(appLifecycleStateProvider);
+    ref.listen<SessionCompletionNotificationMode>(
+      sessionCompletionNotificationModeProvider,
+      (previous, next) {
+        if (next == SessionCompletionNotificationMode.none) return;
+        unawaited(
+          ref.read(localNotificationServiceProvider).ensurePermissionPrompted(),
+        );
+      },
+    );
     final mode = ref.watch(themeModeProvider);
 
     return MaterialApp.router(

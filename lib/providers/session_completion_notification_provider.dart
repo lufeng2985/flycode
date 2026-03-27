@@ -69,9 +69,15 @@ class SessionCompletionNotificationModeNotifier
   }
 
   Future<void> _restore() async {
-    final prefs = await SharedPreferences.getInstance();
-    final value = prefs.getString(_kSessionCompletionNotificationModeKey);
+    final mode = await readSessionCompletionNotificationModeFromStorage();
     if (!ref.mounted) return;
-    state = SessionCompletionNotificationModeX.fromStorageValue(value);
+    state = mode;
   }
+}
+
+Future<SessionCompletionNotificationMode>
+readSessionCompletionNotificationModeFromStorage() async {
+  final prefs = await SharedPreferences.getInstance();
+  final value = prefs.getString(_kSessionCompletionNotificationModeKey);
+  return SessionCompletionNotificationModeX.fromStorageValue(value);
 }

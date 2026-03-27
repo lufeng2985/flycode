@@ -18,9 +18,26 @@ class LocalNotificationService {
   static const String _channelDescription =
       'Notifications for completed chat sessions';
 
-  Future<void> showSessionCompleted({String? sessionTitle}) async {
+  Future<void> ensurePermissionPrompted() async {
     await _ensureInitialized();
+
+    final android = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    if (android != null) {
+      final enabled = await android.areNotificationsEnabled();
+      if (enabled ?? false) {
+        _permissionsRequested = true;
+        return;
+      }
+    }
+
     await _requestPermissionsIfNeeded();
+  }
+
+  Future<void> showSessionCompleted({String? sessionTitle}) async {
+    await ensurePermissionPrompted();
 
     const details = NotificationDetails(
       android: AndroidNotificationDetails(
