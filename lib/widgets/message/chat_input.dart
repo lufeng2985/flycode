@@ -19,10 +19,13 @@ import '../../providers/chat_view_state_provider.dart';
 import '../../providers/chat_config_provider.dart';
 import '../../providers/provider_list_provider.dart';
 import '../../providers/current_directory_provider.dart';
+import '../../providers/permission_provider.dart';
 import '../../providers/session_status_provider.dart';
+import '../../providers/session_unread_provider.dart';
 import '../../providers/model_variant_provider.dart';
 import '../../service/api/models/agent.dart';
 import '../../service/api/models/provider.dart';
+import '../../service/api/models/permission.dart';
 import '../../service/api/models/session.dart';
 import '../../service/api/models/session_status.dart';
 import '../../theme/app_tokens.dart';
@@ -1382,6 +1385,8 @@ class _SelectionChip extends StatelessWidget {
   }
 }
 
+enum _SessionListBadgeKind { none, working, permission, error, unread }
+
 class _SessionHistorySheet extends ConsumerWidget {
   final ValueChanged<Session> onSelectSession;
 
@@ -1391,8 +1396,86 @@ class _SessionHistorySheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final sessionsAsync = ref.watch(sessionsProvider);
     final selectedSessionId = ref.watch(chatViewStateProvider).sessionId;
+    final sessionStatuses = ref.watch(sessionStatusProvider);
+    final unreadState = ref.watch(sessionUnreadProvider);
+    final pendingPermissions =
+        ref.watch(pendingPermissionsProvider).asData?.value ??
+        const <PermissionRequest>[];
+    final allSessions =
+        ref.watch(allSessionsProvider).asData?.value ?? const <Session>[];
     final theme = Theme.of(context);
     final tokens = context.tokens;
+
+    bool hasPendingPermission(String sessionID) {
+      if (pendingPermissions.isEmpty) return false;
+      final subtree = collectSessionTree(sessionID, allSessions);
+      for (final request in pendingPermissions) {
+        if (subtree.contains(request.sessionID)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    _SessionListBadgeKind resolveBadgeKind(String sessionID) {
+      final status = sessionStatuses[sessionID];
+      if (status != null && status.isWorking) {
+        return _SessionListBadgeKind.working;
+      }
+      if (hasPendingPermission(sessionID)) {
+        return _SessionListBadgeKind.permission;
+      }
+      if (unreadState.hasError(sessionID)) {
+        return _SessionListBadgeKind.error;
+      }
+      if (unreadState.unseenCount(sessionID) > 0) {
+        return _SessionListBadgeKind.unread;
+      }
+      return _SessionListBadgeKind.none;
+    }
+
+    Widget buildStatusBadge(_SessionListBadgeKind kind) {
+      switch (kind) {
+        case _SessionListBadgeKind.working:
+          return SizedBox(
+            width: 14,
+            height: 14,
+            child: CircularProgressIndicator(
+              strokeWidth: 1.8,
+              color: tokens.successForeground,
+            ),
+          );
+        case _SessionListBadgeKind.permission:
+          return Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: tokens.warningForeground,
+              shape: BoxShape.circle,
+            ),
+          );
+        case _SessionListBadgeKind.error:
+          return Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.error,
+              shape: BoxShape.circle,
+            ),
+          );
+        case _SessionListBadgeKind.unread:
+          return Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary,
+              shape: BoxShape.circle,
+            ),
+          );
+        case _SessionListBadgeKind.none:
+          return const SizedBox.shrink();
+      }
+    }
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.73,
@@ -1501,6 +1584,7 @@ class _SessionHistorySheet extends ConsumerWidget {
                           ),
                           ...sessionsForDate.map((session) {
                             final isSelected = selectedSessionId == session.id;
+                            final badgeKind = resolveBadgeKind(session.id);
 
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 2),
@@ -1518,40 +1602,57 @@ class _SessionHistorySheet extends ConsumerWidget {
                                   child: Container(
                                     width: double.infinity,
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
+                                      horizontal: 12,
                                       vertical: 8,
                                     ),
-                                    child: Column(
+                                    child: Row(
                                       crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                          CrossAxisAlignment.center,
                                       children: [
-                                        Text(
-                                          session.title ?? session.id,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            fontFamily: 'Inter',
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                            color: isSelected
-                                                ? theme.colorScheme.primary
-                                                : theme.colorScheme.onSurface,
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                session.title ?? session.id,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                  fontFamily: 'Inter',
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: isSelected
+                                                      ? theme
+                                                            .colorScheme
+                                                            .primary
+                                                      : theme
+                                                            .colorScheme
+                                                            .onSurface,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                _formatUpdatedTimeForHistory(
+                                                  session.updatedAt,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                  fontFamily: 'Inter',
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w500,
+                                                  color: tokens.mutedForeground,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          _formatUpdatedTimeForHistory(
-                                            session.updatedAt,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            fontFamily: 'Inter',
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w500,
-                                            color: tokens.mutedForeground,
-                                          ),
-                                        ),
+                                        if (badgeKind !=
+                                            _SessionListBadgeKind.none) ...[
+                                          const SizedBox(width: 8),
+                                          buildStatusBadge(badgeKind),
+                                        ],
                                       ],
                                     ),
                                   ),

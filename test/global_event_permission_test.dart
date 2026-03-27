@@ -62,6 +62,17 @@ void main() {
     expect(statusEvent.status.isWorking, isTrue);
   });
 
+  test('parseEvent parses session.idle payload', () {
+    final event = parseEvent({
+      'type': 'session.idle',
+      'properties': {'sessionID': 'sess-idle-1'},
+    });
+
+    expect(event, isA<EventSessionIdle>());
+    final idleEvent = event as EventSessionIdle;
+    expect(idleEvent.sessionID, 'sess-idle-1');
+  });
+
   test('parseEvent parses message.part.delta payload', () {
     final event = parseEvent({
       'type': 'message.part.delta',

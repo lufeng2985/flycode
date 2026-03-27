@@ -7,8 +7,11 @@ import '../service/api/models/parts.dart';
 import '../service/api/session_api.dart';
 import 'question_provider.dart';
 import 'permission_provider.dart';
+import 'chat_view_state_provider.dart';
+import 'current_directory_provider.dart';
 import 'session_provider.dart';
 import 'session_status_provider.dart';
+import 'session_unread_provider.dart';
 import 'todo_provider.dart';
 
 part 'global_event_provider.g.dart';
@@ -18,6 +21,17 @@ class GlobalEventListener extends _$GlobalEventListener {
   @override
   Stream<GlobalEvent> build() async* {
     final api = await ref.watch(globalApiProvider.future);
+    ref.read(sessionUnreadProvider);
+
+    ref.listen<ChatViewState>(chatViewStateProvider, (previous, next) {
+      final nextSessionID = next.sessionId;
+      if (nextSessionID == null || nextSessionID == previous?.sessionId) {
+        return;
+      }
+      unawaited(
+        ref.read(sessionUnreadProvider.notifier).markViewed(nextSessionID),
+      );
+    });
 
     // Prime local status cache from snapshot so UI can recover if SSE dropped
     // previous status transitions (for example, busy -> idle).
@@ -32,6 +46,14 @@ class GlobalEventListener extends _$GlobalEventListener {
   }
 
   void _handleEvent(GlobalEvent event) {
+    final currentDirectory = ref.read(currentDirectoryProvider);
+    if (currentDirectory != null &&
+        currentDirectory.isNotEmpty &&
+        event.directory.isNotEmpty &&
+        event.directory != currentDirectory) {
+      return;
+    }
+
     final payload = event.payload;
 
     if (payload is EventSessionCreated ||
@@ -39,6 +61,13 @@ class GlobalEventListener extends _$GlobalEventListener {
         payload is EventSessionDeleted) {
       ref.invalidate(sessionsProvider);
       ref.invalidate(allSessionsProvider);
+      if (payload is EventSessionDeleted) {
+        unawaited(
+          ref
+              .read(sessionUnreadProvider.notifier)
+              .clearSession(payload.info.id),
+        );
+      }
       return;
     }
 
@@ -68,6 +97,12 @@ class GlobalEventListener extends _$GlobalEventListener {
       ref
           .read(sessionStatusProvider.notifier)
           .updateStatus(payload.sessionID, payload.status);
+    } else if (payload is EventSessionIdle) {
+      _markSessionUnread(payload.sessionID, isError: false);
+    } else if (payload is EventSessionError) {
+      final sessionID = payload.sessionID;
+      if (sessionID == null || sessionID.isEmpty) return;
+      _markSessionUnread(sessionID, isError: true);
     } else if (payload is EventPermissionAsked) {
       ref
           .read(pendingPermissionsProvider.notifier)
@@ -82,6 +117,23 @@ class GlobalEventListener extends _$GlobalEventListener {
           .updateTodos(payload.todos);
     }
     // EventUnknown and other unhandled payloads are intentionally ignored.
+  }
+
+  void _markSessionUnread(String sessionID, {required bool isError}) {
+    if (sessionID.isEmpty) return;
+    final activeSessionID = ref.read(chatViewStateProvider).sessionId;
+    if (activeSessionID == sessionID) {
+      unawaited(ref.read(sessionUnreadProvider.notifier).markViewed(sessionID));
+      return;
+    }
+
+    if (isError) {
+      unawaited(ref.read(sessionUnreadProvider.notifier).addError(sessionID));
+    } else {
+      unawaited(
+        ref.read(sessionUnreadProvider.notifier).addTurnComplete(sessionID),
+      );
+    }
   }
 
   void _handleMessageUpdated(EventMessageUpdated event) {

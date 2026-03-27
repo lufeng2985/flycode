@@ -400,6 +400,13 @@ class EventSessionStatus {
   });
 }
 
+class EventSessionIdle {
+  final String type;
+  final String sessionID;
+
+  EventSessionIdle({required this.type, required this.sessionID});
+}
+
 class EventPermissionAsked {
   final String type;
   final PermissionRequest request;
@@ -536,6 +543,12 @@ Object parseEvent(Map<String, dynamic> json) {
         status: SessionStatus.fromJson(
           statusProps['status'] as Map<String, dynamic>,
         ),
+      );
+    case 'session.idle':
+      final idleProps = json['properties'] as Map<String, dynamic>;
+      return EventSessionIdle(
+        type: type,
+        sessionID: idleProps['sessionID'] as String,
       );
     case 'permission.asked':
       final props = json['properties'] as Map<String, dynamic>;
