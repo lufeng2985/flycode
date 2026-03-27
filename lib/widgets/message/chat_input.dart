@@ -1435,6 +1435,11 @@ class _SessionHistorySheet extends ConsumerWidget {
                       ),
                     ),
                   ),
+                  IconButton(
+                    icon: Icon(Icons.close, color: theme.colorScheme.onSurface),
+                    onPressed: () => Navigator.pop(context),
+                    visualDensity: VisualDensity.compact,
+                  ),
                 ],
               ),
             ),
@@ -1660,77 +1665,114 @@ class _VariantSelectionSheet extends StatelessWidget {
     final options = <String?>[null, ...variants];
     final theme = Theme.of(context);
     final tokens = context.tokens;
+    final maxSheetHeight = MediaQuery.of(context).size.height * 0.72;
+
     return Container(
+      constraints: BoxConstraints(maxHeight: maxSheetHeight),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(tokens.radiusM + 2),
+        ),
       ),
       child: SafeArea(
+        top: false,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              margin: const EdgeInsets.only(top: 12, bottom: 8),
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: tokens.border,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-              child: Text(
-                '选择变体',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
+            Center(
+              child: Container(
+                margin: const EdgeInsets.only(top: 10, bottom: 8),
+                width: 56,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.secondary,
+                  borderRadius: BorderRadius.circular(tokens.radiusPill),
                 ),
               ),
             ),
-            const Divider(height: 1),
-            ListView.separated(
-              shrinkWrap: true,
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: options.length,
-              separatorBuilder: (_, _) => Divider(
-                height: 1,
-                color: tokens.border.withValues(alpha: 0.4),
-              ),
-              itemBuilder: (ctx, i) {
-                final value = options[i];
-                final selected = current == value;
-                return InkWell(
-                  onTap: () => onSelect(value),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            _labelFor(value),
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                              color: selected
-                                  ? theme.colorScheme.primary
-                                  : theme.colorScheme.onSurface,
-                            ),
-                          ),
-                        ),
-                        if (selected)
-                          Icon(
-                            Icons.check,
-                            size: 18,
-                            color: theme.colorScheme.primary,
-                          ),
-                      ],
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 6, 10, 10),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '选择变体',
+                      style: TextStyle(
+                        fontFamily: 'Plus Jakarta Sans',
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: theme.colorScheme.onSurface,
+                      ),
                     ),
                   ),
-                );
-              },
+                  IconButton(
+                    icon: Icon(Icons.close, color: theme.colorScheme.onSurface),
+                    onPressed: () => Navigator.pop(context),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ],
+              ),
+            ),
+            Divider(height: 1, color: tokens.border.withValues(alpha: 0.5)),
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 16),
+                itemCount: options.length,
+                itemBuilder: (ctx, i) {
+                  final value = options[i];
+                  final selected = current == value;
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Material(
+                      color: selected
+                          ? theme.colorScheme.primary.withValues(alpha: 0.08)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(tokens.radiusM),
+                      child: InkWell(
+                        onTap: () => onSelect(value),
+                        borderRadius: BorderRadius.circular(tokens.radiusM),
+                        splashColor: theme.colorScheme.primary.withValues(
+                          alpha: 0.08,
+                        ),
+                        highlightColor: theme.colorScheme.primary.withValues(
+                          alpha: 0.05,
+                        ),
+                        child: Container(
+                          height: 46,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  _labelFor(value),
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: selected
+                                        ? FontWeight.w700
+                                        : FontWeight.w600,
+                                    color: selected
+                                        ? theme.colorScheme.primary
+                                        : theme.colorScheme.onSurface,
+                                  ),
+                                ),
+                              ),
+                              if (selected)
+                                Icon(
+                                  Icons.check,
+                                  size: 18,
+                                  color: theme.colorScheme.primary,
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
           ],
         ),
