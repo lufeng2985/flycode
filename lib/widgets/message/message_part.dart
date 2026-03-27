@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import '../../service/api/models/parts.dart';
@@ -76,10 +77,15 @@ class _TypewriterMarkdownText extends StatefulWidget {
 
 class _TypewriterMarkdownTextState extends State<_TypewriterMarkdownText> {
   static const Duration _tick = Duration(milliseconds: 24);
+  static const Duration _streamingLag = Duration(milliseconds: 320);
 
   Timer? _timer;
   List<String> _chars = const [];
   int _visibleCount = 0;
+  DateTime? _lastLengthUpdateAt;
+  double _incomingCharsPerSecond = 24;
+  ValueListenable<bool>? _isScrollingListenable;
+  bool _isUserScrolling = false;
 
   @override
   void initState() {
@@ -97,6 +103,22 @@ class _TypewriterMarkdownTextState extends State<_TypewriterMarkdownText> {
     _chars = widget.text.characters.toList();
     final newLength = _chars.length;
 
+    if (newLength > oldLength) {
+      final now = DateTime.now();
+      final last = _lastLengthUpdateAt;
+      if (last != null) {
+        final elapsedMs = now.difference(last).inMilliseconds;
+        if (elapsedMs > 0) {
+          final incoming =
+              (newLength - oldLength) * 1000 / elapsedMs.clamp(1, 60000);
+          final clamped = incoming.clamp(6, 240).toDouble();
+          _incomingCharsPerSecond =
+              (_incomingCharsPerSecond * 0.6) + (clamped * 0.4);
+        }
+      }
+      _lastLengthUpdateAt = now;
+    }
+
     if (!widget.animate) {
       _timer?.cancel();
       _timer = null;
@@ -106,6 +128,12 @@ class _TypewriterMarkdownTextState extends State<_TypewriterMarkdownText> {
         });
       }
       return;
+    }
+
+    if (oldLength == 0 && newLength > 0 && _visibleCount == 0) {
+      setState(() {
+        _visibleCount = 1;
+      });
     }
 
     if (newLength < oldLength && _visibleCount > newLength) {
@@ -119,12 +147,19 @@ class _TypewriterMarkdownTextState extends State<_TypewriterMarkdownText> {
 
   @override
   void dispose() {
+    _detachScrollListener();
     _timer?.cancel();
     super.dispose();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _attachScrollListener();
+  }
+
   void _syncAnimation() {
-    if (!widget.animate || _visibleCount >= _chars.length) {
+    if (!widget.animate || _isUserScrolling || _visibleCount >= _chars.length) {
       _timer?.cancel();
       _timer = null;
       return;
@@ -133,20 +168,31 @@ class _TypewriterMarkdownTextState extends State<_TypewriterMarkdownText> {
     _timer ??= Timer.periodic(_tick, (_) {
       if (!mounted) return;
 
-      final remaining = _chars.length - _visibleCount;
+      final targetVisible = _targetVisibleCount();
+      final remaining = targetVisible - _visibleCount;
       if (remaining <= 0) {
+        if (_visibleCount < _chars.length) {
+          return;
+        }
         _timer?.cancel();
         _timer = null;
         return;
       }
 
-      final step = remaining >= 120
-          ? 4
-          : remaining >= 60
-          ? 3
-          : remaining >= 20
-          ? 2
-          : 1;
+      final isReceivingRecently = _isReceivingDeltaRecently();
+      final basedOnIncoming =
+          (_incomingCharsPerSecond * _tick.inMilliseconds) /
+          Duration.millisecondsPerSecond;
+      var step = basedOnIncoming.ceil().clamp(1, isReceivingRecently ? 10 : 4);
+      if (remaining > step * 4) {
+        final catchUp = (remaining / 4).ceil().clamp(
+          1,
+          isReceivingRecently ? 14 : 6,
+        );
+        if (catchUp > step) {
+          step = catchUp;
+        }
+      }
 
       setState(() {
         _visibleCount = (_visibleCount + step).clamp(0, _chars.length);
@@ -159,28 +205,94 @@ class _TypewriterMarkdownTextState extends State<_TypewriterMarkdownText> {
     });
   }
 
+  bool _isReceivingDeltaRecently() {
+    final last = _lastLengthUpdateAt;
+    if (last == null) return false;
+    return DateTime.now().difference(last) <= _streamingLag;
+  }
+
+  void _attachScrollListener() {
+    final scrollable = Scrollable.maybeOf(context);
+    final listenable = scrollable?.position.isScrollingNotifier;
+    if (identical(_isScrollingListenable, listenable)) {
+      return;
+    }
+
+    _detachScrollListener();
+    _isScrollingListenable = listenable;
+    _isUserScrolling = listenable?.value ?? false;
+    _isScrollingListenable?.addListener(_handleScrollStateChanged);
+  }
+
+  void _detachScrollListener() {
+    _isScrollingListenable?.removeListener(_handleScrollStateChanged);
+    _isScrollingListenable = null;
+  }
+
+  void _handleScrollStateChanged() {
+    final scrolling = _isScrollingListenable?.value ?? false;
+    if (scrolling == _isUserScrolling) {
+      return;
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _isUserScrolling = scrolling;
+    });
+    _syncAnimation();
+  }
+
+  int _targetVisibleCount() {
+    if (!widget.animate) {
+      return _chars.length;
+    }
+    final last = _lastLengthUpdateAt;
+    if (last == null) {
+      return _chars.length;
+    }
+    final elapsed = DateTime.now().difference(last);
+    if (elapsed > _streamingLag) {
+      return _chars.length;
+    }
+
+    final lagChars =
+        (_incomingCharsPerSecond *
+                _streamingLag.inMilliseconds /
+                Duration.millisecondsPerSecond)
+            .ceil()
+            .clamp(2, 28);
+    final target = _chars.length - lagChars;
+    return target.clamp(1, _chars.length);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final tokens = context.tokens;
     final text = _chars.take(_visibleCount).join();
-    return MarkdownBody(
-      data: text,
-      selectable: true,
-      builders: {'pre': CodeBlockBuilder()},
-      styleSheet: MarkdownStyleSheet(
-        p: TextStyle(
-          fontSize: 14,
-          height: 1.5,
-          color: theme.colorScheme.onSurface,
+
+    return RepaintBoundary(
+      child: MarkdownBody(
+        data: text,
+        selectable: true,
+        builders: {'pre': CodeBlockBuilder()},
+        styleSheet: MarkdownStyleSheet(
+          p: TextStyle(
+            fontSize: 14,
+            height: 1.5,
+            color: theme.colorScheme.onSurface,
+          ),
+          code: TextStyle(
+            backgroundColor: tokens.accent,
+            color: theme.colorScheme.onSurface,
+            fontFamily: 'monospace',
+            fontSize: 13,
+          ),
+          codeblockDecoration: const BoxDecoration(),
         ),
-        code: TextStyle(
-          backgroundColor: tokens.accent,
-          color: theme.colorScheme.onSurface,
-          fontFamily: 'monospace',
-          fontSize: 13,
-        ),
-        codeblockDecoration: const BoxDecoration(),
       ),
     );
   }

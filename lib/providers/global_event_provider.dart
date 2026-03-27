@@ -48,6 +48,8 @@ class GlobalEventListener extends _$GlobalEventListener {
       _handleMessageRemoved(payload);
     } else if (payload is EventMessagePartUpdated) {
       _handleMessagePartUpdated(payload);
+    } else if (payload is EventMessagePartDelta) {
+      _handleMessagePartDelta(payload);
     } else if (payload is EventMessagePartRemoved) {
       _handleMessagePartRemoved(payload);
     } else if (payload is EventQuestionAsked) {
@@ -159,6 +161,31 @@ class GlobalEventListener extends _$GlobalEventListener {
       event.sessionID,
       (notifier) =>
           notifier.removePart(event.sessionID, event.messageID, event.partID),
+    );
+  }
+
+  void _handleMessagePartDelta(EventMessagePartDelta event) {
+    if (event.field != 'text' || event.delta.isEmpty) return;
+
+    ref
+        .read(sessionMessagesProvider(event.sessionID).notifier)
+        .appendPartDelta(
+          event.sessionID,
+          event.messageID,
+          event.partID,
+          event.field,
+          event.delta,
+        );
+
+    _dispatchToSubSession(
+      event.sessionID,
+      (notifier) => notifier.appendPartDelta(
+        event.sessionID,
+        event.messageID,
+        event.partID,
+        event.field,
+        event.delta,
+      ),
     );
   }
 

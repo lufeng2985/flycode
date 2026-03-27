@@ -81,6 +81,56 @@ class SessionMessagesNotifier extends _$SessionMessagesNotifier {
     updated[msgIndex] = MessageWithParts(info: msg.info, parts: newParts);
     state = AsyncData(updated);
   }
+
+  /// SSE: message.part.delta — 增量追加某个 part 的文本内容
+  void appendPartDelta(
+    String sessionID,
+    String messageID,
+    String partID,
+    String field,
+    String delta,
+  ) {
+    if (this.sessionID != sessionID) return;
+    if (field != 'text' || delta.isEmpty) return;
+
+    final current = state.asData?.value ?? [];
+    final msgIndex = current.indexWhere((m) => _messageId(m) == messageID);
+    if (msgIndex < 0) return;
+
+    final msg = current[msgIndex];
+    final partIndex = msg.parts.indexWhere((p) => _partId(p) == partID);
+
+    final newParts = List<Object>.from(msg.parts);
+    if (partIndex >= 0) {
+      final part = msg.parts[partIndex];
+      if (part is! TextPart) return;
+      newParts[partIndex] = TextPart(
+        id: part.id,
+        sessionID: part.sessionID,
+        messageID: part.messageID,
+        type: part.type,
+        text: '${part.text}$delta',
+        synthetic: part.synthetic,
+        ignored: part.ignored,
+        time: part.time,
+        metadata: part.metadata,
+      );
+    } else {
+      newParts.add(
+        TextPart(
+          id: partID,
+          sessionID: sessionID,
+          messageID: messageID,
+          type: 'text',
+          text: delta,
+        ),
+      );
+    }
+
+    final updated = List<MessageWithParts>.from(current);
+    updated[msgIndex] = MessageWithParts(info: msg.info, parts: newParts);
+    state = AsyncData(updated);
+  }
 }
 
 String _messageId(MessageWithParts m) {
@@ -162,6 +212,54 @@ class SubSessionMessagesNotifier extends _$SubSessionMessagesNotifier {
 
     final msg = current[msgIndex];
     final newParts = msg.parts.where((p) => _partId(p) != partID).toList();
+    final updated = List<MessageWithParts>.from(current);
+    updated[msgIndex] = MessageWithParts(info: msg.info, parts: newParts);
+    state = AsyncData(updated);
+  }
+
+  void appendPartDelta(
+    String msgSessionID,
+    String messageID,
+    String partID,
+    String field,
+    String delta,
+  ) {
+    if (msgSessionID != sessionID) return;
+    if (field != 'text' || delta.isEmpty) return;
+
+    final current = state.asData?.value ?? [];
+    final msgIndex = current.indexWhere((m) => _messageId(m) == messageID);
+    if (msgIndex < 0) return;
+
+    final msg = current[msgIndex];
+    final partIndex = msg.parts.indexWhere((p) => _partId(p) == partID);
+    final newParts = List<Object>.from(msg.parts);
+    if (partIndex >= 0) {
+      final part = msg.parts[partIndex];
+      if (part is! TextPart) return;
+      newParts[partIndex] = TextPart(
+        id: part.id,
+        sessionID: part.sessionID,
+        messageID: part.messageID,
+        type: part.type,
+        text: '${part.text}$delta',
+        synthetic: part.synthetic,
+        ignored: part.ignored,
+        time: part.time,
+        metadata: part.metadata,
+      );
+    } else {
+      newParts.add(
+        TextPart(
+          id: partID,
+          sessionID: msgSessionID,
+          messageID: messageID,
+          type: 'text',
+          text: delta,
+        ),
+      );
+    }
+
     final updated = List<MessageWithParts>.from(current);
     updated[msgIndex] = MessageWithParts(info: msg.info, parts: newParts);
     state = AsyncData(updated);

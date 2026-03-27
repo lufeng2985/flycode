@@ -61,4 +61,25 @@ void main() {
     expect(statusEvent.sessionID, 'sess-9');
     expect(statusEvent.status.isWorking, isTrue);
   });
+
+  test('parseEvent parses message.part.delta payload', () {
+    final event = parseEvent({
+      'type': 'message.part.delta',
+      'properties': {
+        'sessionID': 'sess-1',
+        'messageID': 'msg-1',
+        'partID': 'part-1',
+        'field': 'text',
+        'delta': 'x',
+      },
+    });
+
+    expect(event, isA<EventMessagePartDelta>());
+    final deltaEvent = event as EventMessagePartDelta;
+    expect(deltaEvent.sessionID, 'sess-1');
+    expect(deltaEvent.messageID, 'msg-1');
+    expect(deltaEvent.partID, 'part-1');
+    expect(deltaEvent.field, 'text');
+    expect(deltaEvent.delta, 'x');
+  });
 }

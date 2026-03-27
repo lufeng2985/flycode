@@ -235,6 +235,24 @@ class EventMessagePartUpdated {
   Map<String, dynamic> toJson() => _$EventMessagePartUpdatedToJson(this);
 }
 
+class EventMessagePartDelta {
+  final String type;
+  final String sessionID;
+  final String messageID;
+  final String partID;
+  final String field;
+  final String delta;
+
+  EventMessagePartDelta({
+    required this.type,
+    required this.sessionID,
+    required this.messageID,
+    required this.partID,
+    required this.field,
+    required this.delta,
+  });
+}
+
 @JsonSerializable()
 class EventMessagePartRemoved {
   final String type;
@@ -424,6 +442,16 @@ Object parseEvent(Map<String, dynamic> json) {
     case 'message.part.updated':
       final partJson = json['properties']['part'] as Map<String, dynamic>;
       return EventMessagePartUpdated(type: type, part: parsePart(partJson));
+    case 'message.part.delta':
+      final props = json['properties'] as Map<String, dynamic>;
+      return EventMessagePartDelta(
+        type: type,
+        sessionID: props['sessionID'] as String,
+        messageID: props['messageID'] as String,
+        partID: props['partID'] as String,
+        field: props['field'] as String,
+        delta: props['delta'] as String,
+      );
     case 'message.part.removed':
       return EventMessagePartRemoved(
         type: type,

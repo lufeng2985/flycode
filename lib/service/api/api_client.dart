@@ -190,7 +190,7 @@ class ApiClient {
 
           if (line.startsWith('data:')) {
             buffer.write(line.substring(5).trim());
-          } else if (line.isEmpty && buffer.isNotEmpty) {
+          } else if (line.trim().isEmpty && buffer.isNotEmpty) {
             yield buffer.toString();
             buffer.clear();
           }
