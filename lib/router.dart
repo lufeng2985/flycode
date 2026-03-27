@@ -13,6 +13,7 @@ import 'pages/settings_page.dart';
 import 'pages/theme_mode_page.dart';
 import 'pages/server_config_page.dart';
 import 'pages/model_config_page.dart';
+import 'pages/session_completion_notification_page.dart';
 import 'pages/sub_session_page.dart';
 import 'models/server_config.dart';
 
@@ -54,6 +55,11 @@ final GoRouter appRouter = GoRouter(
       path: '/settings/model',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const ModelConfigPage(),
+    ),
+    GoRoute(
+      path: '/settings/session-completion-notification',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const SessionCompletionNotificationPage(),
     ),
     GoRoute(
       path: '/settings/about',

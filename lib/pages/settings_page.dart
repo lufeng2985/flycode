@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../providers/session_completion_notification_provider.dart';
 import '../providers/server_config_provider.dart';
 import '../theme/app_tokens.dart';
 
@@ -12,6 +13,9 @@ class SettingsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final asyncServerConfig = ref.watch(serverConfigProvider);
+    final notificationMode = ref.watch(
+      sessionCompletionNotificationModeProvider,
+    );
     final serverUrl = _serverDisplayText(
       asyncServerConfig.value?.baseUrl ?? 'http://localhost:4096',
     );
@@ -53,6 +57,15 @@ class SettingsPage extends ConsumerWidget {
             iconColor: mutedColor,
             onTap: () {
               context.push('/settings/theme');
+            },
+          ),
+          _SettingsRow(
+            icon: Icons.notifications_outlined,
+            title: '会话完成通知',
+            value: notificationMode.label,
+            iconColor: mutedColor,
+            onTap: () {
+              context.push('/settings/session-completion-notification');
             },
           ),
           Divider(height: 1, thickness: 1, color: dividerColor),

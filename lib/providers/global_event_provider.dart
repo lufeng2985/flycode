@@ -1,10 +1,14 @@
 import 'dart:async';
+import 'package:flutter/widgets.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../service/api/global_api.dart';
 import '../service/api/models/global_event.dart';
 import '../service/api/models/message.dart';
 import '../service/api/models/parts.dart';
+import '../service/notification/local_notification_service.dart';
+import 'app_lifecycle_provider.dart';
 import '../service/api/session_api.dart';
+import 'session_completion_notification_provider.dart';
 import 'question_provider.dart';
 import 'permission_provider.dart';
 import 'chat_view_state_provider.dart';
@@ -15,6 +19,20 @@ import 'session_unread_provider.dart';
 import 'todo_provider.dart';
 
 part 'global_event_provider.g.dart';
+
+bool shouldSendSessionCompletionNotification({
+  required SessionCompletionNotificationMode mode,
+  required AppLifecycleState lifecycleState,
+}) {
+  switch (mode) {
+    case SessionCompletionNotificationMode.none:
+      return false;
+    case SessionCompletionNotificationMode.backgroundOnly:
+      return !isAppInForeground(lifecycleState);
+    case SessionCompletionNotificationMode.always:
+      return true;
+  }
+}
 
 @riverpod
 class GlobalEventListener extends _$GlobalEventListener {
@@ -99,6 +117,7 @@ class GlobalEventListener extends _$GlobalEventListener {
           .updateStatus(payload.sessionID, payload.status);
     } else if (payload is EventSessionIdle) {
       _markSessionUnread(payload.sessionID, isError: false);
+      unawaited(_notifySessionCompleted(payload.sessionID));
     } else if (payload is EventSessionError) {
       final sessionID = payload.sessionID;
       if (sessionID == null || sessionID.isEmpty) return;
@@ -134,6 +153,54 @@ class GlobalEventListener extends _$GlobalEventListener {
         ref.read(sessionUnreadProvider.notifier).addTurnComplete(sessionID),
       );
     }
+  }
+
+  Future<void> _notifySessionCompleted(String sessionID) async {
+    if (sessionID.isEmpty) return;
+
+    final mode = ref.read(sessionCompletionNotificationModeProvider);
+    final lifecycleState = ref.read(appLifecycleStateProvider);
+    final shouldSend = shouldSendSessionCompletionNotification(
+      mode: mode,
+      lifecycleState: lifecycleState,
+    );
+    if (!shouldSend) return;
+
+    final sessionTitle = _sessionTitleForNotification(sessionID);
+
+    try {
+      await ref
+          .read(localNotificationServiceProvider)
+          .showSessionCompleted(sessionTitle: sessionTitle);
+    } catch (_) {
+      // Ignore local notification failures to avoid affecting SSE handling.
+    }
+  }
+
+  String? _sessionTitleForNotification(String sessionID) {
+    String? normalizedTitle(String? raw) {
+      final value = raw?.trim();
+      if (value == null || value.isEmpty) return null;
+      return value;
+    }
+
+    final allSessions = ref.read(allSessionsProvider).asData?.value;
+    if (allSessions != null) {
+      for (final session in allSessions) {
+        if (session.id != sessionID) continue;
+        return normalizedTitle(session.title);
+      }
+    }
+
+    final rootSessions = ref.read(sessionsProvider).asData?.value;
+    if (rootSessions != null) {
+      for (final session in rootSessions) {
+        if (session.id != sessionID) continue;
+        return normalizedTitle(session.title);
+      }
+    }
+
+    return null;
   }
 
   void _handleMessageUpdated(EventMessageUpdated event) {
