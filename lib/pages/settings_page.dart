@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../l10n/app_language.dart';
+import '../l10n/l10n.dart';
+import '../providers/app_language_provider.dart';
 import '../providers/session_completion_notification_provider.dart';
 import '../providers/server_config_provider.dart';
 import '../theme/app_tokens.dart';
@@ -11,8 +14,10 @@ class SettingsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final colorScheme = Theme.of(context).colorScheme;
     final asyncServerConfig = ref.watch(serverConfigProvider);
+    final language = ref.watch(appLanguageProvider);
     final notificationMode = ref.watch(
       sessionCompletionNotificationModeProvider,
     );
@@ -27,8 +32,8 @@ class SettingsPage extends ConsumerWidget {
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: const Text(
-          '设置',
+        title: Text(
+          l10n.settingsTitle,
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
         ),
         centerTitle: true,
@@ -44,16 +49,19 @@ class SettingsPage extends ConsumerWidget {
       body: ListView(
         padding: EdgeInsets.fromLTRB(24, 12, 24, contentBottomPadding),
         children: [
-          const _SectionTitle(title: '通用设置'),
+          _SectionTitle(title: l10n.settingsSectionGeneral),
           _SettingsRow(
             icon: Icons.language,
-            title: '语言',
+            title: l10n.settingsLanguage,
+            value: language.label(l10n),
             iconColor: mutedColor,
-            onTap: () {},
+            onTap: () {
+              context.push('/settings/language');
+            },
           ),
           _SettingsRow(
             icon: Icons.palette_outlined,
-            title: '色彩主题',
+            title: l10n.settingsTheme,
             iconColor: mutedColor,
             onTap: () {
               context.push('/settings/theme');
@@ -61,18 +69,18 @@ class SettingsPage extends ConsumerWidget {
           ),
           _SettingsRow(
             icon: Icons.notifications_outlined,
-            title: '会话完成通知',
-            value: notificationMode.label,
+            title: l10n.settingsSessionCompletionNotification,
+            value: notificationMode.label(l10n),
             iconColor: mutedColor,
             onTap: () {
               context.push('/settings/session-completion-notification');
             },
           ),
           Divider(height: 1, thickness: 1, color: dividerColor),
-          const _SectionTitle(title: '连接与模型'),
+          _SectionTitle(title: l10n.settingsSectionConnectionModel),
           _SettingsRow(
             icon: Icons.dns_outlined,
-            title: '服务器',
+            title: l10n.settingsServer,
             value: serverUrl,
             iconColor: mutedColor,
             onTap: () {
@@ -86,17 +94,17 @@ class SettingsPage extends ConsumerWidget {
           ),
           _SettingsRow(
             icon: Icons.memory_outlined,
-            title: '模型',
+            title: l10n.settingsModel,
             iconColor: mutedColor,
             onTap: () {
               context.push('/settings/model');
             },
           ),
           Divider(height: 1, thickness: 1, color: dividerColor),
-          const _SectionTitle(title: '更多'),
+          _SectionTitle(title: l10n.settingsSectionMore),
           _SettingsRow(
             icon: Icons.info_outline,
-            title: '关于',
+            title: l10n.settingsAbout,
             iconColor: mutedColor,
             onTap: () {
               context.push('/settings/about');

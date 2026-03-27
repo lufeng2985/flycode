@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -11,6 +12,13 @@ void main() {
     await tester.pumpWidget(ProviderScope(child: MyApp()));
     await tester.pumpAndSettle();
 
-    expect(find.text('连接服务器'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Text &&
+            (widget.data == '连接服务器' || widget.data == 'Connect Server'),
+      ),
+      findsWidgets,
+    );
   });
 }

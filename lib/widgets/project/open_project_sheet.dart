@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../l10n/l10n.dart';
 import '../../models/chat_route_args.dart';
 import '../../providers/current_directory_provider.dart';
 import '../../service/api/api_client.dart';
@@ -118,8 +119,13 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
       }
     } catch (e) {
       if (mounted) {
+        final message = e is ApiException
+            ? e.message
+            : e.toString().contains('resolve_home_failed')
+            ? context.l10n.openProjectErrorResolveHome
+            : e.toString();
         setState(() {
-          _error = e is ApiException ? e.message : e.toString();
+          _error = message;
           _loading = false;
         });
       }
@@ -263,7 +269,7 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
       return fromCwd;
     }
 
-    throw Exception('无法解析 home 目录');
+    throw Exception('resolve_home_failed');
   }
 
   String? _inferDirectoryFromNodes(List<FileNode> nodes) {
@@ -391,7 +397,8 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _confirming = false);
-      final msg = '打开项目失败：$e';
+      final l10n = context.l10n;
+      final msg = l10n.openProjectErrorOpenFailed(e.toString());
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(msg),
@@ -441,7 +448,7 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
               child: Row(
                 children: [
                   Text(
-                    '打开项目',
+                    context.l10n.openProjectTitle,
                     style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w600,
@@ -471,7 +478,7 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
                 enabled: !_confirming,
                 style: const TextStyle(fontSize: 15),
                 decoration: InputDecoration(
-                  hintText: '输入目录名称或路径（如 ~/projects）',
+                  hintText: context.l10n.openProjectInputHint,
                   hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
                   prefixIcon: Icon(
                     Icons.search_rounded,
@@ -591,12 +598,12 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
               ),
               const SizedBox(height: 12),
               Text(
-                '输入目录名称进行搜索',
+                context.l10n.openProjectPlaceholderSearch,
                 style: TextStyle(color: Colors.grey[400], fontSize: 13),
               ),
               const SizedBox(height: 4),
               Text(
-                '支持路径导航：~/projects/myapp',
+                context.l10n.openProjectPlaceholderPathSupport,
                 style: TextStyle(color: Colors.grey[350], fontSize: 12),
               ),
             ],
@@ -605,7 +612,7 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
       } else {
         return Center(
           child: Text(
-            '未找到匹配的目录',
+            context.l10n.openProjectNoMatch,
             style: TextStyle(color: Colors.grey[400], fontSize: 13),
           ),
         );

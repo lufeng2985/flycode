@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/l10n.dart';
 import '../providers/session_completion_notification_provider.dart';
 import '../service/notification/local_notification_service.dart';
 
@@ -9,10 +10,11 @@ class SessionCompletionNotificationPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final selected = ref.watch(sessionCompletionNotificationModeProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('会话完成通知')),
+      appBar: AppBar(title: Text(l10n.sessionCompletionNotificationTitle)),
       body: RadioGroup<SessionCompletionNotificationMode>(
         groupValue: selected,
         onChanged: (value) async {
@@ -31,7 +33,7 @@ class SessionCompletionNotificationPage extends ConsumerWidget {
             for (final mode in SessionCompletionNotificationMode.values)
               RadioListTile<SessionCompletionNotificationMode>(
                 value: mode,
-                title: Text(mode.label),
+                title: Text(mode.label(l10n)),
               ),
           ],
         ),

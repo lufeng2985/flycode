@@ -3,7 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flycode/l10n/app_localizations.dart';
 
+import 'l10n/app_language.dart';
+import 'l10n/l10n.dart';
+import 'providers/app_language_provider.dart';
 import 'providers/app_lifecycle_provider.dart';
 import 'providers/global_event_provider.dart';
 import 'providers/session_completion_notification_provider.dart';
@@ -68,13 +72,17 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
       },
     );
     final mode = ref.watch(themeModeProvider);
+    final language = ref.watch(appLanguageProvider);
 
     return MaterialApp.router(
-      title: 'Fetch Data Example',
+      onGenerateTitle: (context) => context.l10n.appTitle,
       routerConfig: _router,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: mode.toThemeMode(),
+      locale: language.toLocale(),
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
       debugShowCheckedModeBanner: false,
     );
   }

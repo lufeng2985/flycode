@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../l10n/l10n.dart';
 import '../../service/api/models/provider.dart';
 import '../../service/api/models/message.dart';
 import '../../providers/model_config_provider.dart';
@@ -41,6 +43,7 @@ class _ModelSelectionSheetState extends ConsumerState<ModelSelectionSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final providerListAsync = ref.watch(providerListProvider);
     final configsAsync = ref.watch(modelConfigProvider);
     final theme = Theme.of(context);
@@ -75,7 +78,7 @@ class _ModelSelectionSheetState extends ConsumerState<ModelSelectionSheet> {
                 children: [
                   Expanded(
                     child: Text(
-                      '选择模型',
+                      l10n.modelSelectionTitle,
                       style: TextStyle(
                         fontFamily: 'Plus Jakarta Sans',
                         fontSize: 20,
@@ -102,7 +105,7 @@ class _ModelSelectionSheetState extends ConsumerState<ModelSelectionSheet> {
                   color: theme.colorScheme.onSurface,
                 ),
                 decoration: InputDecoration(
-                  hintText: '搜索模型',
+                  hintText: l10n.modelSelectionSearchHint,
                   hintStyle: TextStyle(
                     fontSize: 15,
                     color: tokens.mutedForeground,
@@ -167,11 +170,17 @@ class _ModelSelectionSheetState extends ConsumerState<ModelSelectionSheet> {
                     ),
                     loading: () =>
                         const Center(child: CircularProgressIndicator()),
-                    error: (e, s) => _buildErrorState(context, '配置加载失败: $e'),
+                    error: (e, s) => _buildErrorState(
+                      context,
+                      l10n.modelSelectionConfigLoadFailed(e.toString()),
+                    ),
                   );
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, s) => _buildErrorState(context, '模型列表加载失败: $e'),
+                error: (e, s) => _buildErrorState(
+                  context,
+                  l10n.modelSelectionListLoadFailed(e.toString()),
+                ),
               ),
             ),
           ],
@@ -243,9 +252,9 @@ class _ModelSelectionSheetState extends ConsumerState<ModelSelectionSheet> {
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
       child: Row(
         children: [
-          chip(key: _filterAll, label: '全部'),
+          chip(key: _filterAll, label: context.l10n.commonAll),
           const SizedBox(width: 8),
-          chip(key: _filterFavorite, label: '收藏'),
+          chip(key: _filterFavorite, label: context.l10n.commonFavorite),
           for (final provider in providers) ...[
             const SizedBox(width: 8),
             chip(key: provider.id, label: provider.name),
@@ -317,7 +326,7 @@ class _ModelSelectionSheetState extends ConsumerState<ModelSelectionSheet> {
     if (providerList.connected.isEmpty) {
       return Center(
         child: Text(
-          '没有连接的模型提供商',
+          context.l10n.modelSelectionNoConnectedProviders,
           style: TextStyle(color: tokens.mutedForeground),
         ),
       );
@@ -384,11 +393,11 @@ class _ModelSelectionSheetState extends ConsumerState<ModelSelectionSheet> {
       final noMatchByQuery = searchQuery.trim().isNotEmpty;
       final noMatchByProvider =
           selectedProviderId != null && searchQuery.trim().isEmpty;
-      String message = '没有可用的模型';
+      String message = context.l10n.modelSelectionNoModels;
       if (noMatchByQuery) {
-        message = '没有匹配的模型';
+        message = context.l10n.modelSelectionNoMatchedModels;
       } else if (noMatchByProvider) {
-        message = '该提供商下没有可用模型';
+        message = context.l10n.modelSelectionNoModelsUnderProvider;
       }
 
       return Center(
@@ -499,7 +508,7 @@ class _ModelTile extends ConsumerWidget {
                           ),
                           const SizedBox(width: 3),
                           Text(
-                            '已收藏',
+                            context.l10n.modelSelectionFavorited,
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w600,

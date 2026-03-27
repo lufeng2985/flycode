@@ -1,11 +1,13 @@
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 
+import 'l10n/l10n.dart';
 import 'models/chat_route_args.dart';
 import 'pages/app_entry_page.dart';
 import 'pages/about_page.dart';
 import 'pages/file_content_page.dart';
 import 'pages/home_page.dart';
+import 'pages/language_page.dart';
 import 'pages/project_list_page.dart';
 import 'pages/session_context_page.dart';
 import 'pages/session_diff_page.dart';
@@ -31,7 +33,7 @@ final GoRouter appRouter = GoRouter(
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
         final args = state.extra as ChatRouteArgs?;
-        return MyHomePage(title: '会话', args: args);
+        return MyHomePage(title: context.l10n.chatTitle, args: args);
       },
     ),
     GoRoute(
@@ -42,6 +44,11 @@ final GoRouter appRouter = GoRouter(
       path: '/settings/theme',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const ThemeModePage(),
+    ),
+    GoRoute(
+      path: '/settings/language',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const LanguagePage(),
     ),
     GoRoute(
       path: '/settings/server',

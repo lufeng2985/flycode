@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../l10n/l10n.dart';
 import '../theme/app_tokens.dart';
 
 class AboutPage extends StatelessWidget {
@@ -17,13 +18,14 @@ class AboutPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final theme = Theme.of(context);
     final tokens = context.tokens;
     final contentBottomPadding = MediaQuery.paddingOf(context).bottom + 20;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('关于'),
+        title: Text(l10n.aboutTitle),
         centerTitle: false,
         toolbarHeight: 64,
         titleTextStyle: theme.textTheme.titleMedium?.copyWith(
@@ -42,15 +44,15 @@ class AboutPage extends StatelessWidget {
         children: [
           _HeroSection(
             appName: _appName,
-            description: '让 coding 随时发生。你可以在手机上继续项目、衔接会话与灵感。',
+            description: l10n.aboutHeroDescription,
           ),
           const SizedBox(height: 14),
-          const _SectionLabel(title: '产品信息'),
+          _SectionLabel(title: l10n.aboutSectionProductInfo),
           const SizedBox(height: 14),
           _InfoGroupCard(
             children: [
               _InfoRow(
-                title: '官网',
+                title: l10n.aboutOfficialWebsite,
                 value: 'flycode.app',
                 onTap: () => _launchExternalUrl(context, _siteUrl),
               ),
@@ -62,17 +64,17 @@ class AboutPage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          const _SectionLabel(title: '法律与支持'),
+          _SectionLabel(title: l10n.aboutSectionLegalSupport),
           const SizedBox(height: 14),
           _InfoGroupCard(
             children: [
-              _InfoRow(title: '当前版本', value: _appVersion),
+              _InfoRow(title: l10n.aboutCurrentVersion, value: _appVersion),
               _InfoRow(
-                title: '隐私政策',
+                title: l10n.aboutPrivacyPolicy,
                 onTap: () => _launchExternalUrl(context, _privacyUrl),
               ),
               _InfoRow(
-                title: '开源许可',
+                title: l10n.aboutOpenSourceLicenses,
                 onTap: () async {
                   await _registerGoogleFontsLicense();
                   if (!context.mounted) {
@@ -122,7 +124,7 @@ class AboutPage extends StatelessWidget {
   void _showOpenLinkError(BuildContext context) {
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('暂时无法打开链接')));
+    ).showSnackBar(SnackBar(content: Text(context.l10n.aboutOpenLinkFailed)));
   }
 
   Future<void> _registerGoogleFontsLicense() async {

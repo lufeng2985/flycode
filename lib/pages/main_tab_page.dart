@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../theme/app_tokens.dart';
 import 'project_list_page.dart';
 import 'settings_page.dart';
@@ -23,6 +24,7 @@ class _MainTabPageState extends State<MainTabPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final colorScheme = Theme.of(context).colorScheme;
     final tokens = context.tokens;
 
@@ -54,7 +56,7 @@ class _MainTabPageState extends State<MainTabPage> {
             child: Row(
               children: [
                 _BottomNavItem(
-                  label: 'PROJECTS',
+                  label: l10n.mainTabProjects,
                   selected: _index == 0,
                   selectedIcon: Icons.folder,
                   icon: Icons.folder,
@@ -65,7 +67,7 @@ class _MainTabPageState extends State<MainTabPage> {
                 ),
                 const SizedBox(width: 6),
                 _BottomNavItem(
-                  label: 'SETTINGS',
+                  label: l10n.mainTabSettings,
                   selected: _index == 1,
                   selectedIcon: Icons.settings,
                   icon: Icons.settings,

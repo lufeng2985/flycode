@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flycode/l10n/app_localizations.dart';
 
 const _kSessionCompletionNotificationModeKey =
     'session_completion_notification_mode_v1';
@@ -10,14 +11,14 @@ enum SessionCompletionNotificationMode { none, backgroundOnly, always }
 
 extension SessionCompletionNotificationModeX
     on SessionCompletionNotificationMode {
-  String get label {
+  String label(AppLocalizations l10n) {
     switch (this) {
       case SessionCompletionNotificationMode.none:
-        return '不发送通知';
+        return l10n.sessionCompletionNotificationModeNone;
       case SessionCompletionNotificationMode.backgroundOnly:
-        return '应用在后台时发送通知';
+        return l10n.sessionCompletionNotificationModeBackgroundOnly;
       case SessionCompletionNotificationMode.always:
-        return '应用在前台时也发送通知';
+        return l10n.sessionCompletionNotificationModeAlways;
     }
   }
 

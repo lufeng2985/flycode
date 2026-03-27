@@ -1,5 +1,7 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flycode/l10n/app_localizations.dart';
 
 final localNotificationServiceProvider = Provider<LocalNotificationService>(
   (ref) => LocalNotificationService(FlutterLocalNotificationsPlugin()),
@@ -38,6 +40,7 @@ class LocalNotificationService {
 
   Future<void> showSessionCompleted({String? sessionTitle}) async {
     await ensurePermissionPrompted();
+    final l10n = await _resolveLocalizations();
 
     const details = NotificationDetails(
       android: AndroidNotificationDetails(
@@ -61,10 +64,20 @@ class LocalNotificationService {
 
     final normalizedTitle = sessionTitle?.trim();
     final body = (normalizedTitle != null && normalizedTitle.isNotEmpty)
-        ? '$normalizedTitle 已完成'
-        : '有一个会话已完成';
+        ? l10n.sessionCompletedNotificationBodyWithTitle(normalizedTitle)
+        : l10n.sessionCompletedNotificationBodyWithoutTitle;
     final id = (normalizedTitle ?? body).hashCode & 0x7fffffff;
-    await _plugin.show(id, '会话已完成', body, details);
+    await _plugin.show(
+      id,
+      l10n.sessionCompletedNotificationTitle,
+      body,
+      details,
+    );
+  }
+
+  Future<AppLocalizations> _resolveLocalizations() async {
+    final locale = WidgetsBinding.instance.platformDispatcher.locale;
+    return AppLocalizations.delegate.load(locale);
   }
 
   Future<void> _ensureInitialized() async {

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/l10n.dart';
 import '../providers/file_provider.dart';
 import '../service/api/models/file_content.dart';
 
@@ -82,14 +83,14 @@ class FileContentPage extends ConsumerWidget {
           if (contentAsync.hasValue && !contentAsync.value!.isBinary)
             IconButton(
               icon: Icon(Icons.copy_rounded, size: 18, color: Colors.grey[600]),
-              tooltip: '复制内容',
+              tooltip: context.l10n.fileContentCopyTooltip,
               onPressed: () {
                 Clipboard.setData(
                   ClipboardData(text: contentAsync.value!.content),
                 );
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('已复制到剪贴板'),
+                  SnackBar(
+                    content: Text(context.l10n.fileContentCopied),
                     duration: Duration(seconds: 2),
                     behavior: SnackBarBehavior.floating,
                   ),
@@ -221,7 +222,7 @@ class _ErrorView extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              '加载失败',
+              context.l10n.fileContentLoadFailed,
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
@@ -333,7 +334,7 @@ class _FileInfoBar extends StatelessWidget {
           ),
           const SizedBox(width: 3),
           Text(
-            '$lineCount 行',
+            context.l10n.fileContentLines(lineCount),
             style: TextStyle(fontSize: 12, color: Colors.grey[500]),
           ),
           const SizedBox(width: 10),
@@ -379,7 +380,7 @@ class _BinaryUnsupportedView extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            '不支持预览此文件',
+            context.l10n.fileContentPreviewUnsupported,
             style: TextStyle(
               color: Colors.grey[600],
               fontSize: 15,
@@ -388,7 +389,9 @@ class _BinaryUnsupportedView extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            mimeType != null ? '二进制文件（$mimeType）' : '二进制文件',
+            mimeType != null
+                ? context.l10n.fileContentBinaryWithMime(mimeType!)
+                : context.l10n.fileContentBinary,
             style: TextStyle(color: Colors.grey[400], fontSize: 13),
           ),
         ],

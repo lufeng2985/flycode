@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../l10n/l10n.dart';
 import '../../providers/todo_provider.dart';
 import '../../service/api/models/global_event.dart' show Todo;
 import '../../theme/app_tokens.dart';
@@ -76,6 +77,7 @@ class _TodoListWidgetState extends ConsumerState<TodoListWidget> {
   }
 
   Widget _buildHeader(BuildContext context, List<Todo> todos) {
+    final l10n = context.l10n;
     final theme = Theme.of(context);
     final tokens = context.tokens;
     final inProgressCount = todos
@@ -100,7 +102,7 @@ class _TodoListWidgetState extends ConsumerState<TodoListWidget> {
             ),
             const SizedBox(width: 6),
             Text(
-              'AI 任务规划',
+              l10n.todoPanelTitle,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
@@ -108,11 +110,20 @@ class _TodoListWidgetState extends ConsumerState<TodoListWidget> {
             ),
             const SizedBox(width: 8),
             if (inProgressCount > 0)
-              _buildBadge('$inProgressCount 进行中', tokens.infoForeground),
+              _buildBadge(
+                l10n.todoBadgeInProgress(inProgressCount),
+                tokens.infoForeground,
+              ),
             if (pendingCount > 0)
-              _buildBadge('$pendingCount 待处理', tokens.mutedForeground),
+              _buildBadge(
+                l10n.todoBadgePending(pendingCount),
+                tokens.mutedForeground,
+              ),
             if (completedCount > 0)
-              _buildBadge('$completedCount 已完成', tokens.successForeground),
+              _buildBadge(
+                l10n.todoBadgeCompleted(completedCount),
+                tokens.successForeground,
+              ),
             const Spacer(),
             Icon(
               _expanded ? Icons.expand_less : Icons.expand_more,
@@ -247,17 +258,24 @@ class _TodoListWidgetState extends ConsumerState<TodoListWidget> {
   }
 
   _PriorityInfo _priorityInfo(String priority) {
+    final l10n = context.l10n;
     final tokens = context.tokens;
     switch (priority) {
       case 'high':
         return _PriorityInfo(
-          label: '高优',
+          label: l10n.todoPriorityHigh,
           color: Theme.of(context).colorScheme.error,
         );
       case 'medium':
-        return _PriorityInfo(label: '中', color: tokens.warningForeground);
+        return _PriorityInfo(
+          label: l10n.todoPriorityMedium,
+          color: tokens.warningForeground,
+        );
       default: // low
-        return _PriorityInfo(label: '低', color: tokens.mutedForeground);
+        return _PriorityInfo(
+          label: l10n.todoPriorityLow,
+          color: tokens.mutedForeground,
+        );
     }
   }
 }

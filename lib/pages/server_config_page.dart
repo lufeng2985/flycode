@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import '../l10n/l10n.dart';
 import '../providers/onboarding_provider.dart';
 import '../providers/server_config_provider.dart';
 import '../providers/provider_list_provider.dart';
@@ -63,26 +64,30 @@ class _ServerConfigPageState extends ConsumerState<ServerConfigPage> {
     super.dispose();
   }
 
-  String _humanizedConnectionError(Object error) {
+  String _humanizedConnectionError(BuildContext context, Object error) {
+    final l10n = context.l10n;
     if (error is ApiException) {
       if (error.statusCode == 401 || error.statusCode == 403) {
-        return '认证失败，请检查用户名或密码';
+        return l10n.serverConfigErrorAuthFailed;
       }
       if (error.statusCode >= 500) {
-        return '服务器异常（${error.statusCode}），请稍后重试';
+        return l10n.serverConfigErrorServer(error.statusCode);
       }
-      return '请求失败（${error.statusCode}）：${error.message}';
+      return l10n.serverConfigErrorRequestFailed(
+        error.statusCode,
+        error.message,
+      );
     }
     if (error is SocketException) {
-      return '无法连接到服务器，请检查地址和网络';
+      return l10n.serverConfigErrorCannotConnect;
     }
     if (error is http.ClientException) {
-      return '网络请求失败，请检查服务器地址';
+      return l10n.serverConfigErrorNetworkRequestFailed;
     }
     if (error is FormatException) {
-      return '服务器地址格式不正确';
+      return l10n.serverConfigErrorFormat;
     }
-    return '连接失败，请检查服务器配置';
+    return l10n.serverConfigErrorConnectionFailed;
   }
 
   Future<void> _testConnection() async {
@@ -105,14 +110,17 @@ class _ServerConfigPageState extends ConsumerState<ServerConfigPage> {
       if (mounted) {
         setState(() => _testPassed = true);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('连接成功'), backgroundColor: Colors.green),
+          SnackBar(
+            content: Text(context.l10n.serverConfigConnectionSuccess),
+            backgroundColor: Colors.green,
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(_humanizedConnectionError(e)),
+            content: Text(_humanizedConnectionError(context, e)),
             backgroundColor: Colors.red,
           ),
         );
@@ -127,9 +135,9 @@ class _ServerConfigPageState extends ConsumerState<ServerConfigPage> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     if (widget.onboardingMode && !_testPassed) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('请先测试连接并成功后再保存')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.serverConfigPleaseTestBeforeSave)),
+      );
       return;
     }
 
@@ -152,9 +160,9 @@ class _ServerConfigPageState extends ConsumerState<ServerConfigPage> {
     ref.invalidate(providerListProvider);
 
     if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('保存成功')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.serverConfigSaveSuccess)),
+      );
       if (widget.onboardingMode) {
         context.go('/');
       }
@@ -163,9 +171,14 @@ class _ServerConfigPageState extends ConsumerState<ServerConfigPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.onboardingMode ? '连接服务器' : '服务器配置'),
+        title: Text(
+          widget.onboardingMode
+              ? l10n.serverConfigConnectServer
+              : l10n.serverConfigTitle,
+        ),
         centerTitle: true,
         automaticallyImplyLeading: !widget.onboardingMode,
       ),
@@ -182,14 +195,14 @@ class _ServerConfigPageState extends ConsumerState<ServerConfigPage> {
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
                 ),
-                child: const Row(
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Icon(Icons.info_outline, size: 18, color: Colors.blue),
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        '首次使用请先连接服务器。建议先点击“测试连接”，再保存进入首页。',
+                        l10n.serverConfigOnboardingHint,
                         style: TextStyle(fontSize: 13, color: Colors.black87),
                       ),
                     ),
@@ -200,19 +213,19 @@ class _ServerConfigPageState extends ConsumerState<ServerConfigPage> {
             ],
             TextFormField(
               controller: _baseUrlController,
-              decoration: const InputDecoration(
-                labelText: '服务器地址',
-                hintText: 'http://localhost:4096',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.dns_outlined),
+              decoration: InputDecoration(
+                labelText: l10n.serverConfigServerAddress,
+                hintText: l10n.serverConfigServerAddressHint,
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.dns_outlined),
               ),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
-                  return '请输入服务器地址';
+                  return l10n.serverConfigValidationServerRequired;
                 }
                 final uri = Uri.tryParse(value.trim());
                 if (uri == null || !uri.hasScheme) {
-                  return '请输入有效的服务器地址';
+                  return l10n.serverConfigValidationServerInvalid;
                 }
                 return null;
               },
@@ -220,10 +233,10 @@ class _ServerConfigPageState extends ConsumerState<ServerConfigPage> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _usernameController,
-              decoration: const InputDecoration(
-                labelText: '用户名（可选）',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.person_outline),
+              decoration: InputDecoration(
+                labelText: l10n.serverConfigUsernameOptional,
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.person_outline),
               ),
             ),
             const SizedBox(height: 16),
@@ -231,7 +244,7 @@ class _ServerConfigPageState extends ConsumerState<ServerConfigPage> {
               controller: _passwordController,
               obscureText: _obscurePassword,
               decoration: InputDecoration(
-                labelText: '密码（可选）',
+                labelText: l10n.serverConfigPasswordOptional,
                 border: const OutlineInputBorder(),
                 prefixIcon: const Icon(Icons.lock_outline),
                 suffixIcon: IconButton(
@@ -259,7 +272,11 @@ class _ServerConfigPageState extends ConsumerState<ServerConfigPage> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.wifi_find_outlined),
-                    label: Text(_isTesting ? '测试中...' : '测试连接'),
+                    label: Text(
+                      _isTesting
+                          ? l10n.serverConfigTesting
+                          : l10n.serverConfigTestConnection,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -267,7 +284,11 @@ class _ServerConfigPageState extends ConsumerState<ServerConfigPage> {
                   child: FilledButton.icon(
                     onPressed: _save,
                     icon: const Icon(Icons.save_outlined),
-                    label: Text(widget.onboardingMode ? '保存并进入' : '保存'),
+                    label: Text(
+                      widget.onboardingMode
+                          ? l10n.serverConfigSaveAndEnter
+                          : l10n.serverConfigSave,
+                    ),
                   ),
                 ),
               ],

@@ -1,6 +1,9 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../l10n/l10n.dart';
 import '../providers/session_provider.dart';
 import '../service/api/session_api.dart';
 import '../providers/provider_list_provider.dart';
@@ -128,14 +131,15 @@ class SessionContextPage extends ConsumerWidget {
     final messagesAsync = ref.watch(sessionMessagesProvider(sessionID));
     final sessionsAsync = ref.watch(sessionsProvider);
     final providerListAsync = ref.watch(providerListProvider);
+    final l10n = context.l10n;
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: const Text(
-          '上下文',
+        title: Text(
+          l10n.sessionContextTitle,
           style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w600,
@@ -153,7 +157,8 @@ class SessionContextPage extends ConsumerWidget {
       ),
       body: messagesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('加载失败: $e')),
+        error: (e, _) =>
+            Center(child: Text(l10n.sessionContextLoadFailed(e.toString()))),
         data: (messages) {
           final sessions = sessionsAsync.asData?.value ?? const <Session>[];
           Session? session;
@@ -262,7 +267,7 @@ class _UsageSection extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '已使用',
+                      context.l10n.sessionContextUsed,
                       style: TextStyle(fontSize: 13, color: Colors.grey[500]),
                     ),
                   ],
@@ -275,14 +280,14 @@ class _UsageSection extends StatelessWidget {
             children: [
               Expanded(
                 child: _StatCell(
-                  label: '总 Token',
+                  label: context.l10n.sessionContextTotalTokens,
                   value: _formatNum(metrics.totalTokens),
                 ),
               ),
               _VerticalDivider(),
               Expanded(
                 child: _StatCell(
-                  label: '上下文限制',
+                  label: context.l10n.sessionContextLimit,
                   value: metrics.contextLimit != null
                       ? _formatNum(metrics.contextLimit!)
                       : '—',
@@ -290,7 +295,10 @@ class _UsageSection extends StatelessWidget {
               ),
               _VerticalDivider(),
               Expanded(
-                child: _StatCell(label: '总费用', value: metrics.costString),
+                child: _StatCell(
+                  label: context.l10n.sessionContextTotalCost,
+                  value: metrics.costString,
+                ),
               ),
             ],
           ),
@@ -373,8 +381,8 @@ class _SessionInfoCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            '会话信息',
+          Text(
+            context.l10n.sessionContextInfoTitle,
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w600,
@@ -383,26 +391,32 @@ class _SessionInfoCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           _InfoRow(
-            label: '提供商',
+            label: context.l10n.sessionContextProvider,
             value: metrics.providerID.isEmpty ? '—' : metrics.providerID,
           ),
           const Divider(height: 20),
           _InfoRow(
-            label: '模型',
+            label: context.l10n.sessionContextModel,
             value: metrics.modelID.isEmpty ? '—' : metrics.modelID,
           ),
           const Divider(height: 20),
-          _InfoRow(label: '用户消息', value: '${metrics.userMessageCount}'),
-          const Divider(height: 20),
-          _InfoRow(label: '助手消息', value: '${metrics.assistantMessageCount}'),
+          _InfoRow(
+            label: context.l10n.sessionContextUserMessages,
+            value: '${metrics.userMessageCount}',
+          ),
           const Divider(height: 20),
           _InfoRow(
-            label: '创建时间',
+            label: context.l10n.sessionContextAssistantMessages,
+            value: '${metrics.assistantMessageCount}',
+          ),
+          const Divider(height: 20),
+          _InfoRow(
+            label: context.l10n.sessionContextCreatedAt,
             value: session != null ? _formatTime(session!.time.created) : '—',
           ),
           const Divider(height: 20),
           _InfoRow(
-            label: '最后活动',
+            label: context.l10n.sessionContextLastActive,
             value: session != null ? _formatTime(session!.time.updated) : '—',
           ),
         ],

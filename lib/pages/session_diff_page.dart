@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../l10n/l10n.dart';
 import '../providers/session_provider.dart';
 import '../service/api/models/session.dart';
 
@@ -17,13 +18,14 @@ class SessionDiffPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final diffsAsync = ref.watch(sessionDiffProvider(sessionID));
 
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text(
-          '文件变更',
+        title: Text(
+          l10n.sessionDiffTitle,
           style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17),
         ),
         backgroundColor: Colors.white,
@@ -50,7 +52,7 @@ class SessionDiffPage extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  '加载失败',
+                  l10n.sessionDiffLoadFailed,
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
@@ -88,7 +90,7 @@ class SessionDiffPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    '暂无文件变更',
+                    l10n.sessionDiffEmptyTitle,
                     style: TextStyle(
                       color: Colors.grey[500],
                       fontSize: 15,
@@ -97,7 +99,7 @@ class SessionDiffPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '本次会话未产生任何文件改动',
+                    l10n.sessionDiffEmptySubtitle,
                     style: TextStyle(color: Colors.grey[400], fontSize: 13),
                   ),
                 ],
@@ -165,7 +167,7 @@ class _SummaryBar extends StatelessWidget {
           Icon(Icons.description_outlined, size: 14, color: Colors.grey[500]),
           const SizedBox(width: 4),
           Text(
-            '$fileCount 个文件',
+            context.l10n.sessionDiffFilesCount(fileCount),
             style: TextStyle(fontSize: 12, color: Colors.grey[600]),
           ),
           const SizedBox(width: 12),
@@ -278,7 +280,7 @@ class _FileDiffTile extends StatelessWidget {
             GestureDetector(
               onTap: () => context.push('/file', extra: diff.file),
               child: Tooltip(
-                message: '查看文件内容',
+                message: context.l10n.sessionDiffViewFileContent,
                 child: Container(
                   width: 28,
                   height: 28,
@@ -460,7 +462,7 @@ class _DiffView extends StatelessWidget {
           border: Border.all(color: Colors.grey[200]!),
         ),
         child: Text(
-          '（空文件）',
+          context.l10n.sessionDiffEmptyFile,
           style: TextStyle(
             fontSize: 12,
             color: Colors.grey[400],
@@ -505,7 +507,7 @@ class _CollapsedHintRow extends StatelessWidget {
       color: Colors.grey[50],
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       child: Text(
-        '── $count 行未变更 ──',
+        context.l10n.sessionDiffCollapsedLines(count),
         style: TextStyle(
           fontSize: 11,
           color: Colors.grey[400],

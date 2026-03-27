@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flycode/l10n/app_localizations.dart';
 
 enum AppThemeMode { system, light, dark }
 
@@ -14,14 +15,14 @@ extension AppThemeModeX on AppThemeMode {
     }
   }
 
-  String get label {
+  String label(AppLocalizations l10n) {
     switch (this) {
       case AppThemeMode.system:
-        return '跟随系统';
+        return l10n.themeModeSystem;
       case AppThemeMode.light:
-        return '浅色';
+        return l10n.themeModeLight;
       case AppThemeMode.dark:
-        return '深色';
+        return l10n.themeModeDark;
     }
   }
 

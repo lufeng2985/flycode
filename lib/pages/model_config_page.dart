@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/l10n.dart';
 import '../providers/model_config_provider.dart';
 import '../providers/provider_list_provider.dart';
 import '../service/api/models/provider.dart';
@@ -44,6 +45,7 @@ class _ModelConfigPageState extends ConsumerState<ModelConfigPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final providerListAsync = ref.watch(providerListProvider);
     final isRefreshing = providerListAsync.isLoading;
     final theme = Theme.of(context);
@@ -51,7 +53,7 @@ class _ModelConfigPageState extends ConsumerState<ModelConfigPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('模型配置'),
+        title: Text(l10n.modelConfigTitle),
         centerTitle: false,
         actions: [
           Padding(
@@ -73,14 +75,18 @@ class _ModelConfigPageState extends ConsumerState<ModelConfigPage> {
                             return;
                           }
                           messenger.showSnackBar(
-                            const SnackBar(content: Text('模型列表已刷新')),
+                            SnackBar(content: Text(l10n.modelConfigRefreshed)),
                           );
                         } catch (error) {
                           if (!mounted) {
                             return;
                           }
                           messenger.showSnackBar(
-                            SnackBar(content: Text('刷新失败: $error')),
+                            SnackBar(
+                              content: Text(
+                                l10n.modelConfigRefreshFailed(error.toString()),
+                              ),
+                            ),
                           );
                         }
                       },
@@ -103,7 +109,8 @@ class _ModelConfigPageState extends ConsumerState<ModelConfigPage> {
       body: providerListAsync.when(
         data: (providerList) => _buildContent(context, providerList),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => _ErrorState(message: '加载模型列表失败: $error'),
+        error: (error, _) =>
+            _ErrorState(message: l10n.modelConfigLoadFailed(error.toString())),
       ),
     );
   }
@@ -127,7 +134,7 @@ class _ModelConfigPageState extends ConsumerState<ModelConfigPage> {
           child: TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              hintText: '搜索 Provider 或模型',
+              hintText: context.l10n.modelConfigSearchHint,
               filled: true,
               fillColor: tokens.accent,
               prefixIcon: Icon(
@@ -184,8 +191,8 @@ class _ModelConfigPageState extends ConsumerState<ModelConfigPage> {
               if (visibleProviders.isEmpty) {
                 return _ErrorState(
                   message: connectedProviders.isEmpty
-                      ? '当前没有可用的 Provider'
-                      : '没有匹配的 Provider 或模型',
+                      ? context.l10n.modelConfigNoProvider
+                      : context.l10n.modelConfigNoMatch,
                 );
               }
 
@@ -271,7 +278,11 @@ class _ModelConfigPageState extends ConsumerState<ModelConfigPage> {
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, _) => _ErrorState(message: '加载配置失败: $error'),
+            error: (error, _) => _ErrorState(
+              message: context.l10n.modelConfigLoadConfigFailed(
+                error.toString(),
+              ),
+            ),
           ),
         ),
       ],
@@ -355,9 +366,13 @@ class _ModelConfigPageState extends ConsumerState<ModelConfigPage> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('批量更新失败: $error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            context.l10n.modelConfigBatchUpdateFailed(error.toString()),
+          ),
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -385,9 +400,11 @@ class _ModelConfigPageState extends ConsumerState<ModelConfigPage> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('更新失败: $error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.l10n.modelConfigUpdateFailed(error.toString())),
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -450,7 +467,10 @@ class _ProviderFilterChips extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 6),
       child: Row(
         children: [
-          chip(value: _ModelConfigPageState._filterAll, label: '全部'),
+          chip(
+            value: _ModelConfigPageState._filterAll,
+            label: context.l10n.commonAll,
+          ),
           for (final provider in providers) ...[
             const SizedBox(width: 8),
             chip(value: provider.id, label: provider.name),

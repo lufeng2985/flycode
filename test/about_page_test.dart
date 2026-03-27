@@ -1,17 +1,24 @@
 import 'package:flycode/pages/about_page.dart';
 import 'package:flycode/theme/app_theme.dart';
+import 'package:flycode/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   testWidgets('AboutPage renders key content', (WidgetTester tester) async {
     await tester.pumpWidget(
-      MaterialApp(theme: AppTheme.light(), home: const AboutPage()),
+      MaterialApp(
+        theme: AppTheme.light(),
+        locale: const Locale('zh'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        home: const AboutPage(),
+      ),
     );
 
     await tester.pumpAndSettle();
 
-    expect(find.text('关于 FlyCode'), findsOneWidget);
+    expect(find.text('关于'), findsOneWidget);
     expect(find.text('FlyCode'), findsOneWidget);
     expect(find.text('官网'), findsOneWidget);
     expect(find.text('GitHub'), findsOneWidget);

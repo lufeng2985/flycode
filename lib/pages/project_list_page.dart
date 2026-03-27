@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+import '../l10n/l10n.dart';
 import '../models/chat_route_args.dart';
 import '../service/api/models/project.dart';
 import '../service/api/api_client.dart';
@@ -32,15 +34,18 @@ Color? _parseColor(String? colorStr) {
   return null;
 }
 
-String _formatUpdatedTime(int timestampMs) {
+String _formatUpdatedTime(BuildContext context, int timestampMs) {
+  final l10n = context.l10n;
   final dt = DateTime.fromMillisecondsSinceEpoch(timestampMs);
   final now = DateTime.now();
   final diff = now.difference(dt);
 
-  if (diff.inMinutes < 1) return '刚刚';
-  if (diff.inMinutes < 60) return '${diff.inMinutes} 分钟前';
-  if (diff.inHours < 24) return '${diff.inHours} 小时前';
-  if (diff.inDays < 7) return '${diff.inDays} 天前';
+  if (diff.inMinutes < 1) return l10n.projectListUpdatedJustNow;
+  if (diff.inMinutes < 60) {
+    return l10n.projectListUpdatedMinutesAgo(diff.inMinutes);
+  }
+  if (diff.inHours < 24) return l10n.projectListUpdatedHoursAgo(diff.inHours);
+  if (diff.inDays < 7) return l10n.projectListUpdatedDaysAgo(diff.inDays);
 
   final y = dt.year;
   final m = dt.month.toString().padLeft(2, '0');
@@ -77,21 +82,22 @@ List<Project> _sortProjects(
   return sorted;
 }
 
-String _connectionErrorText(Object error) {
+String _connectionErrorText(BuildContext context, Object error) {
+  final l10n = context.l10n;
   if (error is ApiException) {
     if (error.statusCode == 401 || error.statusCode == 403) {
-      return '认证失败，请检查服务器账号和密码。';
+      return l10n.projectListErrorAuthFailed;
     }
     if (error.statusCode >= 500) {
-      return '服务器暂时不可用（${error.statusCode}）。';
+      return l10n.projectListErrorServerUnavailable(error.statusCode);
     }
-    return '请求失败（${error.statusCode}）：${error.message}';
+    return l10n.projectListErrorRequestFailed(error.statusCode, error.message);
   }
   final text = error.toString();
   if (text.contains('SocketException') || text.contains('ClientException')) {
-    return '无法连接到服务器，请检查地址或网络。';
+    return l10n.projectListErrorCannotConnect;
   }
-  return '加载项目失败，请检查服务器配置。';
+  return l10n.projectListErrorLoadFailed;
 }
 
 Future<void> _showProjectActionMenu(
@@ -122,7 +128,9 @@ Future<void> _showProjectActionMenu(
                 color: colorScheme.onSurface,
               ),
               title: Text(
-                isPinned ? '取消置顶' : '置顶',
+                isPinned
+                    ? context.l10n.projectListActionUnpin
+                    : context.l10n.projectListActionPin,
                 style: TextStyle(color: colorScheme.onSurface),
               ),
               onTap: () => Navigator.of(context).pop('toggle_pin'),
@@ -149,6 +157,7 @@ class ProjectListPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final colorScheme = Theme.of(context).colorScheme;
     final tokens = context.tokens;
     final projectsAsync = ref.watch(projectsProvider);
@@ -181,7 +190,7 @@ class ProjectListPage extends ConsumerWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Projects',
+                  l10n.projectListHeader,
                   style: TextStyle(
                     fontFamily: 'PlusJakartaSans',
                     fontSize: 28,
@@ -199,8 +208,8 @@ class ProjectListPage extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                child: const Text(
-                  '+ New',
+                child: Text(
+                  l10n.projectListNew,
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                 ),
               ),
@@ -241,14 +250,14 @@ class ProjectListPage extends ConsumerWidget {
                     color: tokens.mutedForeground.withValues(alpha: 0.55),
                   ),
                   const SizedBox(height: 12),
-                  const Text(
-                    '暂时无法加载项目',
+                  Text(
+                    l10n.projectListLoadFailedTitle,
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    _connectionErrorText(error),
+                    _connectionErrorText(context, error),
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 13,
@@ -259,7 +268,7 @@ class ProjectListPage extends ConsumerWidget {
                   FilledButton.icon(
                     onPressed: openServerConfigPage,
                     icon: const Icon(Icons.settings_ethernet),
-                    label: const Text('去配置服务器'),
+                    label: Text(l10n.projectListGoConfigureServer),
                   ),
                   const SizedBox(height: 10),
                   OutlinedButton.icon(
@@ -268,7 +277,7 @@ class ProjectListPage extends ConsumerWidget {
                       ref.invalidate(projectPinsProvider);
                     },
                     icon: const Icon(Icons.refresh),
-                    label: const Text('重试加载'),
+                    label: Text(l10n.projectListRetryLoad),
                   ),
                 ],
               ),
@@ -322,7 +331,7 @@ class ProjectListPage extends ConsumerWidget {
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
-                                  '暂无项目',
+                                  l10n.projectListEmpty,
                                   style: TextStyle(
                                     color: tokens.mutedForeground,
                                     fontSize: 15,
@@ -331,7 +340,7 @@ class ProjectListPage extends ConsumerWidget {
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
-                                  '请先添加一个项目',
+                                  l10n.projectListPleaseAddProject,
                                   style: TextStyle(
                                     color: tokens.mutedForeground.withValues(
                                       alpha: 0.8,
@@ -345,7 +354,9 @@ class ProjectListPage extends ConsumerWidget {
                                   icon: const Icon(
                                     Icons.settings_ethernet_outlined,
                                   ),
-                                  label: const Text('检查服务器配置'),
+                                  label: Text(
+                                    l10n.projectListCheckServerConfig,
+                                  ),
                                 ),
                               ],
                             ),
@@ -377,6 +388,7 @@ class ProjectListPage extends ConsumerWidget {
                         );
                         final displayName = _projectDisplayName(project);
                         final updatedText = _formatUpdatedTime(
+                          context,
                           project.time.updated,
                         );
                         final iconColor =

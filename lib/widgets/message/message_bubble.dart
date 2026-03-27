@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../l10n/l10n.dart';
 import '../../providers/provider_list_provider.dart';
 import '../../service/api/models/provider.dart';
 import '../../service/api/models/message.dart';
@@ -365,7 +366,7 @@ class _CopyButton extends StatelessWidget {
                   Icon(Icons.check, size: 14, color: tokens.successForeground),
                   SizedBox(width: 4),
                   Text(
-                    'Copied',
+                    context.l10n.messageCopied,
                     style: TextStyle(
                       color: tokens.successForeground,
                       fontSize: 12,
@@ -384,7 +385,7 @@ class _CopyButton extends StatelessWidget {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    'Copy',
+                    context.l10n.messageCopy,
                     style: TextStyle(
                       color: tokens.mutedForeground,
                       fontSize: 12,

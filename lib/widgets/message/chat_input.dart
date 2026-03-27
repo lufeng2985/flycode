@@ -8,6 +8,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:clipboard/clipboard.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mime/mime.dart';
+
+import '../../l10n/l10n.dart';
 import '../../service/api/session_api.dart';
 import '../../service/api/command_api.dart';
 import '../../service/api/file_api.dart';
@@ -486,9 +488,11 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       });
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('选择图片失败: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.l10n.chatInputPickImageFailed(e.toString())),
+        ),
+      );
     }
   }
 
@@ -592,9 +596,11 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.l10n.chatInputSendError(e.toString())),
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -618,9 +624,11 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     } catch (e) {
       if (mounted) {
         setState(() => _isAborting = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('中断失败: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.l10n.chatInputAbortFailed(e.toString())),
+          ),
+        );
       }
     }
   }
@@ -974,7 +982,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                         fontFamily: isShellMode ? 'monospace' : null,
                       ),
                       decoration: InputDecoration(
-                        hintText: isShellMode ? '输入 shell 命令...' : '随便问点什么...',
+                        hintText: isShellMode
+                            ? context.l10n.chatInputShellHint
+                            : context.l10n.chatInputAskHint,
                         hintStyle: TextStyle(
                           color: tokens.mutedForeground,
                           fontSize: 14,
@@ -1508,7 +1518,7 @@ class _SessionHistorySheet extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      '会话历史',
+                      context.l10n.chatInputSessionHistory,
                       style: TextStyle(
                         fontFamily: 'Plus Jakarta Sans',
                         fontSize: 20,
@@ -1548,7 +1558,7 @@ class _SessionHistorySheet extends ConsumerWidget {
                   if (sessions.isEmpty) {
                     return Center(
                       child: Text(
-                        '暂无会话',
+                        context.l10n.chatInputNoSessions,
                         style: TextStyle(color: tokens.mutedForeground),
                       ),
                     );
@@ -1573,7 +1583,7 @@ class _SessionHistorySheet extends ConsumerWidget {
                               bottom: 8,
                             ),
                             child: Text(
-                              _formatDateHeaderForHistory(date),
+                              _formatDateHeaderForHistory(context, date),
                               style: TextStyle(
                                 fontFamily: 'Inter',
                                 fontSize: 12,
@@ -1634,6 +1644,7 @@ class _SessionHistorySheet extends ConsumerWidget {
                                               const SizedBox(height: 2),
                                               Text(
                                                 _formatUpdatedTimeForHistory(
+                                                  context,
                                                   session.updatedAt,
                                                 ),
                                                 maxLines: 1,
@@ -1699,7 +1710,7 @@ String _getDateKeyForHistory(int? timestamp) {
   return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 }
 
-String _formatDateHeaderForHistory(String dateKey) {
+String _formatDateHeaderForHistory(BuildContext context, String dateKey) {
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
   final yesterday = today.subtract(const Duration(days: 1));
@@ -1715,28 +1726,32 @@ String _formatDateHeaderForHistory(String dateKey) {
   }
 
   final date = parseDate(dateKey);
-  if (date == today) return '今天';
-  if (date == yesterday) return '昨天';
+  if (date == today) return context.l10n.chatInputToday;
+  if (date == yesterday) return context.l10n.chatInputYesterday;
 
   final parts = dateKey.split('-');
   if (parts.length < 3) return dateKey;
 
   final month = int.tryParse(parts[1]) ?? 1;
   final day = int.tryParse(parts[2]) ?? 1;
-  return '$month月$day日';
+  return context.l10n.chatInputMonthDay(month, day);
 }
 
-String _formatUpdatedTimeForHistory(int? timestampMs) {
-  if (timestampMs == null || timestampMs == 0) return '刚刚';
+String _formatUpdatedTimeForHistory(BuildContext context, int? timestampMs) {
+  if (timestampMs == null || timestampMs == 0) {
+    return context.l10n.chatInputJustNow;
+  }
 
   final dt = DateTime.fromMillisecondsSinceEpoch(timestampMs);
   final now = DateTime.now();
   final diff = now.difference(dt);
 
-  if (diff.inMinutes < 1) return '刚刚';
-  if (diff.inMinutes < 60) return '${diff.inMinutes} 分钟前';
-  if (diff.inHours < 24) return '${diff.inHours} 小时前';
-  if (diff.inDays < 7) return '${diff.inDays} 天前';
+  if (diff.inMinutes < 1) return context.l10n.chatInputJustNow;
+  if (diff.inMinutes < 60) {
+    return context.l10n.chatInputMinutesAgo(diff.inMinutes);
+  }
+  if (diff.inHours < 24) return context.l10n.chatInputHoursAgo(diff.inHours);
+  if (diff.inDays < 7) return context.l10n.chatInputDaysAgo(diff.inDays);
 
   final y = dt.year;
   final m = dt.month.toString().padLeft(2, '0');
@@ -1798,7 +1813,7 @@ class _VariantSelectionSheet extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      '选择变体',
+                      context.l10n.chatInputSelectVariant,
                       style: TextStyle(
                         fontFamily: 'Plus Jakarta Sans',
                         fontSize: 20,
@@ -1996,7 +2011,7 @@ class _AgentSelectionSheet extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
               child: Text(
-                '选择 Agent',
+                context.l10n.chatInputSelectAgent,
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),

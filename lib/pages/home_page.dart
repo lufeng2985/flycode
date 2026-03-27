@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../l10n/l10n.dart';
 import '../models/chat_route_args.dart';
 import '../providers/chat_view_state_provider.dart';
 import '../providers/current_directory_provider.dart';
@@ -86,6 +87,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final tokens = context.tokens;
 
     ref.watch(globalEventListenerProvider);
@@ -124,7 +126,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
             ),
             const SizedBox(height: 16),
             Text(
-              '开始一段新会话',
+              l10n.homeNewSessionTitle,
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
@@ -133,7 +135,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
             ),
             const SizedBox(height: 8),
             Text(
-              '在下方输入消息，发送后将自动创建会话',
+              l10n.homeNewSessionSubtitle,
               style: TextStyle(
                 fontSize: 13,
                 color: tokens.mutedForeground.withValues(alpha: 0.8),
@@ -157,13 +159,13 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
             if (selectedSession != null) ...[
               _HeaderActionButton(
                 icon: Icons.difference_outlined,
-                tooltip: '文件变更',
+                tooltip: l10n.homeTooltipFileDiff,
                 onTap: () => context.push('/diff', extra: selectedSession!.id),
               ),
               const SizedBox(width: 8),
               _HeaderActionButton(
                 icon: Icons.info_outline,
-                tooltip: '上下文',
+                tooltip: l10n.homeTooltipContext,
                 onTap: () => context.push(
                   '/session-context',
                   extra: selectedSession!.id,
@@ -202,7 +204,9 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
                   ? const Center(child: CircularProgressIndicator())
                   : sessionsAsync.when(
                       data: (sessions) {
-                        final text = sessions.isEmpty ? '暂无会话' : '请选择一个会话';
+                        final text = sessions.isEmpty
+                            ? l10n.homeNoSession
+                            : l10n.homeSelectSession;
                         return Center(
                           child: Text(
                             text,

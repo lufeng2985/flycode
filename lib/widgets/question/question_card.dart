@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../l10n/l10n.dart';
 import '../../providers/current_directory_provider.dart';
 import '../../providers/question_provider.dart';
 import '../../service/api/models/question.dart';
@@ -141,6 +143,7 @@ class _QuestionRequestCardState extends ConsumerState<QuestionRequestCard> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final question = _currentQuestion;
     final total = widget.request.questions.length;
     final isMultiple = question.multiple ?? false;
@@ -199,7 +202,9 @@ class _QuestionRequestCardState extends ConsumerState<QuestionRequestCard> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
-              isMultiple ? '选择一个或多个答案' : '选择一个答案',
+              isMultiple
+                  ? l10n.questionCardSelectOneOrMore
+                  : l10n.questionCardSelectOne,
               style: TextStyle(fontSize: 13, color: Colors.grey[500]),
             ),
           ),
@@ -227,7 +232,10 @@ class _QuestionRequestCardState extends ConsumerState<QuestionRequestCard> {
                     minimumSize: const Size(0, 36),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  child: const Text('忽略', style: TextStyle(fontSize: 14)),
+                  child: Text(
+                    l10n.questionCardIgnore,
+                    style: const TextStyle(fontSize: 14),
+                  ),
                 ),
                 if (_canGoBack) ...[
                   const Spacer(),
@@ -239,7 +247,10 @@ class _QuestionRequestCardState extends ConsumerState<QuestionRequestCard> {
                       minimumSize: const Size(0, 36),
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
-                    child: const Text('上一步', style: TextStyle(fontSize: 14)),
+                    child: Text(
+                      l10n.questionCardPrevious,
+                      style: const TextStyle(fontSize: 14),
+                    ),
                   ),
                 ],
                 const Spacer(),
@@ -256,7 +267,9 @@ class _QuestionRequestCardState extends ConsumerState<QuestionRequestCard> {
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                   ),
                   child: Text(
-                    _isLastQuestion ? '提交' : '下一步',
+                    _isLastQuestion
+                        ? l10n.questionCardSubmit
+                        : l10n.questionCardNext,
                     style: const TextStyle(fontSize: 14),
                   ),
                 ),
@@ -456,7 +469,7 @@ class _CustomInputTileState extends State<_CustomInputTile> {
                 onChanged: widget.onChanged,
                 style: const TextStyle(fontSize: 14, color: Colors.black87),
                 decoration: InputDecoration(
-                  hintText: '输入你的答案...',
+                  hintText: context.l10n.questionCardCustomAnswerHint,
                   hintStyle: TextStyle(fontSize: 14, color: Colors.grey[400]),
                   isDense: true,
                   border: InputBorder.none,
