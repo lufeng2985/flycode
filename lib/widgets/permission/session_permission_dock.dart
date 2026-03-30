@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../l10n/l10n.dart';
 import '../../providers/permission_provider.dart';
 import '../../service/api/models/permission.dart';
+import '../../theme/app_tokens.dart';
 
 class SessionPermissionDock extends ConsumerWidget {
   const SessionPermissionDock({super.key, required this.request});
@@ -12,6 +13,10 @@ class SessionPermissionDock extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final tokens = context.tokens;
+    final textTheme = theme.textTheme;
+    final colorScheme = theme.colorScheme;
     ref.watch(pendingPermissionsProvider);
     final notifier = ref.read(pendingPermissionsProvider.notifier);
     final responding = notifier.isResponding(request.id);
@@ -28,19 +33,12 @@ class SessionPermissionDock extends ConsumerWidget {
     }
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      margin: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey[300]!),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(tokens.radiusM),
+        border: Border.all(color: tokens.border.withValues(alpha: 0.7)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -48,59 +46,98 @@ class SessionPermissionDock extends ConsumerWidget {
         children: [
           Row(
             children: [
-              const Icon(
-                Icons.shield_outlined,
-                size: 18,
-                color: Colors.black87,
-              ),
+              const Icon(Icons.shield_outlined, size: 20),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   l10n.permissionDockTitle,
-                  style: TextStyle(
-                    fontSize: 14,
+                  style: textTheme.titleMedium?.copyWith(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 17,
                     fontWeight: FontWeight.w700,
-                    color: Colors.grey[900],
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Text(
             '${request.permission} · ${request.patterns.join(', ')}',
-            style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: textTheme.bodySmall?.copyWith(
+              fontSize: 12,
+              color: tokens.mutedForeground,
+              fontWeight: FontWeight.w500,
+            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           Row(
             children: [
               Expanded(
+                flex: 47,
                 child: OutlinedButton(
                   onPressed: responding
                       ? null
                       : () => decide(PermissionReplyAction.reject),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red[700],
-                    side: BorderSide(color: Colors.red[200]!),
+                    minimumSize: const Size.fromHeight(40),
+                    foregroundColor: const Color(0xFFDC2626),
+                    backgroundColor: colorScheme.surface,
+                    side: const BorderSide(color: Color(0xFFFCA5A5)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    textStyle: textTheme.labelLarge?.copyWith(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   child: Text(l10n.permissionDockDeny),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 12),
               Expanded(
-                child: FilledButton.tonal(
-                  onPressed: responding
-                      ? null
-                      : () => decide(PermissionReplyAction.always),
-                  child: Text(l10n.permissionDockAllowAlways),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
+                flex: 55,
                 child: FilledButton(
                   onPressed: responding
                       ? null
+                      : () => decide(PermissionReplyAction.always),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(40),
+                    backgroundColor: colorScheme.primary,
+                    foregroundColor: colorScheme.onPrimary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    textStyle: textTheme.labelLarge?.copyWith(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  child: Text(l10n.permissionDockAllowAlways),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 47,
+                child: OutlinedButton(
+                  onPressed: responding
+                      ? null
                       : () => decide(PermissionReplyAction.once),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(40),
+                    foregroundColor: const Color(0xFF7C3AED),
+                    backgroundColor: colorScheme.surface,
+                    side: const BorderSide(color: Color(0xFFC4B5FD)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    textStyle: textTheme.labelLarge?.copyWith(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   child: Text(l10n.permissionDockAllowOnce),
                 ),
               ),
