@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../service/api/models/parts.dart';
+import 'diff_view.dart';
 import 'tool_meta.dart';
 
 const double _kToolPanelMaxHeight = 220;
@@ -129,6 +130,26 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
     );
   }
 
+  /// Returns all files from apply_patch metadata as a list of maps.
+  List<Map<String, dynamic>> get _applyPatchFiles {
+    if (_part.tool != 'apply_patch') return [];
+    final state = _part.state;
+    Map<String, dynamic>? metadata;
+    if (state is ToolStateCompleted) {
+      metadata = state.metadata;
+    } else if (state is ToolStateRunning) {
+      metadata = state.metadata;
+    } else if (state is ToolStateError) {
+      metadata = state.metadata;
+    }
+    final rawFiles = metadata?['files'];
+    if (rawFiles is! List) return [];
+    return rawFiles
+        .whereType<Map>()
+        .map((e) => e.map((k, v) => MapEntry(k.toString(), v)))
+        .toList();
+  }
+
   String? _toNonEmptyString(dynamic value) {
     if (value == null) return null;
     final text = value.toString().trim();
@@ -161,10 +182,10 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
     if (_isActive || _isError) return false;
     final meta = toolMetaOf(_part.tool);
     if (!meta.hasExpandableContent) return false;
-    // bash needs output or command
     if (_part.tool == 'bash') return true;
-    // edit/write always show file path
-    if (_part.tool == 'edit' || _part.tool == 'write') return true;
+    if (_part.tool == 'edit') return true;
+    if (_part.tool == 'write') return true;
+    if (_part.tool == 'apply_patch') return _applyPatchFiles.isNotEmpty;
     return false;
   }
 
@@ -457,8 +478,15 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
             output: _output,
             running: _isRunning,
           )
-        else if (_part.tool == 'edit' || _part.tool == 'write')
+        else if (_part.tool == 'edit')
+          _EditDiffPanel(
+            oldString: _input['oldString']?.toString() ?? '',
+            newString: _input['newString']?.toString() ?? '',
+          )
+        else if (_part.tool == 'write')
           _FilePathPanel(filePath: _input['filePath']?.toString() ?? '')
+        else if (_part.tool == 'apply_patch')
+          _PatchDiffPanel(files: _applyPatchFiles)
         else
           const SizedBox.shrink(),
       ],
@@ -577,7 +605,90 @@ class _BashOutputPanel extends StatelessWidget {
   }
 }
 
-// ─── File path panel (edit / write) ──────────────────────────────────────────
+// ─── Edit diff panel ─────────────────────────────────────────────────────────
+
+class _EditDiffPanel extends StatelessWidget {
+  final String oldString;
+  final String newString;
+
+  const _EditDiffPanel({required this.oldString, required this.newString});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 8),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxHeight: _kToolPanelMaxHeight),
+        child: SingleChildScrollView(
+          child: DiffView(before: oldString, after: newString),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Patch diff panel (apply_patch) ──────────────────────────────────────────
+
+class _PatchDiffPanel extends StatelessWidget {
+  final List<Map<String, dynamic>> files;
+
+  const _PatchDiffPanel({required this.files});
+
+  String _fileName(String? path) {
+    if (path == null || path.isEmpty) return '';
+    final normalized = path.replaceAll('\\', '/');
+    final parts = normalized.split('/');
+    return parts.lastWhere((p) => p.isNotEmpty, orElse: () => normalized);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (files.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 8),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxHeight: _kToolPanelMaxHeight),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: files.map((file) {
+              final before = file['before']?.toString() ?? '';
+              final after = file['after']?.toString() ?? '';
+              final relativePath = file['relativePath']?.toString();
+              final filePath = file['filePath']?.toString();
+              final path = (relativePath?.isNotEmpty == true)
+                  ? relativePath!
+                  : filePath ?? '';
+              final fileName = _fileName(path);
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (fileName.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        fileName,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey[500],
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                    ),
+                  DiffView(before: before, after: after),
+                  if (file != files.last) const SizedBox(height: 8),
+                ],
+              );
+            }).toList(),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── File path panel (write) ──────────────────────────────────────────────────
 
 class _FilePathPanel extends StatelessWidget {
   final String filePath;

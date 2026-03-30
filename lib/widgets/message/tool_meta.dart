@@ -119,7 +119,7 @@ final _toolMetaMap = <String, ToolMeta>{
       return null;
     },
     getArgs: (input) => [],
-    hasExpandableContent: false,
+    hasExpandableContent: true,
   ),
   'task': ToolMeta(
     displayName: 'Task',

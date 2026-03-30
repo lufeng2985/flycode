@@ -39,7 +39,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTheme => 'Theme';
 
   @override
-  String get settingsSessionCompletionNotification => 'Session completion notifications';
+  String get settingsSessionCompletionNotification =>
+      'Session completion notifications';
 
   @override
   String get settingsSectionConnectionModel => 'Connection & Models';
@@ -69,16 +70,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get themeModeDark => 'Dark';
 
   @override
-  String get sessionCompletionNotificationTitle => 'Session completion notifications';
+  String get sessionCompletionNotificationTitle =>
+      'Session completion notifications';
 
   @override
   String get sessionCompletionNotificationModeNone => 'Never';
 
   @override
-  String get sessionCompletionNotificationModeBackgroundOnly => 'Only when app is in background';
+  String get sessionCompletionNotificationModeBackgroundOnly =>
+      'Only when app is in background';
 
   @override
-  String get sessionCompletionNotificationModeAlways => 'Also when app is in foreground';
+  String get sessionCompletionNotificationModeAlways =>
+      'Also when app is in foreground';
 
   @override
   String get mainTabProjects => 'PROJECTS';
@@ -93,7 +97,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get serverConfigTitle => 'Server Configuration';
 
   @override
-  String get serverConfigOnboardingHint => 'Please connect to a server on first launch. We recommend testing the connection before saving.';
+  String get serverConfigOnboardingHint =>
+      'Please connect to a server on first launch. We recommend testing the connection before saving.';
 
   @override
   String get serverConfigServerAddress => 'Server URL';
@@ -108,7 +113,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get serverConfigPasswordOptional => 'Password (optional)';
 
   @override
-  String get serverConfigPleaseTestBeforeSave => 'Please test the connection successfully before saving.';
+  String get serverConfigPleaseTestBeforeSave =>
+      'Please test the connection successfully before saving.';
 
   @override
   String get serverConfigConnectionSuccess => 'Connection successful';
@@ -132,10 +138,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get serverConfigValidationServerRequired => 'Please enter server URL';
 
   @override
-  String get serverConfigValidationServerInvalid => 'Please enter a valid server URL';
+  String get serverConfigValidationServerInvalid =>
+      'Please enter a valid server URL';
 
   @override
-  String get serverConfigErrorAuthFailed => 'Authentication failed. Please check your username or password.';
+  String get serverConfigErrorAuthFailed =>
+      'Authentication failed. Please check your username or password.';
 
   @override
   String serverConfigErrorServer(int statusCode) {
@@ -148,22 +156,26 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get serverConfigErrorCannotConnect => 'Unable to connect to server. Please check URL and network.';
+  String get serverConfigErrorCannotConnect =>
+      'Unable to connect to server. Please check URL and network.';
 
   @override
-  String get serverConfigErrorNetworkRequestFailed => 'Network request failed. Please check server URL.';
+  String get serverConfigErrorNetworkRequestFailed =>
+      'Network request failed. Please check server URL.';
 
   @override
   String get serverConfigErrorFormat => 'Invalid server URL format';
 
   @override
-  String get serverConfigErrorConnectionFailed => 'Connection failed. Please check server configuration.';
+  String get serverConfigErrorConnectionFailed =>
+      'Connection failed. Please check server configuration.';
 
   @override
   String get aboutTitle => 'About';
 
   @override
-  String get aboutHeroDescription => 'Keep coding within reach. Continue your projects and conversations from your phone.';
+  String get aboutHeroDescription =>
+      'Keep coding within reach. Continue your projects and conversations from your phone.';
 
   @override
   String get aboutSectionProductInfo => 'Product';
@@ -235,7 +247,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get projectListErrorAuthFailed => 'Authentication failed. Please check server credentials.';
+  String get projectListErrorAuthFailed =>
+      'Authentication failed. Please check server credentials.';
 
   @override
   String projectListErrorServerUnavailable(int statusCode) {
@@ -248,16 +261,19 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get projectListErrorCannotConnect => 'Unable to connect to server. Please check URL or network.';
+  String get projectListErrorCannotConnect =>
+      'Unable to connect to server. Please check URL or network.';
 
   @override
-  String get projectListErrorLoadFailed => 'Failed to load projects. Please check server configuration.';
+  String get projectListErrorLoadFailed =>
+      'Failed to load projects. Please check server configuration.';
 
   @override
   String get homeNewSessionTitle => 'Start a new session';
 
   @override
-  String get homeNewSessionSubtitle => 'Type a message below. A session will be created automatically after sending.';
+  String get homeNewSessionSubtitle =>
+      'Type a message below. A session will be created automatically after sending.';
 
   @override
   String get homeTooltipFileDiff => 'File changes';
@@ -368,7 +384,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sessionDiffEmptyTitle => 'No file changes';
 
   @override
-  String get sessionDiffEmptySubtitle => 'No file changes were produced in this session';
+  String get sessionDiffEmptySubtitle =>
+      'No file changes were produced in this session';
 
   @override
   String sessionDiffFilesCount(int count) {
@@ -401,7 +418,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get fileContentPreviewUnsupported => 'Preview is not available for this file';
+  String get fileContentPreviewUnsupported =>
+      'Preview is not available for this file';
 
   @override
   String get fileContentBinary => 'Binary file';
@@ -415,7 +433,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get openProjectTitle => 'Open Project';
 
   @override
-  String get openProjectInputHint => 'Enter directory name or path (e.g. ~/projects)';
+  String get openProjectInputHint =>
+      'Enter directory name or path (e.g. ~/projects)';
 
   @override
   String get openProjectErrorResolveHome => 'Unable to resolve home directory';
@@ -429,7 +448,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get openProjectPlaceholderSearch => 'Search by directory name';
 
   @override
-  String get openProjectPlaceholderPathSupport => 'Path navigation supported: ~/projects/myapp';
+  String get openProjectPlaceholderPathSupport =>
+      'Path navigation supported: ~/projects/myapp';
 
   @override
   String get openProjectNoMatch => 'No matching directories';
@@ -551,7 +571,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get modelSelectionNoConnectedProviders => 'No connected model providers';
+  String get modelSelectionNoConnectedProviders =>
+      'No connected model providers';
 
   @override
   String get modelSelectionNoModels => 'No available models';
@@ -560,7 +581,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get modelSelectionNoMatchedModels => 'No matching models';
 
   @override
-  String get modelSelectionNoModelsUnderProvider => 'No available models under this provider';
+  String get modelSelectionNoModelsUnderProvider =>
+      'No available models under this provider';
 
   @override
   String get modelSelectionFavorited => 'Favorited';
@@ -607,5 +629,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get sessionCompletedNotificationBodyWithoutTitle => 'A session has completed';
+  String get sessionCompletedNotificationBodyWithoutTitle =>
+      'A session has completed';
 }
