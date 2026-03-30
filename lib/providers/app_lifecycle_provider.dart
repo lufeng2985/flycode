@@ -8,7 +8,9 @@ final appLifecycleStateProvider =
 
 class AppLifecycleStateNotifier extends Notifier<AppLifecycleState> {
   @override
-  AppLifecycleState build() => AppLifecycleState.resumed;
+  AppLifecycleState build() {
+    return WidgetsBinding.instance.lifecycleState ?? AppLifecycleState.resumed;
+  }
 
   void setState(AppLifecycleState next) {
     if (state == next) return;

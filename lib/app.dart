@@ -32,11 +32,6 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    final initialState = WidgetsBinding.instance.lifecycleState;
-    if (initialState != null) {
-      ref.read(appLifecycleStateProvider.notifier).setState(initialState);
-    }
-
     unawaited(_ensureNotificationPermissionOnStartup());
   }
 

@@ -5,6 +5,7 @@ import '../../l10n/l10n.dart';
 import '../../providers/current_directory_provider.dart';
 import '../../providers/question_provider.dart';
 import '../../service/api/models/question.dart';
+import '../../theme/app_tokens.dart';
 
 /// Displays all pending questions for the current session as a step-by-step
 /// card overlay at the bottom of the chat view.
@@ -53,12 +54,16 @@ class _QuestionRequestCardState extends ConsumerState<QuestionRequestCard> {
   // custom text controllers, one per question
   late final List<TextEditingController> _customControllers;
 
+  // whether custom answer is currently selected for each question
+  late final List<bool> _customSelected;
+
   @override
   void initState() {
     super.initState();
     final count = widget.request.questions.length;
     _answers = List.generate(count, (_) => []);
     _customControllers = List.generate(count, (_) => TextEditingController());
+    _customSelected = List.generate(count, (_) => false);
   }
 
   @override
@@ -81,13 +86,17 @@ class _QuestionRequestCardState extends ConsumerState<QuestionRequestCard> {
     final hasCustomInput = _customControllers[_currentIndex].text
         .trim()
         .isNotEmpty;
-    return selected.isNotEmpty || hasCustomInput;
+    final hasSelectedCustom = _customSelected[_currentIndex] && hasCustomInput;
+    return selected.isNotEmpty || hasSelectedCustom;
   }
 
   void _toggleOption(String label) {
     final current = _answers[_currentIndex];
     final question = _currentQuestion;
     final isMultiple = question.multiple ?? false;
+    if (!isMultiple) {
+      FocusScope.of(context).unfocus();
+    }
 
     setState(() {
       if (isMultiple) {
@@ -97,8 +106,30 @@ class _QuestionRequestCardState extends ConsumerState<QuestionRequestCard> {
           _answers[_currentIndex] = [...current, label];
         }
       } else {
-        _answers[_currentIndex] = current.contains(label) ? [] : [label];
+        _customSelected[_currentIndex] = false;
+        _answers[_currentIndex] = [label];
       }
+    });
+  }
+
+  void _selectCustomAnswer() {
+    final isMultiple = _currentQuestion.multiple ?? false;
+    setState(() {
+      if (!isMultiple) {
+        _answers[_currentIndex] = [];
+      }
+      _customSelected[_currentIndex] = true;
+    });
+  }
+
+  void _toggleCustomAnswer() {
+    final isMultiple = _currentQuestion.multiple ?? false;
+    if (!isMultiple) {
+      _selectCustomAnswer();
+      return;
+    }
+    setState(() {
+      _customSelected[_currentIndex] = !_customSelected[_currentIndex];
     });
   }
 
@@ -111,13 +142,6 @@ class _QuestionRequestCardState extends ConsumerState<QuestionRequestCard> {
   }
 
   Future<void> _onNext() async {
-    // Collect custom input if provided
-    final customText = _customControllers[_currentIndex].text.trim();
-    if (customText.isNotEmpty &&
-        !_answers[_currentIndex].contains(customText)) {
-      _answers[_currentIndex] = [..._answers[_currentIndex], customText];
-    }
-
     if (_isLastQuestion) {
       await _submit();
     } else {
@@ -129,9 +153,20 @@ class _QuestionRequestCardState extends ConsumerState<QuestionRequestCard> {
 
   Future<void> _submit() async {
     final directory = ref.read(currentDirectoryProvider);
+    final answers = List.generate(widget.request.questions.length, (i) {
+      final merged = List<String>.from(_answers[i]);
+      final customText = _customControllers[i].text.trim();
+      if (_customSelected[i] &&
+          customText.isNotEmpty &&
+          !merged.contains(customText)) {
+        merged.add(customText);
+      }
+      return merged;
+    });
+
     await ref
         .read(pendingQuestionsProvider.notifier)
-        .reply(widget.request.id, answers: _answers, directory: directory);
+        .reply(widget.request.id, answers: answers, directory: directory);
   }
 
   Future<void> _reject() async {
@@ -144,6 +179,9 @@ class _QuestionRequestCardState extends ConsumerState<QuestionRequestCard> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final tokens = context.tokens;
     final question = _currentQuestion;
     final total = widget.request.questions.length;
     final isMultiple = question.multiple ?? false;
@@ -152,141 +190,159 @@ class _QuestionRequestCardState extends ConsumerState<QuestionRequestCard> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 2),
-          ),
-        ],
-        border: Border.all(color: Colors.grey[200]!),
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: tokens.border),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Header: step indicator
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-            child: Row(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
               children: [
                 Text(
-                  '${_currentIndex + 1} of $total question${total > 1 ? 's' : ''}',
-                  style: const TextStyle(
+                  'Question ${_currentIndex + 1} / $total',
+                  style: textTheme.labelLarge?.copyWith(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: Colors.black87,
+                    color: tokens.accentForeground,
                   ),
                 ),
                 const Spacer(),
-                _StepDots(total: total, current: _currentIndex),
+                _StepDots(
+                  total: total,
+                  current: _currentIndex,
+                  activeColor: colorScheme.primary,
+                  inactiveColor: tokens.border,
+                ),
               ],
             ),
-          ),
-          const SizedBox(height: 12),
-          // Question text
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
+            const SizedBox(height: 12),
+            Text(
               question.question,
-              style: const TextStyle(
+              style: textTheme.titleMedium?.copyWith(
+                fontFamily: 'PlusJakartaSans',
                 fontSize: 15,
-                fontWeight: FontWeight.w500,
-                color: Colors.black87,
+                height: 1.2,
+                fontWeight: FontWeight.w700,
+                color: colorScheme.onSurface,
               ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
+            const SizedBox(height: 8),
+            Text(
               isMultiple
                   ? l10n.questionCardSelectOneOrMore
                   : l10n.questionCardSelectOne,
-              style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+              style: textTheme.labelMedium?.copyWith(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: tokens.mutedForeground,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          // Options list
-          _OptionsList(
-            question: question,
-            selected: _answers[_currentIndex],
-            customController: _customControllers[_currentIndex],
-            onToggle: _toggleOption,
-            hasCustom: hasCustom,
-            onCustomChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: 8),
-          // Footer: ignore / previous / next
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-            child: Row(
+            const SizedBox(height: 12),
+            _OptionsList(
+              question: question,
+              selected: _answers[_currentIndex],
+              customController: _customControllers[_currentIndex],
+              onToggle: _toggleOption,
+              hasCustom: hasCustom,
+              onCustomChanged: (_) => setState(() {}),
+              onCustomSelected: _selectCustomAnswer,
+              onCustomToggled: _toggleCustomAnswer,
+              customSelected: _customSelected[_currentIndex],
+              isMultiple: isMultiple,
+            ),
+            const SizedBox(height: 12),
+            Row(
               children: [
                 TextButton(
                   onPressed: _reject,
                   style: TextButton.styleFrom(
-                    foregroundColor: Colors.grey[600],
+                    foregroundColor: tokens.mutedForeground,
                     padding: EdgeInsets.zero,
                     minimumSize: const Size(0, 36),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                   child: Text(
                     l10n.questionCardIgnore,
-                    style: const TextStyle(fontSize: 14),
+                    style: textTheme.labelLarge?.copyWith(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
+                const Spacer(),
                 if (_canGoBack) ...[
-                  const Spacer(),
-                  TextButton(
+                  OutlinedButton(
                     onPressed: _onPrevious,
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.grey[700],
-                      padding: EdgeInsets.zero,
-                      minimumSize: const Size(0, 36),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 38),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 7,
+                      ),
+                      side: BorderSide(color: tokens.border),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: Text(
                       l10n.questionCardPrevious,
-                      style: const TextStyle(fontSize: 14),
+                      style: textTheme.labelLarge?.copyWith(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: tokens.accentForeground,
+                      ),
                     ),
                   ),
+                  const SizedBox(width: 8),
                 ],
-                const Spacer(),
                 FilledButton(
                   onPressed: _canProceed ? _onNext : null,
                   style: FilledButton.styleFrom(
-                    backgroundColor: Colors.black87,
-                    disabledBackgroundColor: Colors.grey[300],
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(80, 36),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                    minimumSize: const Size(0, 38),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 7,
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   child: Text(
                     _isLastQuestion
                         ? l10n.questionCardSubmit
                         : l10n.questionCardNext,
-                    style: const TextStyle(fontSize: 14),
+                    style: textTheme.labelLarge?.copyWith(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: colorScheme.onPrimary,
+                    ),
                   ),
                 ),
               ],
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
 class _StepDots extends StatelessWidget {
-  const _StepDots({required this.total, required this.current});
+  const _StepDots({
+    required this.total,
+    required this.current,
+    required this.activeColor,
+    required this.inactiveColor,
+  });
 
   final int total;
   final int current;
+  final Color activeColor;
+  final Color inactiveColor;
 
   @override
   Widget build(BuildContext context) {
@@ -295,12 +351,12 @@ class _StepDots extends StatelessWidget {
       children: List.generate(total, (i) {
         final isActive = i == current;
         return Container(
-          margin: const EdgeInsets.only(left: 4),
-          width: isActive ? 20 : 8,
-          height: 3,
+          margin: EdgeInsets.only(left: i == 0 ? 0 : 6),
+          width: isActive ? 18 : 6,
+          height: 6,
           decoration: BoxDecoration(
-            color: isActive ? Colors.black87 : Colors.grey[300],
-            borderRadius: BorderRadius.circular(2),
+            color: isActive ? activeColor : inactiveColor,
+            borderRadius: BorderRadius.circular(999),
           ),
         );
       }),
@@ -316,6 +372,10 @@ class _OptionsList extends StatelessWidget {
     required this.onToggle,
     required this.hasCustom,
     required this.onCustomChanged,
+    required this.onCustomSelected,
+    required this.onCustomToggled,
+    required this.customSelected,
+    required this.isMultiple,
   });
 
   final QuestionInfo question;
@@ -324,28 +384,44 @@ class _OptionsList extends StatelessWidget {
   final void Function(String label) onToggle;
   final bool hasCustom;
   final void Function(String) onCustomChanged;
+  final VoidCallback onCustomSelected;
+  final VoidCallback onCustomToggled;
+  final bool customSelected;
+  final bool isMultiple;
 
   @override
   Widget build(BuildContext context) {
+    final options = <Widget>[
+      for (final opt in question.options) ...[
+        _OptionTile(
+          label: opt.label,
+          description: opt.description,
+          isSelected: selected.contains(opt.label),
+          isMultiple: isMultiple,
+          onTap: () => onToggle(opt.label),
+        ),
+        const SizedBox(height: 8),
+      ],
+    ];
+
+    if (hasCustom) {
+      options.add(
+        _CustomInputTile(
+          controller: customController,
+          onChanged: onCustomChanged,
+          onSelected: onCustomSelected,
+          onToggled: onCustomToggled,
+          isSelected: customSelected,
+          isMultiple: isMultiple,
+        ),
+      );
+    } else if (options.isNotEmpty) {
+      options.removeLast();
+    }
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: Column(
-        children: [
-          ...question.options.map(
-            (opt) => _OptionTile(
-              label: opt.label,
-              description: opt.description,
-              isSelected: selected.contains(opt.label),
-              onTap: () => onToggle(opt.label),
-            ),
-          ),
-          if (hasCustom)
-            _CustomInputTile(
-              controller: customController,
-              onChanged: onCustomChanged,
-            ),
-        ],
-      ),
+      padding: EdgeInsets.zero,
+      child: Column(children: options),
     );
   }
 }
@@ -355,63 +431,75 @@ class _OptionTile extends StatelessWidget {
     required this.label,
     required this.description,
     required this.isSelected,
+    required this.isMultiple,
     required this.onTap,
   });
 
   final String label;
   final String description;
   final bool isSelected;
+  final bool isMultiple;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final tokens = context.tokens;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 6),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.grey[100] : Colors.white,
-          borderRadius: BorderRadius.circular(10),
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected ? Colors.grey[400]! : Colors.grey[200]!,
+            color: isSelected ? colorScheme.primary : tokens.border,
+            width: 1,
           ),
         ),
         child: Row(
           children: [
             Container(
-              width: 20,
-              height: 20,
+              width: 18,
+              height: 18,
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isSelected ? Colors.black87 : Colors.transparent,
+                shape: isMultiple ? BoxShape.rectangle : BoxShape.circle,
+                borderRadius: isMultiple ? BorderRadius.circular(5) : null,
+                color: isSelected ? colorScheme.primary : Colors.transparent,
                 border: Border.all(
-                  color: isSelected ? Colors.black87 : Colors.grey[400]!,
-                  width: 1.5,
+                  color: isSelected
+                      ? colorScheme.primary
+                      : tokens.mutedForeground.withValues(alpha: 0.6),
+                  width: 2,
                 ),
               ),
               child: isSelected
-                  ? const Icon(Icons.check, size: 12, color: Colors.white)
+                  ? Icon(Icons.check, size: 12, color: colorScheme.onPrimary)
                   : null,
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     label,
-                    style: TextStyle(
-                      fontSize: 14,
+                    style: textTheme.labelLarge?.copyWith(
+                      fontSize: 13,
                       fontWeight: FontWeight.w500,
-                      color: isSelected ? Colors.black : Colors.black87,
+                      color: colorScheme.onSurface,
                     ),
                   ),
                   if (description.isNotEmpty) ...[
                     const SizedBox(height: 1),
                     Text(
                       description,
-                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                      style: textTheme.labelSmall?.copyWith(
+                        fontSize: 10,
+                        color: tokens.mutedForeground,
+                      ),
                     ),
                   ],
                 ],
@@ -425,10 +513,21 @@ class _OptionTile extends StatelessWidget {
 }
 
 class _CustomInputTile extends StatefulWidget {
-  const _CustomInputTile({required this.controller, required this.onChanged});
+  const _CustomInputTile({
+    required this.controller,
+    required this.onChanged,
+    required this.onSelected,
+    required this.onToggled,
+    required this.isSelected,
+    required this.isMultiple,
+  });
 
   final TextEditingController controller;
   final void Function(String) onChanged;
+  final VoidCallback onSelected;
+  final VoidCallback onToggled;
+  final bool isSelected;
+  final bool isMultiple;
 
   @override
   State<_CustomInputTile> createState() => _CustomInputTileState();
@@ -436,49 +535,119 @@ class _CustomInputTile extends StatefulWidget {
 
 class _CustomInputTileState extends State<_CustomInputTile> {
   bool _focused = false;
+  late final FocusNode _focusNode;
+
+  bool get _isSelected => widget.isSelected;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode = FocusNode();
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: _focused ? Colors.grey[400]! : Colors.grey[200]!,
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            width: 20,
-            height: 20,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.grey[400]!, width: 1.5),
-            ),
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final tokens = context.tokens;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: widget.isMultiple
+          ? () {
+              widget.onToggled();
+              if (widget.isSelected) {
+                _focusNode.unfocus();
+              } else {
+                _focusNode.requestFocus();
+              }
+            }
+          : () {
+              widget.onSelected();
+              _focusNode.requestFocus();
+            },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: _focused ? colorScheme.primary : tokens.border,
+            width: 1,
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Focus(
-              onFocusChange: (v) => setState(() => _focused = v),
-              child: TextField(
-                controller: widget.controller,
-                onChanged: widget.onChanged,
-                style: const TextStyle(fontSize: 14, color: Colors.black87),
-                decoration: InputDecoration(
-                  hintText: context.l10n.questionCardCustomAnswerHint,
-                  hintStyle: TextStyle(fontSize: 14, color: Colors.grey[400]),
-                  isDense: true,
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 6),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 18,
+              height: 18,
+              decoration: BoxDecoration(
+                shape: widget.isMultiple ? BoxShape.rectangle : BoxShape.circle,
+                borderRadius: widget.isMultiple
+                    ? BorderRadius.circular(5)
+                    : null,
+                color: _isSelected ? colorScheme.primary : Colors.transparent,
+                border: Border.all(
+                  color: _isSelected
+                      ? colorScheme.primary
+                      : tokens.mutedForeground.withValues(alpha: 0.6),
+                  width: 2,
+                ),
+              ),
+              child: _isSelected
+                  ? Icon(Icons.check, size: 12, color: colorScheme.onPrimary)
+                  : null,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Focus(
+                onFocusChange: (v) {
+                  if (v && !_isSelected) {
+                    widget.onSelected();
+                  }
+                  setState(() => _focused = v);
+                },
+                child: TextField(
+                  focusNode: _focusNode,
+                  controller: widget.controller,
+                  onChanged: (value) {
+                    if (value.trim().isNotEmpty) {
+                      widget.onSelected();
+                    }
+                    setState(() {});
+                    widget.onChanged(value);
+                  },
+                  style: textTheme.labelLarge?.copyWith(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: colorScheme.onSurface,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: context.l10n.questionCardCustomAnswerHint,
+                    hintStyle: textTheme.labelLarge?.copyWith(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: tokens.mutedForeground.withValues(alpha: 0.6),
+                    ),
+                    filled: false,
+                    isDense: true,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    contentPadding: EdgeInsets.zero,
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
