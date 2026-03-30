@@ -4,6 +4,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../service/api/models/parts.dart';
 import 'tool_meta.dart';
 
+const double _kToolPanelMaxHeight = 220;
+
 class ToolUseWidget extends StatefulWidget {
   final ToolPart toolPart;
   final void Function(String sessionId)? onNavigateToSubSession;
@@ -19,7 +21,7 @@ class ToolUseWidget extends StatefulWidget {
 }
 
 class _ToolUseWidgetState extends State<ToolUseWidget> {
-  bool _isExpanded = false;
+  bool _isExpanded = true;
 
   ToolPart get _part => widget.toolPart;
 
@@ -433,9 +435,14 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
         borderRadius: BorderRadius.circular(6),
         border: Border.all(color: Colors.red[200]!),
       ),
-      child: Text(
-        err,
-        style: TextStyle(fontSize: 12, color: Colors.red[700], height: 1.4),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxHeight: _kToolPanelMaxHeight),
+        child: SingleChildScrollView(
+          child: Text(
+            err,
+            style: TextStyle(fontSize: 12, color: Colors.red[700], height: 1.4),
+          ),
+        ),
       ),
     );
   }
@@ -546,17 +553,22 @@ class _BashOutputPanel extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: const Color(0xFFE5E7EB)),
         ),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: SelectableText(
-            command.isNotEmpty
-                ? '\$ $command\n\n$displayOutput'
-                : displayOutput,
-            style: const TextStyle(
-              color: Color(0xFF1F2328),
-              fontSize: 13,
-              height: 1.5,
-              fontFamily: 'monospace',
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: _kToolPanelMaxHeight),
+          child: SingleChildScrollView(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SelectableText(
+                command.isNotEmpty
+                    ? '\$ $command\n\n$displayOutput'
+                    : displayOutput,
+                style: const TextStyle(
+                  color: Color(0xFF1F2328),
+                  fontSize: 13,
+                  height: 1.5,
+                  fontFamily: 'monospace',
+                ),
+              ),
             ),
           ),
         ),
@@ -576,13 +588,25 @@ class _FilePathPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(top: 4, bottom: 8),
-      child: Text(
-        filePath,
-        style: TextStyle(
-          fontSize: 12,
-          color: Colors.grey[700],
-          fontFamily: 'monospace',
-          height: 1.4,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: _kToolPanelMaxHeight),
+          child: SingleChildScrollView(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SelectableText(
+                filePath,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[700],
+                  fontFamily: 'monospace',
+                  height: 1.4,
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );

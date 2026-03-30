@@ -69,7 +69,7 @@ class _MessageBubbleState extends ConsumerState<MessageBubble> {
   String _extractText() {
     final buffer = StringBuffer();
     for (final part in widget.messageWithParts.parts) {
-      if (part is TextPart) {
+      if (part is TextPart && part.synthetic != true && part.text.isNotEmpty) {
         if (buffer.isNotEmpty) buffer.write('\n');
         buffer.write(part.text);
       }
@@ -276,6 +276,7 @@ class _MessageBubbleState extends ConsumerState<MessageBubble> {
               const SizedBox(height: 6),
               _UserFooter(
                 message: userMessage,
+                agentLabel: _formatAgentLabel(userMessage.agent),
                 modelLabel: modelLabel,
                 copied: _copied,
                 onCopy: _copyMessage,
@@ -383,14 +384,6 @@ class _CopyButton extends StatelessWidget {
                     size: 14,
                     color: tokens.mutedForeground,
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    context.l10n.messageCopy,
-                    style: TextStyle(
-                      color: tokens.mutedForeground,
-                      fontSize: 12,
-                    ),
-                  ),
                 ],
               ),
       ),
@@ -446,6 +439,7 @@ class _AssistantFooter extends StatelessWidget {
 
 class _UserFooter extends StatelessWidget {
   final UserMessage message;
+  final String agentLabel;
   final String modelLabel;
   final bool copied;
   final VoidCallback onCopy;
@@ -453,11 +447,18 @@ class _UserFooter extends StatelessWidget {
 
   const _UserFooter({
     required this.message,
+    required this.agentLabel,
     required this.modelLabel,
     required this.copied,
     required this.onCopy,
     required this.showCopy,
   });
+
+  String _displayModelAndAgent() {
+    if (agentLabel.isEmpty) return modelLabel;
+    if (modelLabel.isEmpty) return agentLabel;
+    return '$agentLabel · $modelLabel';
+  }
 
   String _formatTime(int timestamp) {
     final date = DateTime.fromMillisecondsSinceEpoch(timestamp);
@@ -471,6 +472,7 @@ class _UserFooter extends StatelessWidget {
     final timeLabel = _formatTime(message.time.created);
     final maxModelWidth = MediaQuery.of(context).size.width * 0.35;
     final tokens = context.tokens;
+    final modelAndAgentLabel = _displayModelAndAgent();
 
     return DefaultTextStyle(
       style: TextStyle(fontSize: 12, color: tokens.mutedForeground),
@@ -482,7 +484,7 @@ class _UserFooter extends StatelessWidget {
             ConstrainedBox(
               constraints: BoxConstraints(maxWidth: maxModelWidth),
               child: Text(
-                modelLabel,
+                modelAndAgentLabel,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.right,
@@ -499,4 +501,9 @@ class _UserFooter extends StatelessWidget {
       ),
     );
   }
+}
+
+String _formatAgentLabel(String agent) {
+  if (agent.isEmpty) return '';
+  return '${agent[0].toUpperCase()}${agent.substring(1)}';
 }
