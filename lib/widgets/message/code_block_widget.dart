@@ -30,7 +30,7 @@ class CodeBlockBuilder extends MarkdownElementBuilder {
         ? rawLanguage.substring('language-'.length)
         : rawLanguage;
 
-    final code = codeElement?.textContent ?? element.textContent;
+    final code = (codeElement?.textContent ?? element.textContent).trimRight();
 
     return _CodeBlockWidget(language: language, code: code);
   }

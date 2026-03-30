@@ -588,7 +588,7 @@ class _BashOutputPanel extends StatelessWidget {
               scrollDirection: Axis.horizontal,
               child: SelectableText(
                 command.isNotEmpty
-                    ? '\$ $command\n\n$displayOutput'
+                    ? '\$ $command\n\n${displayOutput.trimRight()}'
                     : displayOutput,
                 style: const TextStyle(
                   color: Color(0xFF1F2328),
