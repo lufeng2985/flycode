@@ -337,6 +337,18 @@
   "questionCardSubmit": "Submit",
   "questionCardNext": "Next",
   "questionCardCustomAnswerHint": "Type your answer...",
+  "permissionDockTitle": "Permission Request",
+  "permissionDockDeny": "Deny",
+  "permissionDockAllowAlways": "Allow always",
+  "permissionDockAllowOnce": "Allow once",
+  "permissionDockReplyFailed": "Permission reply failed: {error}",
+  "@permissionDockReplyFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "modelSelectionTitle": "Select Model",
   "modelSelectionSearchHint": "Search models",
   "modelSelectionConfigLoadFailed": "Config load failed: {error}",

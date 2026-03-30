@@ -24,8 +24,8 @@
   "sessionCompletionNotificationModeNone": "不发送通知",
   "sessionCompletionNotificationModeBackgroundOnly": "应用在后台时发送通知",
   "sessionCompletionNotificationModeAlways": "应用在前台时也发送通知",
-  "mainTabProjects": "PROJECTS",
-  "mainTabSettings": "SETTINGS",
+  "mainTabProjects": "项目",
+  "mainTabSettings": "设置",
   "serverConfigConnectServer": "连接服务器",
   "serverConfigTitle": "服务器配置",
   "serverConfigOnboardingHint": "首次使用请先连接服务器。建议先点击“测试连接”，再保存进入首页。",
@@ -75,8 +75,8 @@
   "aboutPrivacyPolicy": "隐私政策",
   "aboutOpenSourceLicenses": "开源许可",
   "aboutOpenLinkFailed": "暂时无法打开链接",
-  "projectListHeader": "Projects",
-  "projectListNew": "+ New",
+  "projectListHeader": "项目",
+  "projectListNew": "+ 新建",
   "projectListLoadFailedTitle": "暂时无法加载项目",
   "projectListGoConfigureServer": "去配置服务器",
   "projectListRetryLoad": "重试加载",
@@ -337,6 +337,18 @@
   "questionCardSubmit": "提交",
   "questionCardNext": "下一步",
   "questionCardCustomAnswerHint": "输入你的答案...",
+  "permissionDockTitle": "权限请求",
+  "permissionDockDeny": "拒绝",
+  "permissionDockAllowAlways": "始终允许",
+  "permissionDockAllowOnce": "允许一次",
+  "permissionDockReplyFailed": "权限响应失败：{error}",
+  "@permissionDockReplyFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "modelSelectionTitle": "选择模型",
   "modelSelectionSearchHint": "搜索模型",
   "modelSelectionConfigLoadFailed": "配置加载失败: {error}",

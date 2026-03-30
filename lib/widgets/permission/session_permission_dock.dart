@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../l10n/l10n.dart';
 import '../../providers/permission_provider.dart';
 import '../../service/api/models/permission.dart';
 
@@ -10,6 +11,7 @@ class SessionPermissionDock extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     ref.watch(pendingPermissionsProvider);
     final notifier = ref.read(pendingPermissionsProvider.notifier);
     final responding = notifier.isResponding(request.id);
@@ -19,9 +21,9 @@ class SessionPermissionDock extends ConsumerWidget {
         await notifier.respond(request, reply: action);
       } catch (e) {
         if (!context.mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Permission reply failed: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.permissionDockReplyFailed(e.toString()))),
+        );
       }
     }
 
@@ -54,7 +56,7 @@ class SessionPermissionDock extends ConsumerWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Permission Request',
+                  l10n.permissionDockTitle,
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -81,7 +83,7 @@ class SessionPermissionDock extends ConsumerWidget {
                     foregroundColor: Colors.red[700],
                     side: BorderSide(color: Colors.red[200]!),
                   ),
-                  child: const Text('Deny'),
+                  child: Text(l10n.permissionDockDeny),
                 ),
               ),
               const SizedBox(width: 8),
@@ -90,7 +92,7 @@ class SessionPermissionDock extends ConsumerWidget {
                   onPressed: responding
                       ? null
                       : () => decide(PermissionReplyAction.always),
-                  child: const Text('Allow always'),
+                  child: Text(l10n.permissionDockAllowAlways),
                 ),
               ),
               const SizedBox(width: 8),
@@ -99,7 +101,7 @@ class SessionPermissionDock extends ConsumerWidget {
                   onPressed: responding
                       ? null
                       : () => decide(PermissionReplyAction.once),
-                  child: const Text('Allow once'),
+                  child: Text(l10n.permissionDockAllowOnce),
                 ),
               ),
             ],

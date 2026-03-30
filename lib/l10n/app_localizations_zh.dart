@@ -81,10 +81,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sessionCompletionNotificationModeAlways => '应用在前台时也发送通知';
 
   @override
-  String get mainTabProjects => 'PROJECTS';
+  String get mainTabProjects => '项目';
 
   @override
-  String get mainTabSettings => 'SETTINGS';
+  String get mainTabSettings => '设置';
 
   @override
   String get serverConfigConnectServer => '连接服务器';
@@ -187,10 +187,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aboutOpenLinkFailed => '暂时无法打开链接';
 
   @override
-  String get projectListHeader => 'Projects';
+  String get projectListHeader => '项目';
 
   @override
-  String get projectListNew => '+ New';
+  String get projectListNew => '+ 新建';
 
   @override
   String get projectListLoadFailedTitle => '暂时无法加载项目';
@@ -516,6 +516,23 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get questionCardCustomAnswerHint => '输入你的答案...';
+
+  @override
+  String get permissionDockTitle => '权限请求';
+
+  @override
+  String get permissionDockDeny => '拒绝';
+
+  @override
+  String get permissionDockAllowAlways => '始终允许';
+
+  @override
+  String get permissionDockAllowOnce => '允许一次';
+
+  @override
+  String permissionDockReplyFailed(String error) {
+    return '权限响应失败：$error';
+  }
 
   @override
   String get modelSelectionTitle => '选择模型';
