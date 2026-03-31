@@ -1,6 +1,8 @@
 import 'package:diff_match_patch/diff_match_patch.dart';
 import 'package:flutter/material.dart';
 
+import '../../theme/app_tokens.dart';
+
 // ──────────────────────────────────────────────
 // Diff 渲染器（从 session_diff_page.dart 提取）
 // ──────────────────────────────────────────────
@@ -108,21 +110,22 @@ class DiffView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     final lines = _computeDiffLines();
 
     if (lines.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.grey[50],
+          color: tokens.card,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.grey[200]!),
+          border: Border.all(color: tokens.border.withValues(alpha: 0.8)),
         ),
         child: Text(
           '(empty)',
           style: TextStyle(
             fontSize: 12,
-            color: Colors.grey[400],
+            color: tokens.mutedForeground,
             fontFamily: 'monospace',
           ),
         ),
@@ -134,7 +137,7 @@ class DiffView extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey[200]!),
+        border: Border.all(color: tokens.border.withValues(alpha: 0.8)),
       ),
       clipBehavior: Clip.hardEdge,
       child: Column(
@@ -160,14 +163,15 @@ class CollapsedHintRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return Container(
-      color: Colors.grey[50],
+      color: tokens.card,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       child: Text(
         '... $count lines unchanged',
         style: TextStyle(
           fontSize: 11,
-          color: Colors.grey[400],
+          color: tokens.mutedForeground,
           fontFamily: 'monospace',
         ),
       ),
@@ -185,22 +189,24 @@ class DiffLineRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final tokens = context.tokens;
     final Color bg;
     final Color textColor;
     final String prefix;
 
     switch (line.op) {
       case DIFF_INSERT:
-        bg = const Color(0xFFE8F5E9);
-        textColor = const Color(0xFF1B5E20);
+        bg = tokens.success;
+        textColor = tokens.successForeground;
         prefix = '+';
       case DIFF_DELETE:
-        bg = const Color(0xFFFFEBEE);
-        textColor = const Color(0xFFB71C1C);
+        bg = tokens.errorSoft;
+        textColor = tokens.errorSoftForeground;
         prefix = '-';
       default:
-        bg = Colors.white;
-        textColor = Colors.black87;
+        bg = theme.colorScheme.surface;
+        textColor = theme.colorScheme.onSurface;
         prefix = ' ';
     }
 

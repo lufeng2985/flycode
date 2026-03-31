@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import 'package:markdown/markdown.dart' as md;
 import '../../service/api/models/parts.dart';
 import '../../theme/app_tokens.dart';
 import 'code_block_widget.dart';
+import 'message_markdown_theme.dart';
 import 'tool_use_widget.dart';
 
 class MessagePart extends StatelessWidget {
@@ -270,32 +272,358 @@ class _TypewriterMarkdownTextState extends State<_TypewriterMarkdownText> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final tokens = context.tokens;
     final text = _chars.take(_visibleCount).join();
+    final markdownText = _addInlineCodeVisualPadding(text);
 
     return RepaintBoundary(
       child: MarkdownBody(
-        data: text,
+        data: markdownText,
         selectable: true,
-        builders: {'pre': CodeBlockBuilder()},
-        styleSheet: MarkdownStyleSheet(
-          p: TextStyle(
-            fontSize: 14,
-            height: 1.5,
-            color: theme.colorScheme.onSurface,
-          ),
-          code: TextStyle(
-            backgroundColor: tokens.accent,
-            color: theme.colorScheme.onSurface,
-            fontFamily: 'monospace',
-            fontSize: 13,
-          ),
-          codeblockDecoration: const BoxDecoration(),
-        ),
+        builders: {
+          'pre': CodeBlockBuilder(),
+          'ul': _MarkdownListBuilder(ordered: false),
+          'ol': _MarkdownListBuilder(ordered: true),
+        },
+        onTapLink: (text, href, title) => openMessageMarkdownLink(href),
+        styleSheet: buildMessageMarkdownStyleSheet(context),
       ),
     );
   }
+}
+
+String _addInlineCodeVisualPadding(String markdown) {
+  final segments = markdown.split('```');
+  if (segments.length == 1) {
+    return _padInlineCodeInSegment(markdown);
+  }
+
+  final buffer = StringBuffer();
+  for (var i = 0; i < segments.length; i++) {
+    if (i.isOdd) {
+      buffer.write('```');
+      buffer.write(segments[i]);
+      buffer.write('```');
+    } else {
+      buffer.write(_padInlineCodeInSegment(segments[i]));
+    }
+  }
+
+  if (!markdown.endsWith('```')) {
+    final output = buffer.toString();
+    if (output.endsWith('```')) {
+      return output.substring(0, output.length - 3);
+    }
+  }
+
+  return buffer.toString();
+}
+
+String _padInlineCodeInSegment(String text) {
+  return text.replaceAllMapped(RegExp(r'`([^`\n]+)`'), (match) {
+    final content = match.group(1);
+    if (content == null || content.isEmpty) {
+      return match.group(0)!;
+    }
+    return '`\u2009$content\u2009`';
+  });
+}
+
+class _MarkdownListBuilder extends MarkdownElementBuilder {
+  final bool ordered;
+
+  _MarkdownListBuilder({required this.ordered});
+
+  @override
+  bool isBlockElement() => true;
+
+  @override
+  Widget? visitElementAfterWithContext(
+    BuildContext context,
+    md.Element element,
+    TextStyle? preferredStyle,
+    TextStyle? parentStyle,
+  ) {
+    final items = element.children
+        ?.whereType<md.Element>()
+        .where((e) => e.tag == 'li')
+        .toList();
+    if (items == null || items.isEmpty) {
+      return null;
+    }
+
+    final start = ordered
+        ? int.tryParse(element.attributes['start'] ?? '') ?? 1
+        : 1;
+    final theme = Theme.of(context);
+    final tokens = context.tokens;
+    final styleSheet = buildMessageMarkdownStyleSheet(context);
+    final bulletStyle =
+        styleSheet.listBullet ??
+        theme.textTheme.bodyMedium?.copyWith(fontSize: 14, height: 1.45);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < items.length; i++) ...[
+          if (_taskListCheckedState(items[i]) case final checked?)
+            _MarkdownTaskListItem(
+              checked: checked,
+              contentMarkdown: _serializeListItemContent(items[i]),
+              nestedLists:
+                  items[i].children
+                      ?.whereType<md.Element>()
+                      .where((child) => child.tag == 'ul' || child.tag == 'ol')
+                      .toList() ??
+                  const <md.Element>[],
+            )
+          else
+            _MarkdownListItem(
+              marker: ordered ? '${start + i}.' : '•',
+              bulletStyle: bulletStyle,
+              contentMarkdown: _serializeListItemContent(items[i]),
+              nestedLists:
+                  items[i].children
+                      ?.whereType<md.Element>()
+                      .where((child) => child.tag == 'ul' || child.tag == 'ol')
+                      .toList() ??
+                  const <md.Element>[],
+              textColor: preferredStyle?.color ?? theme.colorScheme.onSurface,
+              markerColor: tokens.mutedForeground,
+            ),
+          if (i != items.length - 1) const SizedBox(height: 4),
+        ],
+      ],
+    );
+  }
+}
+
+class _MarkdownTaskListItem extends StatelessWidget {
+  final bool checked;
+  final String contentMarkdown;
+  final List<md.Element> nestedLists;
+
+  const _MarkdownTaskListItem({
+    required this.checked,
+    required this.contentMarkdown,
+    required this.nestedLists,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final tokens = context.tokens;
+    final styleSheet = buildMessageMarkdownStyleSheet(
+      context,
+    ).copyWith(blockSpacing: 0, pPadding: EdgeInsets.zero);
+    final checkboxBackground = checked
+        ? theme.colorScheme.primary
+        : theme.colorScheme.surface;
+    final checkboxBorder = checked
+        ? theme.colorScheme.primary
+        : tokens.border.withValues(alpha: 0.9);
+    final checkboxIconColor = checked
+        ? theme.colorScheme.onPrimary
+        : Colors.transparent;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 2, right: 10),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            width: 18,
+            height: 18,
+            decoration: BoxDecoration(
+              color: checkboxBackground,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: checkboxBorder, width: 1.5),
+            ),
+            child: Icon(
+              Icons.check_rounded,
+              size: 13,
+              color: checkboxIconColor,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (contentMarkdown.trim().isNotEmpty)
+                DefaultTextStyle.merge(
+                  style: TextStyle(
+                    color: checked
+                        ? tokens.mutedForeground
+                        : theme.colorScheme.onSurface,
+                    decoration: checked
+                        ? TextDecoration.lineThrough
+                        : TextDecoration.none,
+                    decorationColor: checked
+                        ? tokens.mutedForeground.withValues(alpha: 0.9)
+                        : null,
+                  ),
+                  child: MarkdownBody(
+                    data: _addInlineCodeVisualPadding(contentMarkdown),
+                    selectable: true,
+                    builders: {
+                      'pre': CodeBlockBuilder(),
+                      'ul': _MarkdownListBuilder(ordered: false),
+                      'ol': _MarkdownListBuilder(ordered: true),
+                    },
+                    onTapLink: (text, href, title) =>
+                        openMessageMarkdownLink(href),
+                    styleSheet: styleSheet.copyWith(
+                      p: styleSheet.p?.copyWith(
+                        color: checked
+                            ? tokens.mutedForeground
+                            : theme.colorScheme.onSurface,
+                        decoration: checked
+                            ? TextDecoration.lineThrough
+                            : TextDecoration.none,
+                        decorationColor: checked
+                            ? tokens.mutedForeground.withValues(alpha: 0.9)
+                            : null,
+                      ),
+                    ),
+                  ),
+                ),
+              for (final nested in nestedLists) ...[
+                const SizedBox(height: 4),
+                _NestedMarkdownList(element: nested),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MarkdownListItem extends StatelessWidget {
+  final String marker;
+  final TextStyle? bulletStyle;
+  final String contentMarkdown;
+  final List<md.Element> nestedLists;
+  final Color textColor;
+  final Color markerColor;
+
+  const _MarkdownListItem({
+    required this.marker,
+    required this.bulletStyle,
+    required this.contentMarkdown,
+    required this.nestedLists,
+    required this.textColor,
+    required this.markerColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final styleSheet = buildMessageMarkdownStyleSheet(
+      context,
+    ).copyWith(blockSpacing: 0, pPadding: EdgeInsets.zero);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 30,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 1, right: 8),
+            child: Text(
+              marker,
+              textAlign: TextAlign.right,
+              style: bulletStyle?.copyWith(color: markerColor),
+            ),
+          ),
+        ),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (contentMarkdown.trim().isNotEmpty)
+                MarkdownBody(
+                  data: _addInlineCodeVisualPadding(contentMarkdown),
+                  selectable: true,
+                  builders: {
+                    'pre': CodeBlockBuilder(),
+                    'ul': _MarkdownListBuilder(ordered: false),
+                    'ol': _MarkdownListBuilder(ordered: true),
+                  },
+                  onTapLink: (text, href, title) =>
+                      openMessageMarkdownLink(href),
+                  styleSheet: styleSheet,
+                ),
+              for (final nested in nestedLists) ...[
+                const SizedBox(height: 4),
+                _NestedMarkdownList(element: nested),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _NestedMarkdownList extends StatelessWidget {
+  final md.Element element;
+
+  const _NestedMarkdownList({required this.element});
+
+  @override
+  Widget build(BuildContext context) {
+    final builder = _MarkdownListBuilder(ordered: element.tag == 'ol');
+    return builder.visitElementAfterWithContext(context, element, null, null) ??
+        const SizedBox.shrink();
+  }
+}
+
+String _serializeListItemContent(md.Element item) {
+  final nodes = <md.Node>[];
+  for (final child in item.children ?? const <md.Node>[]) {
+    if (child is md.Element &&
+        (child.tag == 'ul' ||
+            child.tag == 'ol' ||
+            child.attributes['type'] == 'checkbox')) {
+      continue;
+    }
+    nodes.add(child);
+  }
+  return nodes.map(_serializeMarkdownNode).join().trim();
+}
+
+bool? _taskListCheckedState(md.Element item) {
+  final firstElement = item.children?.whereType<md.Element>().firstOrNull;
+  if (firstElement == null || firstElement.attributes['type'] != 'checkbox') {
+    return null;
+  }
+  return firstElement.attributes.containsKey('checked');
+}
+
+String _serializeMarkdownNode(md.Node node) {
+  if (node is md.Text) {
+    return node.text;
+  }
+  if (node is! md.Element) {
+    return node.textContent;
+  }
+
+  final content = (node.children ?? const <md.Node>[])
+      .map(_serializeMarkdownNode)
+      .join();
+
+  return switch (node.tag) {
+    'p' => content,
+    'strong' => '**$content**',
+    'em' => '*$content*',
+    'del' => '~~$content~~',
+    'code' => '`$content`',
+    'a' =>
+      '[${content.isEmpty ? node.textContent : content}](${node.attributes['href'] ?? ''})',
+    'br' => '  \n',
+    _ => content,
+  };
 }
 
 class _CompactionDivider extends StatelessWidget {

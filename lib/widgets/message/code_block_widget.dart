@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:markdown/markdown.dart' as md;
 
+import 'message_markdown_theme.dart';
+
 /// A custom [MarkdownElementBuilder] that renders fenced code blocks with
 /// a language header bar and a copy-to-clipboard button.
 class CodeBlockBuilder extends MarkdownElementBuilder {
@@ -60,88 +62,93 @@ class _CodeBlockWidgetState extends State<_CodeBlockWidget> {
 
   @override
   Widget build(BuildContext context) {
+    const borderRadius = BorderRadius.all(Radius.circular(12));
+    const headerRadius = BorderRadius.vertical(top: Radius.circular(12));
+    const bodyRadius = BorderRadius.vertical(bottom: Radius.circular(12));
     final hasLanguage = widget.language.isNotEmpty;
+    final theme = Theme.of(context);
+    final codeTheme = buildMessageCodeBlockTheme(context);
+    final codeTextStyle = theme.textTheme.bodyMedium!.copyWith(
+      fontFamily: 'monospace',
+      fontSize: 13,
+      height: 1.5,
+      color: codeTheme.codeColor,
+    );
+    final commentPattern = RegExp(r'^\s*(//|#)');
 
     return Container(
+      key: messageMarkdownCodeBlockKey,
       margin: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFFF6F8FA),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        color: codeTheme.backgroundColor,
+        borderRadius: borderRadius,
+        border: Border.all(color: codeTheme.borderColor),
       ),
-      clipBehavior: Clip.antiAlias,
+      clipBehavior: Clip.hardEdge,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Header bar
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: const BoxDecoration(
-              color: Color(0xFFEFF1F3),
-              border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB))),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: codeTheme.headerColor,
+              borderRadius: headerRadius,
+              border: Border(bottom: BorderSide(color: codeTheme.borderColor)),
             ),
             child: Row(
               children: [
-                if (hasLanguage)
-                  Text(
-                    widget.language,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF57606A),
-                      letterSpacing: 0.5,
-                    ),
-                  )
-                else
-                  const Text(
-                    'code',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF57606A),
-                      letterSpacing: 0.5,
-                    ),
+                Text(
+                  hasLanguage ? widget.language : 'code',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: codeTheme.languageColor,
+                    letterSpacing: 0.3,
                   ),
+                ),
                 const Spacer(),
-                GestureDetector(
+                InkWell(
                   onTap: _copyCode,
+                  borderRadius: BorderRadius.circular(999),
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 200),
                     child: _copied
-                        ? const Row(
+                        ? Row(
                             key: ValueKey('copied'),
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
                                 Icons.check,
                                 size: 14,
-                                color: Color(0xFF4CAF50),
+                                color: codeTheme.successColor,
                               ),
                               SizedBox(width: 4),
                               Text(
                                 'Copied',
-                                style: TextStyle(
+                                style: theme.textTheme.labelSmall?.copyWith(
                                   fontSize: 12,
-                                  color: Color(0xFF4CAF50),
+                                  fontWeight: FontWeight.w600,
+                                  color: codeTheme.successColor,
                                 ),
                               ),
                             ],
                           )
-                        : const Row(
+                        : Row(
                             key: ValueKey('copy'),
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
                                 Icons.copy_outlined,
                                 size: 14,
-                                color: Color(0xFF57606A),
+                                color: codeTheme.iconColor,
                               ),
                               SizedBox(width: 4),
                               Text(
                                 'Copy',
-                                style: TextStyle(
+                                style: theme.textTheme.labelSmall?.copyWith(
                                   fontSize: 12,
-                                  color: Color(0xFF57606A),
+                                  fontWeight: FontWeight.w600,
+                                  color: codeTheme.iconColor,
                                 ),
                               ),
                             ],
@@ -151,17 +158,30 @@ class _CodeBlockWidgetState extends State<_CodeBlockWidget> {
               ],
             ),
           ),
-          // Code body
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.all(12),
-            child: SelectableText(
-              widget.code,
-              style: const TextStyle(
-                fontFamily: 'monospace',
-                fontSize: 13,
-                color: Color(0xFF1F2328),
-                height: 1.5,
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: codeTheme.backgroundColor,
+              borderRadius: bodyRadius,
+            ),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              child: SelectableText.rich(
+                TextSpan(
+                  children: [
+                    for (final line in widget.code.split('\n')) ...[
+                      TextSpan(
+                        text: line,
+                        style: commentPattern.hasMatch(line)
+                            ? codeTextStyle.copyWith(
+                                color: codeTheme.commentColor,
+                              )
+                            : codeTextStyle,
+                      ),
+                      const TextSpan(text: '\n'),
+                    ],
+                  ]..removeLast(),
+                ),
               ),
             ),
           ),

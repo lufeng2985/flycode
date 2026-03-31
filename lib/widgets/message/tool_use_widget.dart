@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../service/api/models/parts.dart';
+import '../../theme/app_tokens.dart';
 import 'diff_view.dart';
+import 'message_markdown_theme.dart';
 import 'tool_meta.dart';
 
 const double _kToolPanelMaxHeight = 220;
@@ -212,13 +214,14 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
   }
 
   Widget _buildQuestionDismissed(BuildContext context) {
+    final tokens = context.tokens;
     return Padding(
       padding: const EdgeInsets.only(top: 6),
       child: Text(
         'Question dismissed',
         style: TextStyle(
           fontSize: 12,
-          color: Colors.grey[500],
+          color: tokens.mutedForeground,
           fontStyle: FontStyle.italic,
         ),
       ),
@@ -226,6 +229,8 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
   }
 
   Widget _buildHeader(BuildContext context) {
+    final theme = Theme.of(context);
+    final tokens = context.tokens;
     if (_part.tool == 'apply_patch' && !_isActive && !_isError) {
       final summary = _applyPatchSummary;
       if (summary != null) {
@@ -256,7 +261,7 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
         ? Icon(
             _isExpanded ? Icons.expand_less : Icons.expand_more,
             size: 16,
-            color: Colors.grey[500],
+            color: tokens.mutedForeground,
           )
         : null;
 
@@ -282,8 +287,10 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
                     children: [
                       _isActive
                           ? Shimmer.fromColors(
-                              baseColor: Colors.grey[400]!,
-                              highlightColor: Colors.grey[200]!,
+                              baseColor: tokens.mutedForeground.withValues(
+                                alpha: 0.45,
+                              ),
+                              highlightColor: tokens.card,
                               child: Text(
                                 displayName,
                                 maxLines: 1,
@@ -302,8 +309,8 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
                                 color: _isError
-                                    ? Colors.red[700]
-                                    : Colors.black87,
+                                    ? tokens.errorSoftForeground
+                                    : theme.colorScheme.onSurface,
                               ),
                             ),
                       SizedBox(width: 8),
@@ -334,7 +341,7 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: 13,
-                                    color: Colors.grey[700],
+                                    color: tokens.mutedForeground,
                                   ),
                                 ),
                         ),
@@ -384,6 +391,8 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
     BuildContext context,
     _ApplyPatchSummary summary,
   ) {
+    final theme = Theme.of(context);
+    final tokens = context.tokens;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -403,19 +412,25 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
                     text: summary.fileName,
                     style: TextStyle(
                       fontSize: 13,
-                      color: Colors.grey[700],
+                      color: theme.colorScheme.onSurface,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                   if (summary.directory.isNotEmpty)
                     TextSpan(
                       text: ' ${summary.directory}',
-                      style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: tokens.mutedForeground,
+                      ),
                     ),
                   if (summary.extraFilesCount > 0)
                     TextSpan(
                       text: '  +${summary.extraFilesCount} files',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: tokens.mutedForeground,
+                      ),
                     ),
                 ],
               ),
@@ -426,19 +441,19 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
           const SizedBox(width: 8),
           Text(
             '+${summary.additions}',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF1A7F37),
+              color: tokens.successForeground,
             ),
           ),
           const SizedBox(width: 12),
           Text(
             '-${summary.deletions}',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: Color(0xFFD1242F),
+              color: theme.colorScheme.error,
             ),
           ),
         ],
@@ -447,21 +462,28 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
   }
 
   Widget _buildErrorBody(BuildContext context) {
+    final tokens = context.tokens;
     final err = _errorText ?? '';
     return Container(
       margin: const EdgeInsets.only(top: 4, bottom: 8),
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.red[50],
+        color: tokens.errorSoft,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: Colors.red[200]!),
+        border: Border.all(
+          color: tokens.errorSoftForeground.withValues(alpha: 0.28),
+        ),
       ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxHeight: _kToolPanelMaxHeight),
         child: SingleChildScrollView(
           child: Text(
             err,
-            style: TextStyle(fontSize: 12, color: Colors.red[700], height: 1.4),
+            style: TextStyle(
+              fontSize: 12,
+              color: tokens.errorSoftForeground,
+              height: 1.4,
+            ),
           ),
         ),
       ),
@@ -528,12 +550,13 @@ class _ArgChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return ConstrainedBox(
       constraints: BoxConstraints(maxWidth: maxWidth),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
         decoration: BoxDecoration(
-          color: const Color(0xFFF1F1F1),
+          color: tokens.card,
           borderRadius: BorderRadius.circular(4),
         ),
         child: Text(
@@ -541,9 +564,9 @@ class _ArgChip extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           softWrap: false,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 11,
-            color: Color(0xFF555555),
+            color: tokens.accentForeground,
             fontFamily: 'monospace',
           ),
         ),
@@ -567,6 +590,7 @@ class _BashOutputPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final codeTheme = buildMessageCodeBlockTheme(context);
     final displayOutput = (output?.isNotEmpty == true)
         ? output!
         : (running ? 'running...' : 'no output');
@@ -577,9 +601,9 @@ class _BashOutputPanel extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: const Color(0xFFF6F8FA),
+          color: codeTheme.backgroundColor,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0xFFE5E7EB)),
+          border: Border.all(color: codeTheme.borderColor),
         ),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxHeight: _kToolPanelMaxHeight),
@@ -590,8 +614,8 @@ class _BashOutputPanel extends StatelessWidget {
                 command.isNotEmpty
                     ? '\$ $command\n\n${displayOutput.trimRight()}'
                     : displayOutput,
-                style: const TextStyle(
-                  color: Color(0xFF1F2328),
+                style: TextStyle(
+                  color: codeTheme.codeColor,
                   fontSize: 13,
                   height: 1.5,
                   fontFamily: 'monospace',
@@ -643,6 +667,7 @@ class _PatchDiffPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     if (files.isEmpty) return const SizedBox.shrink();
 
     return Padding(
@@ -671,7 +696,7 @@ class _PatchDiffPanel extends StatelessWidget {
                         fileName,
                         style: TextStyle(
                           fontSize: 11,
-                          color: Colors.grey[500],
+                          color: tokens.mutedForeground,
                           fontFamily: 'monospace',
                         ),
                       ),
@@ -697,6 +722,7 @@ class _FilePathPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return Padding(
       padding: const EdgeInsets.only(top: 4, bottom: 8),
       child: Container(
@@ -711,7 +737,7 @@ class _FilePathPanel extends StatelessWidget {
                 filePath,
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.grey[700],
+                  color: tokens.mutedForeground,
                   fontFamily: 'monospace',
                   height: 1.4,
                 ),

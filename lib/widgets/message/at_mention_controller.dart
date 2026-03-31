@@ -142,11 +142,12 @@ class AtMentionController extends TextEditingController {
       }
       // The pill itself.
       if (pill.end <= currentText.length) {
+        final primaryColor = Theme.of(context).colorScheme.primary;
         spans.add(
           TextSpan(
             text: currentText.substring(pill.start, pill.end),
             style: (style ?? const TextStyle()).copyWith(
-              color: const Color(0xFF2563EB), // blue-600
+              color: primaryColor,
               fontWeight: FontWeight.w500,
             ),
           ),
