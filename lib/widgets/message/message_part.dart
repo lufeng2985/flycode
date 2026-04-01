@@ -88,6 +88,7 @@ class _TypewriterMarkdownTextState extends State<_TypewriterMarkdownText> {
   double _incomingCharsPerSecond = 24;
   ValueListenable<bool>? _isScrollingListenable;
   bool _isUserScrolling = false;
+  bool _pendingScrollStateSync = false;
 
   @override
   void initState() {
@@ -241,10 +242,27 @@ class _TypewriterMarkdownTextState extends State<_TypewriterMarkdownText> {
       return;
     }
 
-    setState(() {
-      _isUserScrolling = scrolling;
+    if (_pendingScrollStateSync) {
+      return;
+    }
+
+    _pendingScrollStateSync = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _pendingScrollStateSync = false;
+      if (!mounted) {
+        return;
+      }
+
+      final latestScrolling = _isScrollingListenable?.value ?? false;
+      if (latestScrolling == _isUserScrolling) {
+        return;
+      }
+
+      setState(() {
+        _isUserScrolling = latestScrolling;
+      });
+      _syncAnimation();
     });
-    _syncAnimation();
   }
 
   int _targetVisibleCount() {

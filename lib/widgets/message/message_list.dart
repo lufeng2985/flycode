@@ -51,69 +51,252 @@ class MessageList extends ConsumerWidget {
           ),
         );
       },
-      data: (messages) =>
-          _buildList(messages, onNavigateToSubSession: onNavigateToSubSession),
+      data: (messages) => _MessageListBody(
+        messages: messages,
+        onNavigateToSubSession: onNavigateToSubSession,
+      ),
     );
   }
 }
 
 /// 纯消息列表渲染（可复用于子 Session 页面）
-class MessageListView extends StatelessWidget {
+class MessageListView extends StatefulWidget {
   final List<MessageWithParts> messages;
   final void Function(String sessionId)? onNavigateToSubSession;
+  final double bottomDetachedThreshold;
+  final Duration scrollToBottomAnimationDuration;
 
   const MessageListView({
     super.key,
     required this.messages,
     this.onNavigateToSubSession,
+    this.bottomDetachedThreshold = 72,
+    this.scrollToBottomAnimationDuration = const Duration(milliseconds: 220),
   });
 
   @override
-  Widget build(BuildContext context) =>
-      _buildList(messages, onNavigateToSubSession: onNavigateToSubSession);
+  State<MessageListView> createState() => _MessageListViewState();
 }
 
-Widget _buildList(
-  List<MessageWithParts> messages, {
-  void Function(String sessionId)? onNavigateToSubSession,
-}) {
-  final visibleMessages = messages
-      .where((message) => !_isSyntheticOnlyUserMessage(message))
-      .toList();
+class _MessageListBody extends StatelessWidget {
+  final List<MessageWithParts> messages;
+  final void Function(String sessionId)? onNavigateToSubSession;
 
-  if (visibleMessages.isEmpty) {
-    return Center(
-      child: Builder(
-        builder: (context) {
-          final tokens = context.tokens;
-          return Text(
-            'No messages yet',
-            style: TextStyle(color: tokens.mutedForeground),
-          );
-        },
-      ),
+  const _MessageListBody({required this.messages, this.onNavigateToSubSession});
+
+  @override
+  Widget build(BuildContext context) => MessageListView(
+    messages: messages,
+    onNavigateToSubSession: onNavigateToSubSession,
+  );
+}
+
+class _MessageListViewState extends State<MessageListView> {
+  static const listViewKey = Key('message_list.list_view');
+  static const scrollToBottomButtonKey = Key('message_list.scroll_to_bottom');
+  static const scrollToBottomIgnorePointerKey = Key(
+    'message_list.scroll_to_bottom_guard',
+  );
+
+  final ScrollController _scrollController = ScrollController();
+
+  bool _isDetachedFromBottom = false;
+  bool _showScrollToBottomButton = false;
+  List<MessageWithParts>? _frozenMessages;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      _jumpToBottom();
+      _syncDetachedState();
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant MessageListView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_scrollController.hasClients) return;
+
+    if (_isDetachedFromBottom &&
+        _messageListSignature(oldWidget.messages) !=
+            _messageListSignature(widget.messages)) {
+      return;
+    }
+
+    if (!_isDetachedFromBottom &&
+        _didBottomAffectingContentChange(oldWidget.messages, widget.messages)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_scrollController.hasClients) return;
+        _jumpToBottom();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (!_scrollController.hasClients) return false;
+
+    if (notification is ScrollStartNotification) {
+    } else if (notification is ScrollEndNotification) {}
+
+    _syncDetachedState();
+    return false;
+  }
+
+  void _syncDetachedState() {
+    final shouldDetach = _distanceFromBottom() > widget.bottomDetachedThreshold;
+    if (shouldDetach == _isDetachedFromBottom &&
+        shouldDetach == _showScrollToBottomButton) {
+      return;
+    }
+
+    setState(() {
+      _isDetachedFromBottom = shouldDetach;
+      _showScrollToBottomButton = shouldDetach;
+      if (shouldDetach) {
+        _frozenMessages = List<MessageWithParts>.unmodifiable(widget.messages);
+        return;
+      }
+
+      _frozenMessages = null;
+    });
+
+    if (!shouldDetach) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_scrollController.hasClients) return;
+        _jumpToBottom();
+      });
+    }
+  }
+
+  double _distanceFromBottom() {
+    final position = _scrollController.position;
+    return (position.pixels - position.minScrollExtent).clamp(
+      0.0,
+      double.infinity,
     );
   }
 
-  return ListView.builder(
-    reverse: true,
-    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-    itemCount: visibleMessages.length,
-    itemBuilder: (context, index) {
-      final messageWithParts =
-          visibleMessages[visibleMessages.length - 1 - index];
-      final prevIndex = visibleMessages.length - 2 - index;
-      final prevMessage = prevIndex >= 0 ? visibleMessages[prevIndex] : null;
-      final prevIsUser = prevMessage?.info is UserMessage;
-      return MessageBubble(
-        key: ValueKey(_messageId(messageWithParts)),
-        messageWithParts: messageWithParts,
-        prevIsUser: prevIsUser,
-        isLatestMessage: index == 0,
-        onNavigateToSubSession: onNavigateToSubSession,
+  void _jumpToBottom() {
+    if (!_scrollController.hasClients) return;
+    _scrollController.jumpTo(_scrollController.position.minScrollExtent);
+  }
+
+  Future<void> _animateToBottom() async {
+    setState(() {
+      _frozenMessages = null;
+      _isDetachedFromBottom = false;
+      _showScrollToBottomButton = false;
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted || !_scrollController.hasClients) return;
+      await _scrollController.animateTo(
+        _scrollController.position.minScrollExtent,
+        duration: widget.scrollToBottomAnimationDuration,
+        curve: Curves.easeOutCubic,
       );
-    },
-  );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sourceMessages = _isDetachedFromBottom
+        ? (_frozenMessages ?? widget.messages)
+        : widget.messages;
+    final visibleMessages = sourceMessages
+        .where((message) => !_isSyntheticOnlyUserMessage(message))
+        .toList();
+
+    if (visibleMessages.isEmpty) {
+      return Center(
+        child: Builder(
+          builder: (context) {
+            final tokens = context.tokens;
+            return Text(
+              'No messages yet',
+              style: TextStyle(color: tokens.mutedForeground),
+            );
+          },
+        ),
+      );
+    }
+
+    final tokens = context.tokens;
+
+    return Stack(
+      children: [
+        NotificationListener<ScrollNotification>(
+          onNotification: _handleScrollNotification,
+          child: ListView.builder(
+            key: listViewKey,
+            controller: _scrollController,
+            reverse: true,
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+            itemCount: visibleMessages.length,
+            itemBuilder: (context, index) {
+              final messageWithParts =
+                  visibleMessages[visibleMessages.length - 1 - index];
+              final prevIndex = visibleMessages.length - 2 - index;
+              final prevMessage = prevIndex >= 0
+                  ? visibleMessages[prevIndex]
+                  : null;
+              final prevIsUser = prevMessage?.info is UserMessage;
+
+              return MessageBubble(
+                key: ValueKey(_messageId(messageWithParts)),
+                messageWithParts: messageWithParts,
+                prevIsUser: prevIsUser,
+                isLatestMessage: index == 0,
+                onNavigateToSubSession: widget.onNavigateToSubSession,
+              );
+            },
+          ),
+        ),
+        Positioned(
+          right: 16,
+          bottom: 16,
+          child: IgnorePointer(
+            key: scrollToBottomIgnorePointerKey,
+            ignoring: !_showScrollToBottomButton,
+            child: AnimatedOpacity(
+              opacity: _showScrollToBottomButton ? 1 : 0,
+              duration: const Duration(milliseconds: 160),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: tokens.accentForeground,
+                  borderRadius: BorderRadius.circular(tokens.radiusPill),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.14),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: IconButton(
+                  key: scrollToBottomButtonKey,
+                  tooltip: 'Scroll to bottom',
+                  onPressed: _animateToBottom,
+                  icon: Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: tokens.accent,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 String _messageId(MessageWithParts message) {
@@ -139,4 +322,63 @@ bool _isSyntheticOnlyUserMessage(MessageWithParts message) {
     return false;
   }
   return true;
+}
+
+bool _didBottomAffectingContentChange(
+  List<MessageWithParts> previous,
+  List<MessageWithParts> next,
+) {
+  final previousVisible = previous
+      .where((message) => !_isSyntheticOnlyUserMessage(message))
+      .toList();
+  final nextVisible = next
+      .where((message) => !_isSyntheticOnlyUserMessage(message))
+      .toList();
+
+  if (previousVisible.length != nextVisible.length) {
+    return true;
+  }
+  if (previousVisible.isEmpty || nextVisible.isEmpty) {
+    return false;
+  }
+
+  return _bottomAnchorSignature(previousVisible.last) !=
+      _bottomAnchorSignature(nextVisible.last);
+}
+
+String _messageListSignature(List<MessageWithParts> messages) {
+  final visibleMessages = messages
+      .where((message) => !_isSyntheticOnlyUserMessage(message))
+      .toList();
+  if (visibleMessages.isEmpty) {
+    return 'empty';
+  }
+
+  return '${visibleMessages.length}:${_messageId(visibleMessages.first)}:${_bottomAnchorSignature(visibleMessages.last)}';
+}
+
+String _bottomAnchorSignature(MessageWithParts message) {
+  final buffer = StringBuffer(_messageId(message));
+  for (final part in message.parts) {
+    if (part is TextPart) {
+      buffer
+        ..write('|text:')
+        ..write(part.id)
+        ..write(':')
+        ..write(part.text.length);
+      continue;
+    }
+    if (part is ToolPart) {
+      buffer
+        ..write('|tool:')
+        ..write(part.id)
+        ..write(':')
+        ..write(part.state);
+      continue;
+    }
+    buffer
+      ..write('|')
+      ..write(part.runtimeType);
+  }
+  return buffer.toString();
 }
