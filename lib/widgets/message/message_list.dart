@@ -100,6 +100,7 @@ class _MessageListViewState extends State<MessageListView> {
 
   final ScrollController _scrollController = ScrollController();
 
+  bool _autoFollowBottom = true;
   bool _isDetachedFromBottom = false;
   bool _showScrollToBottomButton = false;
   List<MessageWithParts>? _frozenMessages;
@@ -125,7 +126,8 @@ class _MessageListViewState extends State<MessageListView> {
       return;
     }
 
-    if (!_isDetachedFromBottom &&
+    if (_autoFollowBottom &&
+        !_isDetachedFromBottom &&
         _didBottomAffectingContentChange(oldWidget.messages, widget.messages)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || !_scrollController.hasClients) return;
@@ -143,14 +145,37 @@ class _MessageListViewState extends State<MessageListView> {
   bool _handleScrollNotification(ScrollNotification notification) {
     if (!_scrollController.hasClients) return false;
 
-    if (notification is ScrollStartNotification) {
-    } else if (notification is ScrollEndNotification) {}
+    if (notification is ScrollUpdateNotification ||
+        notification is UserScrollNotification) {
+      if (_autoFollowBottom && _distanceFromBottom() > 0.5) {
+        _detachFromBottom();
+        return false;
+      }
+    } else if (notification is ScrollEndNotification) {
+      if (!_autoFollowBottom &&
+          _distanceFromBottom() <= widget.bottomDetachedThreshold) {
+        _reattachToBottom();
+        return false;
+      }
+    }
 
     _syncDetachedState();
     return false;
   }
 
   void _syncDetachedState() {
+    if (!_autoFollowBottom) {
+      if (_isDetachedFromBottom && _showScrollToBottomButton) {
+        return;
+      }
+
+      setState(() {
+        _isDetachedFromBottom = true;
+        _showScrollToBottomButton = true;
+      });
+      return;
+    }
+
     final shouldDetach = _distanceFromBottom() > widget.bottomDetachedThreshold;
     if (shouldDetach == _isDetachedFromBottom &&
         shouldDetach == _showScrollToBottomButton) {
@@ -176,6 +201,33 @@ class _MessageListViewState extends State<MessageListView> {
     }
   }
 
+  void _detachFromBottom() {
+    if (!_autoFollowBottom) {
+      return;
+    }
+
+    setState(() {
+      _autoFollowBottom = false;
+      _isDetachedFromBottom = true;
+      _showScrollToBottomButton = true;
+      _frozenMessages = List<MessageWithParts>.unmodifiable(widget.messages);
+    });
+  }
+
+  void _reattachToBottom() {
+    setState(() {
+      _autoFollowBottom = true;
+      _isDetachedFromBottom = false;
+      _showScrollToBottomButton = false;
+      _frozenMessages = null;
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      _jumpToBottom();
+    });
+  }
+
   double _distanceFromBottom() {
     final position = _scrollController.position;
     return (position.pixels - position.minScrollExtent).clamp(
@@ -191,6 +243,7 @@ class _MessageListViewState extends State<MessageListView> {
 
   Future<void> _animateToBottom() async {
     setState(() {
+      _autoFollowBottom = true;
       _frozenMessages = null;
       _isDetachedFromBottom = false;
       _showScrollToBottomButton = false;
@@ -208,7 +261,7 @@ class _MessageListViewState extends State<MessageListView> {
 
   @override
   Widget build(BuildContext context) {
-    final sourceMessages = _isDetachedFromBottom
+    final sourceMessages = (!_autoFollowBottom && _isDetachedFromBottom)
         ? (_frozenMessages ?? widget.messages)
         : widget.messages;
     final visibleMessages = sourceMessages
