@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_highlight/flutter_highlight.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:markdown/markdown.dart' as md;
 
+import 'code_highlight_theme.dart';
 import 'message_markdown_theme.dart';
 
 /// A custom [MarkdownElementBuilder] that renders fenced code blocks with
@@ -68,13 +70,11 @@ class _CodeBlockWidgetState extends State<_CodeBlockWidget> {
     final hasLanguage = widget.language.isNotEmpty;
     final theme = Theme.of(context);
     final codeTheme = buildMessageCodeBlockTheme(context);
-    final codeTextStyle = theme.textTheme.bodyMedium!.copyWith(
-      fontFamily: 'monospace',
-      fontSize: 13,
-      height: 1.5,
-      color: codeTheme.codeColor,
-    );
-    final commentPattern = RegExp(r'^\s*(//|#)');
+    final highlightTheme = buildHighlightTheme(context);
+
+    // Normalize language name for flutter_highlight
+    // Some common mappings
+    final normalizedLanguage = _normalizeLanguage(widget.language);
 
     return Container(
       key: messageMarkdownCodeBlockKey,
@@ -114,7 +114,7 @@ class _CodeBlockWidgetState extends State<_CodeBlockWidget> {
                     duration: const Duration(milliseconds: 200),
                     child: _copied
                         ? Row(
-                            key: ValueKey('copied'),
+                            key: const ValueKey('copied'),
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
@@ -122,7 +122,7 @@ class _CodeBlockWidgetState extends State<_CodeBlockWidget> {
                                 size: 14,
                                 color: codeTheme.successColor,
                               ),
-                              SizedBox(width: 4),
+                              const SizedBox(width: 4),
                               Text(
                                 'Copied',
                                 style: theme.textTheme.labelSmall?.copyWith(
@@ -134,7 +134,7 @@ class _CodeBlockWidgetState extends State<_CodeBlockWidget> {
                             ],
                           )
                         : Row(
-                            key: ValueKey('copy'),
+                            key: const ValueKey('copy'),
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
@@ -142,7 +142,7 @@ class _CodeBlockWidgetState extends State<_CodeBlockWidget> {
                                 size: 14,
                                 color: codeTheme.iconColor,
                               ),
-                              SizedBox(width: 4),
+                              const SizedBox(width: 4),
                               Text(
                                 'Copy',
                                 style: theme.textTheme.labelSmall?.copyWith(
@@ -166,27 +166,92 @@ class _CodeBlockWidgetState extends State<_CodeBlockWidget> {
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              child: SelectableText.rich(
-                TextSpan(
-                  children: [
-                    for (final line in widget.code.split('\n')) ...[
-                      TextSpan(
-                        text: line,
-                        style: commentPattern.hasMatch(line)
-                            ? codeTextStyle.copyWith(
-                                color: codeTheme.commentColor,
-                              )
-                            : codeTextStyle,
+              child: hasLanguage && normalizedLanguage.isNotEmpty
+                  ? HighlightView(
+                      widget.code,
+                      language: normalizedLanguage,
+                      theme: highlightTheme,
+                      padding: EdgeInsets.zero,
+                      textStyle: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 13,
+                        height: 1.5,
                       ),
-                      const TextSpan(text: '\n'),
-                    ],
-                  ]..removeLast(),
-                ),
-              ),
+                    )
+                  : SelectableText(
+                      widget.code,
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 13,
+                        height: 1.5,
+                        color: codeTheme.codeColor,
+                      ),
+                    ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  /// Normalizes language name to match flutter_highlight language identifiers.
+  String _normalizeLanguage(String language) {
+    final lower = language.toLowerCase().trim();
+
+    // Common language mappings
+    const languageMap = {
+      'js': 'javascript',
+      'ts': 'typescript',
+      'py': 'python',
+      'rb': 'ruby',
+      'sh': 'bash',
+      'shell': 'bash',
+      'zsh': 'bash',
+      'yml': 'yaml',
+      'md': 'markdown',
+      'cs': 'csharp',
+      'cpp': 'cpp',
+      'c++': 'cpp',
+      'objc': 'objectivec',
+      'objective-c': 'objectivec',
+      'kt': 'kotlin',
+      'rs': 'rust',
+      'go': 'go',
+      'dart': 'dart',
+      'java': 'java',
+      'swift': 'swift',
+      'php': 'php',
+      'sql': 'sql',
+      'html': 'xml',
+      'xml': 'xml',
+      'css': 'css',
+      'scss': 'scss',
+      'sass': 'scss',
+      'json': 'json',
+      'dockerfile': 'dockerfile',
+      'makefile': 'makefile',
+      'vim': 'vim',
+      'lua': 'lua',
+      'r': 'r',
+      'matlab': 'matlab',
+      'scala': 'scala',
+      'groovy': 'groovy',
+      'perl': 'perl',
+      'clojure': 'clojure',
+      'haskell': 'haskell',
+      'erlang': 'erlang',
+      'elixir': 'elixir',
+      'ocaml': 'ocaml',
+      'f#': 'fsharp',
+      'fsharp': 'fsharp',
+      'powershell': 'powershell',
+      'ps1': 'powershell',
+      'batch': 'dos',
+      'cmd': 'dos',
+      'vb': 'vbnet',
+      'vb.net': 'vbnet',
+    };
+
+    return languageMap[lower] ?? lower;
   }
 }

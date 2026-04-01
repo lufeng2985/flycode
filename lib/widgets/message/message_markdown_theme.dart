@@ -81,8 +81,8 @@ MarkdownStyleSheet buildMessageMarkdownStyleSheet(BuildContext context) {
           ? theme.colorScheme.primary.withValues(alpha: 0.95)
           : primary,
       fontFamily: 'monospace',
-      fontSize: 13,
-      fontWeight: FontWeight.w600,
+      fontSize: 14,
+      fontWeight: FontWeight.w500,
       height: 1.35,
     ),
     h1: headingStyle(22),

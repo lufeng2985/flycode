@@ -273,11 +273,10 @@ class _TypewriterMarkdownTextState extends State<_TypewriterMarkdownText> {
   @override
   Widget build(BuildContext context) {
     final text = _chars.take(_visibleCount).join();
-    final markdownText = _addInlineCodeVisualPadding(text);
 
     return RepaintBoundary(
       child: MarkdownBody(
-        data: markdownText,
+        data: text,
         selectable: true,
         builders: {
           'pre': CodeBlockBuilder(),
@@ -289,43 +288,6 @@ class _TypewriterMarkdownTextState extends State<_TypewriterMarkdownText> {
       ),
     );
   }
-}
-
-String _addInlineCodeVisualPadding(String markdown) {
-  final segments = markdown.split('```');
-  if (segments.length == 1) {
-    return _padInlineCodeInSegment(markdown);
-  }
-
-  final buffer = StringBuffer();
-  for (var i = 0; i < segments.length; i++) {
-    if (i.isOdd) {
-      buffer.write('```');
-      buffer.write(segments[i]);
-      buffer.write('```');
-    } else {
-      buffer.write(_padInlineCodeInSegment(segments[i]));
-    }
-  }
-
-  if (!markdown.endsWith('```')) {
-    final output = buffer.toString();
-    if (output.endsWith('```')) {
-      return output.substring(0, output.length - 3);
-    }
-  }
-
-  return buffer.toString();
-}
-
-String _padInlineCodeInSegment(String text) {
-  return text.replaceAllMapped(RegExp(r'`([^`\n]+)`'), (match) {
-    final content = match.group(1);
-    if (content == null || content.isEmpty) {
-      return match.group(0)!;
-    }
-    return '`\u2009$content\u2009`';
-  });
 }
 
 class _MarkdownListBuilder extends MarkdownElementBuilder {
@@ -464,7 +426,7 @@ class _MarkdownTaskListItem extends StatelessWidget {
                         : null,
                   ),
                   child: MarkdownBody(
-                    data: _addInlineCodeVisualPadding(contentMarkdown),
+                    data: contentMarkdown,
                     selectable: true,
                     builders: {
                       'pre': CodeBlockBuilder(),
@@ -543,7 +505,7 @@ class _MarkdownListItem extends StatelessWidget {
             children: [
               if (contentMarkdown.trim().isNotEmpty)
                 MarkdownBody(
-                  data: _addInlineCodeVisualPadding(contentMarkdown),
+                  data: contentMarkdown,
                   selectable: true,
                   builders: {
                     'pre': CodeBlockBuilder(),

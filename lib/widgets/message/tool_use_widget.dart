@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:highlight/highlight.dart' show highlight, Node;
 import 'package:shimmer/shimmer.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../service/api/models/parts.dart';
 import '../../theme/app_tokens.dart';
+import 'code_highlight_theme.dart';
 import 'diff_view.dart';
 import 'message_markdown_theme.dart';
 import 'tool_meta.dart';
@@ -591,15 +593,83 @@ class _BashOutputPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final codeTheme = buildMessageCodeBlockTheme(context);
+    final highlightTheme = buildHighlightTheme(context);
     final displayOutput = (output?.isNotEmpty == true)
         ? output!
         : (running ? 'running...' : 'no output');
+
+    // 构建命令行内容
+    final Widget commandWidget;
+    if (command.isNotEmpty) {
+      // 使用底层 highlight API 进行语法高亮
+      final result = highlight.parse(command, language: 'bash');
+      final spans = _convertNodes(result.nodes ?? [], highlightTheme);
+
+      commandWidget = Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '\$ ',
+            style: TextStyle(
+              color: codeTheme.codeColor,
+              fontSize: 13,
+              height: 1.5,
+              fontFamily: 'monospace',
+            ),
+          ),
+          RichText(
+            text: TextSpan(
+              style: TextStyle(
+                color: codeTheme.codeColor,
+                fontSize: 13,
+                height: 1.5,
+                fontFamily: 'monospace',
+              ),
+              children: spans.isEmpty ? [TextSpan(text: command)] : spans,
+            ),
+          ),
+        ],
+      );
+    } else {
+      commandWidget = const SizedBox.shrink();
+    }
+
+    // 构建内容
+    final Widget content;
+    if (command.isNotEmpty) {
+      content = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          commandWidget,
+          const SizedBox(height: 8),
+          SelectableText(
+            displayOutput.trimRight(),
+            style: TextStyle(
+              color: codeTheme.codeColor,
+              fontSize: 13,
+              height: 1.5,
+              fontFamily: 'monospace',
+            ),
+          ),
+        ],
+      );
+    } else {
+      content = SelectableText(
+        displayOutput,
+        style: TextStyle(
+          color: codeTheme.codeColor,
+          fontSize: 13,
+          height: 1.5,
+          fontFamily: 'monospace',
+        ),
+      );
+    }
 
     return Padding(
       padding: const EdgeInsets.only(top: 4, bottom: 8),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: codeTheme.backgroundColor,
           borderRadius: BorderRadius.circular(8),
@@ -610,22 +680,41 @@ class _BashOutputPanel extends StatelessWidget {
           child: SingleChildScrollView(
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              child: SelectableText(
-                command.isNotEmpty
-                    ? '\$ $command\n\n${displayOutput.trimRight()}'
-                    : displayOutput,
-                style: TextStyle(
-                  color: codeTheme.codeColor,
-                  fontSize: 13,
-                  height: 1.5,
-                  fontFamily: 'monospace',
-                ),
-              ),
+              padding: const EdgeInsets.all(12),
+              child: content,
             ),
           ),
         ),
       ),
     );
+  }
+
+  /// 将 highlight 解析的节点转换为 TextSpan 列表
+  List<TextSpan> _convertNodes(List<Node> nodes, Map<String, TextStyle> theme) {
+    final spans = <TextSpan>[];
+
+    void traverse(Node node, List<TextSpan> currentSpans) {
+      if (node.value != null) {
+        // 叶子节点：有文本内容
+        final style = node.className != null ? theme[node.className!] : null;
+        currentSpans.add(TextSpan(text: node.value, style: style));
+      } else if (node.children != null) {
+        // 内部节点：有子节点
+        final children = <TextSpan>[];
+        final style = node.className != null ? theme[node.className!] : null;
+        currentSpans.add(TextSpan(children: children, style: style));
+
+        for (var i = 0; i < node.children!.length; i++) {
+          traverse(node.children![i], children);
+        }
+      }
+    }
+
+    for (final node in nodes) {
+      traverse(node, spans);
+    }
+
+    return spans;
   }
 }
 
@@ -641,11 +730,10 @@ class _EditDiffPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(top: 4, bottom: 8),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxHeight: _kToolPanelMaxHeight),
-        child: SingleChildScrollView(
-          child: DiffView(before: oldString, after: newString),
-        ),
+      child: DiffView(
+        before: oldString,
+        after: newString,
+        maxHeight: _kToolPanelMaxHeight,
       ),
     );
   }
@@ -672,42 +760,42 @@ class _PatchDiffPanel extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.only(top: 4, bottom: 8),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxHeight: _kToolPanelMaxHeight),
-        child: SingleChildScrollView(
-          child: Column(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: files.map((file) {
+          final before = file['before']?.toString() ?? '';
+          final after = file['after']?.toString() ?? '';
+          final relativePath = file['relativePath']?.toString();
+          final filePath = file['filePath']?.toString();
+          final path = (relativePath?.isNotEmpty == true)
+              ? relativePath!
+              : filePath ?? '';
+          final fileName = _fileName(path);
+          return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: files.map((file) {
-              final before = file['before']?.toString() ?? '';
-              final after = file['after']?.toString() ?? '';
-              final relativePath = file['relativePath']?.toString();
-              final filePath = file['filePath']?.toString();
-              final path = (relativePath?.isNotEmpty == true)
-                  ? relativePath!
-                  : filePath ?? '';
-              final fileName = _fileName(path);
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (fileName.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(
-                        fileName,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: tokens.mutedForeground,
-                          fontFamily: 'monospace',
-                        ),
-                      ),
+            children: [
+              if (fileName.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    fileName,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: tokens.mutedForeground,
+                      fontFamily: 'monospace',
                     ),
-                  DiffView(before: before, after: after),
-                  if (file != files.last) const SizedBox(height: 8),
-                ],
-              );
-            }).toList(),
-          ),
-        ),
+                  ),
+                ),
+              DiffView(
+                before: before,
+                after: after,
+                fileName: fileName,
+                maxHeight: _kToolPanelMaxHeight,
+              ),
+              if (file != files.last) const SizedBox(height: 8),
+            ],
+          );
+        }).toList(),
       ),
     );
   }

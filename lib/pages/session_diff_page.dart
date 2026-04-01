@@ -309,7 +309,11 @@ class _FileDiffTile extends StatelessWidget {
               bottom: 12,
               top: 4,
             ),
-            child: DiffView(before: diff.before, after: diff.after),
+            child: DiffView(
+              before: diff.before,
+              after: diff.after,
+              fileName: diff.file,
+            ),
           ),
         ],
       ),

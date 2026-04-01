@@ -1914,62 +1914,160 @@ class _CommandSuggestionList extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final tokens = context.tokens;
+    final sheetRadius = BorderRadius.circular(tokens.radiusL);
 
-    return Material(
-      elevation: 8,
-      borderRadius: BorderRadius.circular(10),
-      color: theme.colorScheme.surface,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: maxHeight),
-        child: ListView.separated(
-          shrinkWrap: true,
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          itemCount: commands.length,
-          separatorBuilder: (_, _) =>
-              Divider(height: 1, color: tokens.border.withValues(alpha: 0.4)),
-          itemBuilder: (ctx, i) {
-            final cmd = commands[i];
-            return InkWell(
-              onTap: () => onSelect(cmd),
-              borderRadius: i == 0
-                  ? const BorderRadius.vertical(top: Radius.circular(10))
-                  : i == commands.length - 1
-                  ? const BorderRadius.vertical(bottom: Radius.circular(10))
-                  : BorderRadius.zero,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 10,
-                ),
-                child: Row(
-                  children: [
-                    Text(
-                      '/${cmd.name}',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    if (cmd.description != null &&
-                        cmd.description!.isNotEmpty) ...[
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          cmd.description!,
-                          style: const TextStyle(fontSize: 13),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            );
-          },
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(
+          tokens.card.withValues(
+            alpha: theme.brightness == Brightness.dark ? 0.22 : 0.18,
+          ),
+          theme.colorScheme.surface,
+        ),
+        borderRadius: sheetRadius,
+        border: Border.all(color: tokens.border.withValues(alpha: 0.26)),
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.10),
+            offset: const Offset(0, 14),
+            blurRadius: 34,
+          ),
+          BoxShadow(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.06),
+            offset: const Offset(0, 2),
+            blurRadius: 10,
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: sheetRadius,
+        child: Material(
+          color: Colors.transparent,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: maxHeight),
+            child: ListView.builder(
+              shrinkWrap: true,
+              padding: const EdgeInsets.all(6),
+              itemCount: commands.length,
+              itemBuilder: (ctx, i) {
+                final cmd = commands[i];
+                return Padding(
+                  padding: EdgeInsets.only(
+                    bottom: i == commands.length - 1 ? 0 : 2,
+                  ),
+                  child: _CommandSuggestionTile(
+                    command: cmd,
+                    emphasized: i == 0,
+                    onTap: () => onSelect(cmd),
+                  ),
+                );
+              },
+            ),
+          ),
         ),
       ),
     );
   }
+}
+
+class _CommandSuggestionTile extends StatefulWidget {
+  final Command command;
+  final bool emphasized;
+  final VoidCallback onTap;
+
+  const _CommandSuggestionTile({
+    required this.command,
+    required this.emphasized,
+    required this.onTap,
+  });
+
+  @override
+  State<_CommandSuggestionTile> createState() => _CommandSuggestionTileState();
+}
+
+class _CommandSuggestionTileState extends State<_CommandSuggestionTile> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final tokens = context.tokens;
+    final description = widget.command.description;
+    final hasDescription = description != null && description.isNotEmpty;
+    final tileRadius = BorderRadius.circular(20);
+    final baseColor = widget.emphasized ? tokens.card : Colors.transparent;
+    final hoverColor = Color.alphaBlend(
+      theme.colorScheme.primary.withValues(
+        alpha: theme.brightness == Brightness.dark ? 0.14 : 0.08,
+      ),
+      theme.colorScheme.surface,
+    );
+    final tileColor = _isHovered ? hoverColor : baseColor;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: Material(
+        color: Colors.transparent,
+        child: Ink(
+          decoration: BoxDecoration(color: tileColor, borderRadius: tileRadius),
+          child: InkWell(
+            onTap: widget.onTap,
+            borderRadius: tileRadius,
+            hoverColor: theme.colorScheme.primary.withValues(alpha: 0.06),
+            splashColor: theme.colorScheme.primary.withValues(alpha: 0.10),
+            highlightColor: theme.colorScheme.primary.withValues(alpha: 0.08),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '/${widget.command.name}',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      height: 1.15,
+                    ),
+                  ),
+                  if (hasDescription) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      description,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontFamily: 'Inter',
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        height: 1.25,
+                        color: tokens.mutedForeground,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+@visibleForTesting
+Widget buildCommandSuggestionListForTest({
+  required List<Command> commands,
+  required ValueChanged<Command> onSelect,
+  double maxHeight = 320,
+}) {
+  return _CommandSuggestionList(
+    commands: commands,
+    onSelect: onSelect,
+    maxHeight: maxHeight,
+  );
 }
 
 // ─── Agent 选择底部弹窗（> 3 个 agent 时使用）────────────────────

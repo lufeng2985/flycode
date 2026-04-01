@@ -124,10 +124,10 @@ void main() {
     expect(headingStyle?.fontSize, 22);
     expect(headingStyle?.fontWeight, FontWeight.w700);
 
-    final inlineCodeStyle = findSpanStyle(tester, '\u2009inline code\u2009');
+    final inlineCodeStyle = findSpanStyle(tester, 'inline code');
     expect(inlineCodeStyle?.fontFamily, 'monospace');
-    expect(inlineCodeStyle?.fontSize, 13);
-    expect(inlineCodeStyle?.fontWeight, FontWeight.w600);
+    expect(inlineCodeStyle?.fontSize, 14);
+    expect(inlineCodeStyle?.fontWeight, FontWeight.w500);
     expect(inlineCodeStyle?.backgroundColor, isNull);
 
     final styleSheet = buildMessageMarkdownStyleSheet(
