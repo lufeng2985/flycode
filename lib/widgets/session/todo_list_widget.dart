@@ -9,7 +9,8 @@ import '../../theme/app_tokens.dart';
 ///
 /// 展示规则：
 /// - 只有存在非 completed 的 todo 时才显示整个区域
-/// - 所有 todo 均展示，排序：in_progress → pending → completed
+/// - 展开态展示所有 todo，保持原始顺序
+/// - 折叠态仅预览第一个 in_progress todo
 /// - 支持折叠/展开
 class TodoListWidget extends ConsumerStatefulWidget {
   const TodoListWidget({super.key, required this.sessionID});
@@ -40,11 +41,9 @@ class _TodoListWidgetState extends ConsumerState<TodoListWidget> {
     // 只有存在非 completed 的 todo 时才显示
     final hasActive = todos.any((t) => t.status != 'completed');
     if (!hasActive) return const SizedBox.shrink();
-
-    // 排序：in_progress → pending → completed
-    final sorted = List<Todo>.from(
-      todos,
-    )..sort((a, b) => _statusOrder(a.status).compareTo(_statusOrder(b.status)));
+    final currentTodo = todos
+        .where((t) => t.status == 'in_progress')
+        .firstOrNull;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
@@ -55,20 +54,26 @@ class _TodoListWidgetState extends ConsumerState<TodoListWidget> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _buildHeader(context, sorted),
+          _buildHeader(context, todos),
           if (_expanded) ...[
             Divider(height: 1, color: tokens.border.withValues(alpha: 0.45)),
             ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               padding: const EdgeInsets.symmetric(vertical: 4),
-              itemCount: sorted.length,
+              itemCount: todos.length,
               separatorBuilder: (_, idx) => Divider(
                 height: 1,
                 indent: 40,
                 color: tokens.border.withValues(alpha: 0.25),
               ),
-              itemBuilder: (context, index) => _buildTodoItem(sorted[index]),
+              itemBuilder: (context, index) => _buildTodoItem(todos[index]),
+            ),
+          ] else if (currentTodo != null) ...[
+            Divider(height: 1, color: tokens.border.withValues(alpha: 0.45)),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: _buildTodoItem(currentTodo),
             ),
           ],
         ],
@@ -214,21 +219,6 @@ class _TodoListWidgetState extends ConsumerState<TodoListWidget> {
         ],
       ),
     );
-  }
-
-  int _statusOrder(String status) {
-    switch (status) {
-      case 'in_progress':
-        return 0;
-      case 'pending':
-        return 1;
-      case 'completed':
-        return 2;
-      case 'cancelled':
-        return 3;
-      default:
-        return 4;
-    }
   }
 
   _StatusInfo _statusInfo(String status) {
