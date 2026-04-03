@@ -32,6 +32,7 @@ import '../../service/api/models/session.dart';
 import '../../service/api/models/session_status.dart';
 import '../../theme/app_tokens.dart';
 import 'at_mention_controller.dart';
+import 'chat_command_popup.dart';
 import 'model_selection_sheet.dart';
 
 class _ImageAttachment {
@@ -44,16 +45,17 @@ class _ImageAttachment {
 enum _InputMode { chat, shell }
 
 class ChatInput extends ConsumerStatefulWidget {
-  const ChatInput({super.key});
+  const ChatInput({super.key, this.commandPanelController});
+
+  final CommandPanelController? commandPanelController;
 
   @override
-  ConsumerState<ChatInput> createState() => _ChatInputState();
+  ConsumerState<ChatInput> createState() => ChatInputState();
 }
 
-class _ChatInputState extends ConsumerState<ChatInput> {
+class ChatInputState extends ConsumerState<ChatInput> {
   final AtMentionController _controller = AtMentionController();
   final FocusNode _focusNode = FocusNode();
-  final LayerLink _layerLink = LayerLink();
   bool _isLoading = false;
   bool _isHandlingPaste = false;
 
@@ -63,8 +65,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   _InputMode _inputMode = _InputMode.chat;
   final List<_ImageAttachment> _attachments = [];
-  OverlayEntry? _commandOverlay;
-  List<Command> _filteredCommands = [];
 
   // ─── @ file mention state ─────────────────────────────────────────
   OverlayEntry? _atFileOverlay;
@@ -91,7 +91,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     _syncInputModeByBangPrefix(_controller.text);
 
     if (_inputMode == _InputMode.shell) {
-      _hideCommandOverlay();
+      _hideCommandPanel();
       _hideAtFileOverlay();
       return;
     }
@@ -119,7 +119,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
             _showAtFileOverlay();
           }
           // ── @ overlay is active; skip command detection ──
-          _hideCommandOverlay();
+          _hideCommandPanel();
           return;
         }
       }
@@ -132,7 +132,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
     // ── Command autocomplete ──
     if (!text.startsWith('/') || text.contains(' ')) {
-      _hideCommandOverlay();
+      _hideCommandPanel();
       return;
     }
 
@@ -141,13 +141,16 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     final filtered = commands.where((c) => c.name.startsWith(query)).toList();
 
     if (filtered.isEmpty) {
-      _hideCommandOverlay();
+      _hideCommandPanel();
     } else {
-      _filteredCommands = filtered;
-      if (_commandOverlay == null) {
-        _showCommandOverlay();
+      final panelController = widget.commandPanelController;
+      if (panelController == null) {
+        return;
+      }
+      if (!panelController.visible) {
+        panelController.show(filtered, query: query);
       } else {
-        _commandOverlay!.markNeedsBuild();
+        panelController.update(filtered, query: query);
       }
     }
   }
@@ -194,47 +197,20 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     }
   }
 
-  // ─── Command Overlay ──────────────────────────────────────────────
-
-  void _showCommandOverlay() {
-    final overlay = Overlay.of(context);
-    final mediaQuery = MediaQuery.of(context);
-    final screenWidth = mediaQuery.size.width;
-    final screenHeight = mediaQuery.size.height;
-    const horizontalPadding = 12.0;
-    final overlayWidth = screenWidth - horizontalPadding * 2;
-    final maxHeight = screenHeight * 0.5;
-
-    final renderBox = context.findRenderObject() as RenderBox?;
-    final boxOffset = renderBox?.localToGlobal(Offset.zero) ?? Offset.zero;
-    final bottomY = boxOffset.dy - 4;
-
-    _commandOverlay = OverlayEntry(
-      builder: (ctx) => Positioned(
-        left: horizontalPadding,
-        bottom: screenHeight - bottomY,
-        width: overlayWidth,
-        child: _CommandSuggestionList(
-          commands: _filteredCommands,
-          onSelect: _onCommandSelected,
-          maxHeight: maxHeight,
-        ),
-      ),
-    );
-    overlay.insert(_commandOverlay!);
+  void _hideCommandPanel() {
+    widget.commandPanelController?.hide();
   }
 
-  void _hideCommandOverlay() {
-    _commandOverlay?.remove();
-    _commandOverlay = null;
-  }
-
-  void _onCommandSelected(Command command) {
-    _hideCommandOverlay();
+  void insertCommand(Command command) {
+    _hideCommandPanel();
     _controller.value = TextEditingValue(
       text: '/${command.name} ',
       selection: TextSelection.collapsed(offset: 1 + command.name.length + 1),
     );
+  }
+
+  void focusInput() {
+    _focusNode.requestFocus();
   }
 
   // ─── @ File Overlay ───────────────────────────────────────────────
@@ -856,7 +832,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
         _attachments.clear();
       }
     });
-    _hideCommandOverlay();
+    _hideCommandPanel();
     _hideAtFileOverlay();
   }
 
@@ -952,65 +928,60 @@ class _ChatInputState extends ConsumerState<ChatInput> {
               onStartNewSession: _startPendingSession,
             ),
             const SizedBox(height: 10),
-            CompositedTransformTarget(
-              link: _layerLink,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: tokens.card.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: tokens.border.withValues(alpha: 0.5),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (!isShellMode && _attachments.isNotEmpty)
-                      _AttachmentList(
-                        attachments: _attachments,
-                        onRemove: _removeAttachment,
-                        onPreview: (att) => _showImagePreview(context, att),
-                      ),
-                    TextField(
-                      controller: _controller,
-                      focusNode: _focusNode,
-                      autofocus: false,
-                      maxLines: 5,
-                      minLines: 1,
-                      style: TextStyle(
+            Container(
+              decoration: BoxDecoration(
+                color: tokens.card.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: tokens.border.withValues(alpha: 0.5)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (!isShellMode && _attachments.isNotEmpty)
+                    _AttachmentList(
+                      attachments: _attachments,
+                      onRemove: _removeAttachment,
+                      onPreview: (att) => _showImagePreview(context, att),
+                    ),
+                  TextField(
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    autofocus: false,
+                    maxLines: 5,
+                    minLines: 1,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontFamily: isShellMode ? 'monospace' : null,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: isShellMode
+                          ? context.l10n.chatInputShellHint
+                          : context.l10n.chatInputAskHint,
+                      hintStyle: TextStyle(
+                        color: tokens.mutedForeground,
                         fontSize: 14,
                         fontFamily: isShellMode ? 'monospace' : null,
                       ),
-                      decoration: InputDecoration(
-                        hintText: isShellMode
-                            ? context.l10n.chatInputShellHint
-                            : context.l10n.chatInputAskHint,
-                        hintStyle: TextStyle(
-                          color: tokens.mutedForeground,
-                          fontSize: 14,
-                          fontFamily: isShellMode ? 'monospace' : null,
-                        ),
-                        contentPadding: const EdgeInsets.all(12),
-                        filled: false,
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        errorBorder: InputBorder.none,
-                        focusedErrorBorder: InputBorder.none,
-                      ),
-                      onSubmitted: (_) => _handleSend(),
+                      contentPadding: const EdgeInsets.all(12),
+                      filled: false,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      errorBorder: InputBorder.none,
+                      focusedErrorBorder: InputBorder.none,
                     ),
-                    _InputToolBar(
-                      isLoading: _isLoading,
-                      isWorking: isWorking,
-                      isAborting: _isAborting,
-                      isShellMode: isShellMode,
-                      onPickImage: _pickImage,
-                      onSend: _handleSend,
-                      onAbort: _handleAbort,
-                    ),
-                  ],
-                ),
+                    onSubmitted: (_) => _handleSend(),
+                  ),
+                  _InputToolBar(
+                    isLoading: _isLoading,
+                    isWorking: isWorking,
+                    isAborting: _isAborting,
+                    isShellMode: isShellMode,
+                    onPickImage: _pickImage,
+                    onSend: _handleSend,
+                    onAbort: _handleAbort,
+                  ),
+                ],
               ),
             ),
           ],
@@ -1045,7 +1016,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   @override
   void dispose() {
-    _hideCommandOverlay();
+    _hideCommandPanel();
     _hideAtFileOverlay();
     _atDebounceTimer?.cancel();
     _controller.removeListener(_onTextChanged);
@@ -1895,179 +1866,6 @@ class _VariantSelectionSheet extends StatelessWidget {
       ),
     );
   }
-}
-
-// ─── 命令建议列表 Widget ───────────────────────────────────────────
-
-class _CommandSuggestionList extends StatelessWidget {
-  final List<Command> commands;
-  final ValueChanged<Command> onSelect;
-  final double maxHeight;
-
-  const _CommandSuggestionList({
-    required this.commands,
-    required this.onSelect,
-    required this.maxHeight,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final tokens = context.tokens;
-    final sheetRadius = BorderRadius.circular(tokens.radiusL);
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Color.alphaBlend(
-          tokens.card.withValues(
-            alpha: theme.brightness == Brightness.dark ? 0.22 : 0.18,
-          ),
-          theme.colorScheme.surface,
-        ),
-        borderRadius: sheetRadius,
-        border: Border.all(color: tokens.border.withValues(alpha: 0.26)),
-        boxShadow: [
-          BoxShadow(
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.10),
-            offset: const Offset(0, 14),
-            blurRadius: 34,
-          ),
-          BoxShadow(
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.06),
-            offset: const Offset(0, 2),
-            blurRadius: 10,
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: sheetRadius,
-        child: Material(
-          color: Colors.transparent,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: maxHeight),
-            child: ListView.builder(
-              shrinkWrap: true,
-              padding: const EdgeInsets.all(6),
-              itemCount: commands.length,
-              itemBuilder: (ctx, i) {
-                final cmd = commands[i];
-                return Padding(
-                  padding: EdgeInsets.only(
-                    bottom: i == commands.length - 1 ? 0 : 2,
-                  ),
-                  child: _CommandSuggestionTile(
-                    command: cmd,
-                    emphasized: i == 0,
-                    onTap: () => onSelect(cmd),
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CommandSuggestionTile extends StatefulWidget {
-  final Command command;
-  final bool emphasized;
-  final VoidCallback onTap;
-
-  const _CommandSuggestionTile({
-    required this.command,
-    required this.emphasized,
-    required this.onTap,
-  });
-
-  @override
-  State<_CommandSuggestionTile> createState() => _CommandSuggestionTileState();
-}
-
-class _CommandSuggestionTileState extends State<_CommandSuggestionTile> {
-  bool _isHovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final tokens = context.tokens;
-    final description = widget.command.description;
-    final hasDescription = description != null && description.isNotEmpty;
-    final tileRadius = BorderRadius.circular(20);
-    final baseColor = widget.emphasized ? tokens.card : Colors.transparent;
-    final hoverColor = Color.alphaBlend(
-      theme.colorScheme.primary.withValues(
-        alpha: theme.brightness == Brightness.dark ? 0.14 : 0.08,
-      ),
-      theme.colorScheme.surface,
-    );
-    final tileColor = _isHovered ? hoverColor : baseColor;
-
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      child: Material(
-        color: Colors.transparent,
-        child: Ink(
-          decoration: BoxDecoration(color: tileColor, borderRadius: tileRadius),
-          child: InkWell(
-            onTap: widget.onTap,
-            borderRadius: tileRadius,
-            hoverColor: theme.colorScheme.primary.withValues(alpha: 0.06),
-            splashColor: theme.colorScheme.primary.withValues(alpha: 0.10),
-            highlightColor: theme.colorScheme.primary.withValues(alpha: 0.08),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '/${widget.command.name}',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      height: 1.15,
-                    ),
-                  ),
-                  if (hasDescription) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      description,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        fontFamily: 'Inter',
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        height: 1.25,
-                        color: tokens.mutedForeground,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-@visibleForTesting
-Widget buildCommandSuggestionListForTest({
-  required List<Command> commands,
-  required ValueChanged<Command> onSelect,
-  double maxHeight = 320,
-}) {
-  return _CommandSuggestionList(
-    commands: commands,
-    onSelect: onSelect,
-    maxHeight: maxHeight,
-  );
 }
 
 // ─── Agent 选择底部弹窗（> 3 个 agent 时使用）────────────────────

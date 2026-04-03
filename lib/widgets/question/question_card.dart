@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,34 +9,49 @@ import '../../providers/question_provider.dart';
 import '../../service/api/models/question.dart';
 import '../../theme/app_tokens.dart';
 
-/// Displays all pending questions for the current session as a step-by-step
-/// card overlay at the bottom of the chat view.
-class QuestionOverlay extends ConsumerWidget {
-  const QuestionOverlay({super.key, required this.sessionID});
+class QuestionOverlayCard extends StatelessWidget {
+  const QuestionOverlayCard({super.key, required this.request});
 
-  final String sessionID;
+  final QuestionRequest request;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final questionsAsync = ref.watch(pendingQuestionsProvider);
+  Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final keyboardInset = mediaQuery.viewInsets.bottom;
 
-    return questionsAsync.when(
-      data: (questions) {
-        final sessionQuestions = questions
-            .where((q) => q.sessionID == sessionID)
-            .toList();
-        if (sessionQuestions.isEmpty) return const SizedBox.shrink();
+    return Positioned.fill(
+      child: IgnorePointer(
+        ignoring: false,
+        child: AnimatedPadding(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          padding: EdgeInsets.fromLTRB(10, 28, 10, keyboardInset + 16),
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final maxWidth = math.min<double>(constraints.maxWidth, 760);
+                final maxHeight = math.max<double>(
+                  320,
+                  constraints.maxHeight * 0.7,
+                );
 
-        return QuestionRequestCard(request: sessionQuestions.first);
-      },
-      loading: () => const SizedBox.shrink(),
-      error: (err, st) => const SizedBox.shrink(),
+                return ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: maxWidth,
+                    maxHeight: maxHeight,
+                  ),
+                  child: QuestionRequestCard(request: request),
+                );
+              },
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
 
-/// Card that handles a single QuestionRequest (which may contain multiple
-/// questions). Walks through each question one step at a time.
 class QuestionRequestCard extends ConsumerStatefulWidget {
   const QuestionRequestCard({super.key, required this.request});
 
@@ -47,14 +64,8 @@ class QuestionRequestCard extends ConsumerStatefulWidget {
 
 class _QuestionRequestCardState extends ConsumerState<QuestionRequestCard> {
   int _currentIndex = 0;
-
-  // answers[i] = list of selected labels for question i
   late final List<List<String>> _answers;
-
-  // custom text controllers, one per question
   late final List<TextEditingController> _customControllers;
-
-  // whether custom answer is currently selected for each question
   late final List<bool> _customSelected;
 
   @override
@@ -92,8 +103,7 @@ class _QuestionRequestCardState extends ConsumerState<QuestionRequestCard> {
 
   void _toggleOption(String label) {
     final current = _answers[_currentIndex];
-    final question = _currentQuestion;
-    final isMultiple = question.multiple ?? false;
+    final isMultiple = _currentQuestion.multiple ?? false;
     if (!isMultiple) {
       FocusScope.of(context).unfocus();
     }
@@ -185,144 +195,187 @@ class _QuestionRequestCardState extends ConsumerState<QuestionRequestCard> {
     final question = _currentQuestion;
     final total = widget.request.questions.length;
     final isMultiple = question.multiple ?? false;
-    final hasCustom = question.custom ?? true; // default true per spec
+    final hasCustom = question.custom ?? true;
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: tokens.border),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+    return Material(
+      key: const Key('question_overlay.surface'),
+      color: colorScheme.surface,
+      elevation: 14,
+      shadowColor: Colors.black.withValues(alpha: 0.16),
+      borderRadius: BorderRadius.circular(28),
+      clipBehavior: Clip.antiAlias,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: tokens.border.withValues(alpha: 0.65)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 32,
+              offset: const Offset(0, 16),
+            ),
+          ],
+        ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Text(
-                  'Question ${_currentIndex + 1} / $total',
-                  style: textTheme.labelLarge?.copyWith(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: tokens.accentForeground,
-                  ),
-                ),
-                const Spacer(),
-                _StepDots(
-                  total: total,
-                  current: _currentIndex,
-                  activeColor: colorScheme.primary,
-                  inactiveColor: tokens.border,
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              question.question,
-              style: textTheme.titleMedium?.copyWith(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 15,
-                height: 1.2,
-                fontWeight: FontWeight.w700,
-                color: colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              isMultiple
-                  ? l10n.questionCardSelectOneOrMore
-                  : l10n.questionCardSelectOne,
-              style: textTheme.labelMedium?.copyWith(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: tokens.mutedForeground,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _OptionsList(
-              question: question,
-              selected: _answers[_currentIndex],
-              customController: _customControllers[_currentIndex],
-              onToggle: _toggleOption,
-              hasCustom: hasCustom,
-              onCustomChanged: (_) => setState(() {}),
-              onCustomSelected: _selectCustomAnswer,
-              onCustomToggled: _toggleCustomAnswer,
-              customSelected: _customSelected[_currentIndex],
-              isMultiple: isMultiple,
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                TextButton(
-                  onPressed: _reject,
-                  style: TextButton.styleFrom(
-                    foregroundColor: tokens.mutedForeground,
-                    padding: EdgeInsets.zero,
-                    minimumSize: const Size(0, 36),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: Text(
-                    l10n.questionCardIgnore,
-                    style: textTheme.labelLarge?.copyWith(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      question.header.isNotEmpty
+                          ? question.header
+                          : 'Question ${_currentIndex + 1} / $total',
+                      style: textTheme.labelLarge?.copyWith(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: tokens.accentForeground,
+                      ),
                     ),
                   ),
+                  const SizedBox(width: 12),
+                  _StepDots(
+                    total: total,
+                    current: _currentIndex,
+                    activeColor: colorScheme.primary,
+                    inactiveColor: tokens.border,
+                  ),
+                ],
+              ),
+            ),
+            Divider(height: 1, color: tokens.border.withValues(alpha: 0.45)),
+            Flexible(
+              fit: FlexFit.loose,
+              child: SingleChildScrollView(
+                key: const Key('question_overlay.scroll'),
+                padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Question ${_currentIndex + 1} / $total',
+                      style: textTheme.labelMedium?.copyWith(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: tokens.mutedForeground,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      question.question,
+                      style: textTheme.titleMedium?.copyWith(
+                        fontFamily: 'PlusJakartaSans',
+                        fontSize: 18,
+                        height: 1.25,
+                        fontWeight: FontWeight.w700,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      isMultiple
+                          ? l10n.questionCardSelectOneOrMore
+                          : l10n.questionCardSelectOne,
+                      style: textTheme.labelMedium?.copyWith(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: tokens.mutedForeground,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    _OptionsList(
+                      question: question,
+                      selected: _answers[_currentIndex],
+                      customController: _customControllers[_currentIndex],
+                      onToggle: _toggleOption,
+                      hasCustom: hasCustom,
+                      onCustomChanged: (_) => setState(() {}),
+                      onCustomSelected: _selectCustomAnswer,
+                      onCustomToggled: _toggleCustomAnswer,
+                      customSelected: _customSelected[_currentIndex],
+                      isMultiple: isMultiple,
+                    ),
+                  ],
                 ),
-                const Spacer(),
-                if (_canGoBack) ...[
-                  OutlinedButton(
-                    onPressed: _onPrevious,
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(0, 38),
+              ),
+            ),
+            Divider(height: 1, color: tokens.border.withValues(alpha: 0.45)),
+            Padding(
+              key: const Key('question_overlay.actions'),
+              padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
+              child: Row(
+                children: [
+                  TextButton(
+                    onPressed: _reject,
+                    style: TextButton.styleFrom(
+                      foregroundColor: tokens.mutedForeground,
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(0, 40),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(
+                      l10n.questionCardIgnore,
+                      style: textTheme.labelLarge?.copyWith(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  if (_canGoBack) ...[
+                    OutlinedButton(
+                      onPressed: _onPrevious,
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, 40),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        side: BorderSide(color: tokens.border),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        l10n.questionCardPrevious,
+                        style: textTheme.labelLarge?.copyWith(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: tokens.accentForeground,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  FilledButton(
+                    onPressed: _canProceed ? _onNext : null,
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(0, 40),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
-                        vertical: 7,
+                        vertical: 8,
                       ),
-                      side: BorderSide(color: tokens.border),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                     child: Text(
-                      l10n.questionCardPrevious,
+                      _isLastQuestion
+                          ? l10n.questionCardSubmit
+                          : l10n.questionCardNext,
                       style: textTheme.labelLarge?.copyWith(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: tokens.accentForeground,
+                        color: colorScheme.onPrimary,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
                 ],
-                FilledButton(
-                  onPressed: _canProceed ? _onNext : null,
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size(0, 38),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 7,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(
-                    _isLastQuestion
-                        ? l10n.questionCardSubmit
-                        : l10n.questionCardNext,
-                    style: textTheme.labelLarge?.copyWith(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: colorScheme.onPrimary,
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ],
         ),
@@ -419,10 +472,7 @@ class _OptionsList extends StatelessWidget {
       options.removeLast();
     }
 
-    return Padding(
-      padding: EdgeInsets.zero,
-      child: Column(children: options),
-    );
+    return Column(children: options);
   }
 }
 
@@ -460,10 +510,12 @@ class _OptionTile extends StatelessWidget {
           ),
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
               width: 18,
               height: 18,
+              margin: const EdgeInsets.only(top: 1),
               decoration: BoxDecoration(
                 shape: isMultiple ? BoxShape.rectangle : BoxShape.circle,
                 borderRadius: isMultiple ? BorderRadius.circular(5) : null,
@@ -493,11 +545,12 @@ class _OptionTile extends StatelessWidget {
                     ),
                   ),
                   if (description.isNotEmpty) ...[
-                    const SizedBox(height: 1),
+                    const SizedBox(height: 4),
                     Text(
                       description,
                       style: textTheme.labelSmall?.copyWith(
-                        fontSize: 10,
+                        fontSize: 11,
+                        height: 1.35,
                         color: tokens.mutedForeground,
                       ),
                     ),

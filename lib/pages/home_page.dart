@@ -13,6 +13,7 @@ import '../providers/question_provider.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/message/message_list.dart';
 import '../widgets/message/chat_input.dart';
+import '../widgets/message/chat_command_popup.dart';
 import '../widgets/permission/session_permission_dock.dart';
 import '../widgets/question/question_card.dart';
 import '../widgets/session/todo_list_widget.dart';
@@ -29,6 +30,9 @@ class MyHomePage extends ConsumerStatefulWidget {
 
 class _MyHomePageState extends ConsumerState<MyHomePage> {
   bool _didBootstrap = false;
+  final CommandPanelController _commandPanelController =
+      CommandPanelController();
+  final GlobalKey<ChatInputState> _chatInputKey = GlobalKey<ChatInputState>();
 
   @override
   void didChangeDependencies() {
@@ -110,9 +114,23 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
         ? null
         : ref.watch(currentSessionPermissionRequestProvider(sessionId));
     final hasPermissionBlock = permissionRequest != null;
-    final hasQuestion = sessionId == null
-        ? false
-        : ref.watch(currentSessionHasQuestionProvider(sessionId));
+    final pendingQuestions = ref.watch(pendingQuestionsProvider).asData?.value;
+    final currentQuestionRequest = sessionId == null
+        ? null
+        : pendingQuestions?.where((q) => q.sessionID == sessionId).firstOrNull;
+    final hasQuestion = currentQuestionRequest != null;
+    final showChatInput =
+        hasActiveOrPendingSession && !hasPermissionBlock && !hasQuestion;
+    final showQuestionOverlay =
+        hasActiveOrPendingSession &&
+        !hasPermissionBlock &&
+        currentQuestionRequest != null;
+
+    if (!showChatInput && _commandPanelController.visible) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _commandPanelController.hide();
+      });
+    }
 
     Widget buildNewSessionWelcome() {
       return Center(
@@ -187,51 +205,115 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
             ),
           ),
         ),
-        body: Column(
+        body: Stack(
           children: [
-            if (selectedSession != null)
-              TodoListWidget(sessionID: selectedSession.id),
-            Expanded(
-              child: selectedSession != null
-                  ? MessageList(
-                      sessionID: selectedSession.id,
-                      onNavigateToSubSession: (sessionId) =>
-                          context.push('/sub-session', extra: sessionId),
-                    )
-                  : isPending
-                  ? buildNewSessionWelcome()
-                  : sessionId != null
-                  ? const Center(child: CircularProgressIndicator())
-                  : sessionsAsync.when(
-                      data: (sessions) {
-                        final text = sessions.isEmpty
-                            ? l10n.homeNoSession
-                            : l10n.homeSelectSession;
-                        return Center(
-                          child: Text(
-                            text,
-                            style: TextStyle(color: tokens.mutedForeground),
+            Column(
+              children: [
+                if (selectedSession != null)
+                  TodoListWidget(sessionID: selectedSession.id),
+                Expanded(
+                  child: ListenableBuilder(
+                    listenable: _commandPanelController,
+                    builder: (context, _) => Stack(
+                      children: [
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            ignoring: _commandPanelController.visible,
+                            child: selectedSession != null
+                                ? MessageList(
+                                    sessionID: selectedSession.id,
+                                    onNavigateToSubSession: (sessionId) =>
+                                        context.push(
+                                          '/sub-session',
+                                          extra: sessionId,
+                                        ),
+                                  )
+                                : isPending
+                                ? buildNewSessionWelcome()
+                                : sessionId != null
+                                ? const Center(
+                                    child: CircularProgressIndicator(),
+                                  )
+                                : sessionsAsync.when(
+                                    data: (sessions) {
+                                      final text = sessions.isEmpty
+                                          ? l10n.homeNoSession
+                                          : l10n.homeSelectSession;
+                                      return Center(
+                                        child: Text(
+                                          text,
+                                          style: TextStyle(
+                                            color: tokens.mutedForeground,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    error: (error, stack) =>
+                                        Center(child: Text('$error, $stack')),
+                                    loading: () => const Center(
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                  ),
                           ),
-                        );
-                      },
-                      error: (error, stack) =>
-                          Center(child: Text('$error, $stack')),
-                      loading: () =>
-                          const Center(child: CircularProgressIndicator()),
+                        ),
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            ignoring: !_commandPanelController.visible,
+                            child: ChatCommandPopup(
+                              controller: _commandPanelController,
+                              onSelect: (command) {
+                                _chatInputKey.currentState?.insertCommand(
+                                  command,
+                                );
+                                _chatInputKey.currentState?.focusInput();
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
+                  ),
+                ),
+                if (selectedSession != null && hasPermissionBlock)
+                  SessionPermissionDock(request: permissionRequest),
+                if (showChatInput)
+                  ChatInput(
+                    key: _chatInputKey,
+                    commandPanelController: _commandPanelController,
+                  ),
+              ],
             ),
-            if (selectedSession != null && hasPermissionBlock)
-              SessionPermissionDock(request: permissionRequest),
-            if (hasActiveOrPendingSession && !hasPermissionBlock && hasQuestion)
-              QuestionOverlay(sessionID: sessionId),
-            if (hasActiveOrPendingSession &&
-                !hasPermissionBlock &&
-                !hasQuestion)
-              const ChatInput(),
+            if (showQuestionOverlay)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Theme.of(
+                            context,
+                          ).colorScheme.scrim.withValues(alpha: 0.06),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            if (showQuestionOverlay)
+              QuestionOverlayCard(request: currentQuestionRequest),
           ],
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _commandPanelController.dispose();
+    super.dispose();
   }
 }
 
