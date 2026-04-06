@@ -5,6 +5,7 @@ import '../service/api/global_api.dart';
 import '../service/api/models/global_event.dart';
 import '../service/api/models/message.dart';
 import '../service/api/models/parts.dart';
+import '../service/api/models/session.dart';
 import '../service/notification/local_notification_service.dart';
 import 'app_lifecycle_provider.dart';
 import '../service/api/session_api.dart';
@@ -166,7 +167,10 @@ class GlobalEventListener extends _$GlobalEventListener {
     );
     if (!shouldSend) return;
 
-    final sessionTitle = _sessionTitleForNotification(sessionID);
+    final session = await _sessionForNotification(sessionID);
+    if (session == null || _isSubSession(session)) return;
+
+    final sessionTitle = _normalizedSessionTitle(session.title);
 
     try {
       await ref
@@ -177,55 +181,42 @@ class GlobalEventListener extends _$GlobalEventListener {
     }
   }
 
-  String? _sessionTitleForNotification(String sessionID) {
-    String? normalizedTitle(String? raw) {
-      final value = raw?.trim();
-      if (value == null || value.isEmpty) return null;
-      return value;
+  Future<Session?> _sessionForNotification(String sessionID) async {
+    try {
+      final api = await ref.read(sessionApiProvider.future);
+      if (!ref.mounted) return null;
+      final directory = ref.read(currentDirectoryProvider);
+      if (!ref.mounted) return null;
+      return await api.getSession(sessionID, directory: directory);
+    } catch (_) {
+      return null;
     }
+  }
 
-    final allSessions = ref.read(allSessionsProvider).asData?.value;
-    if (allSessions != null) {
-      for (final session in allSessions) {
-        if (session.id != sessionID) continue;
-        return normalizedTitle(session.title);
-      }
-    }
+  bool _isSubSession(Session session) {
+    final parentID = session.parentID;
+    return parentID != null && parentID.isNotEmpty;
+  }
 
-    final rootSessions = ref.read(sessionsProvider).asData?.value;
-    if (rootSessions != null) {
-      for (final session in rootSessions) {
-        if (session.id != sessionID) continue;
-        return normalizedTitle(session.title);
-      }
-    }
-
-    return null;
+  String? _normalizedSessionTitle(String? raw) {
+    final value = raw?.trim();
+    if (value == null || value.isEmpty) return null;
+    return value;
   }
 
   void _handleMessageUpdated(EventMessageUpdated event) {
     final info = event.info;
     final String sessionID;
-    final String messageID;
 
     if (info is UserMessage) {
       sessionID = info.sessionID;
-      messageID = info.id;
     } else if (info is AssistantMessage) {
       sessionID = info.sessionID;
-      messageID = info.id;
     } else {
       return;
     }
 
-    // 保留已有的 parts，只更新消息 info
-    final current =
-        ref.read(sessionMessagesProvider(sessionID)).asData?.value ?? [];
-    final existing = current.firstWhere(
-      (m) => _messageId(m) == messageID,
-      orElse: () => MessageWithParts(info: info, parts: []),
-    );
-    final message = MessageWithParts(info: info, parts: existing.parts);
+    final message = MessageWithParts(info: info, parts: const []);
 
     ref
         .read(sessionMessagesProvider(sessionID).notifier)
@@ -320,11 +311,4 @@ class GlobalEventListener extends _$GlobalEventListener {
       // provider 未被订阅时 ref.read 会抛出，直接忽略
     }
   }
-}
-
-String _messageId(MessageWithParts m) {
-  final info = m.info;
-  if (info is UserMessage) return info.id;
-  if (info is AssistantMessage) return info.id;
-  return '';
 }

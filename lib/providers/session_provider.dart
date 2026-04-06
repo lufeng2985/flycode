@@ -19,17 +19,7 @@ class SessionMessagesNotifier extends _$SessionMessagesNotifier {
     if (this.sessionID != sessionID) return;
 
     final current = state.asData?.value ?? [];
-    final index = current.indexWhere(
-      (m) => _messageId(m) == _messageId(message),
-    );
-
-    final updated = List<MessageWithParts>.from(current);
-    if (index >= 0) {
-      updated[index] = message;
-    } else {
-      updated.add(message);
-    }
-    state = AsyncData(updated);
+    state = AsyncData(_upsertMessage(current, message));
   }
 
   /// SSE: message.removed — 删除一条消息
@@ -164,16 +154,7 @@ class SubSessionMessagesNotifier extends _$SubSessionMessagesNotifier {
   void updateMessage(String msgSessionID, MessageWithParts message) {
     if (msgSessionID != sessionID) return;
     final current = state.asData?.value ?? [];
-    final index = current.indexWhere(
-      (m) => _messageId(m) == _messageId(message),
-    );
-    final updated = List<MessageWithParts>.from(current);
-    if (index >= 0) {
-      updated[index] = message;
-    } else {
-      updated.add(message);
-    }
-    state = AsyncData(updated);
+    state = AsyncData(_upsertMessage(current, message));
   }
 
   void removeMessage(String msgSessionID, String messageID) {
@@ -264,4 +245,30 @@ class SubSessionMessagesNotifier extends _$SubSessionMessagesNotifier {
     updated[msgIndex] = MessageWithParts(info: msg.info, parts: newParts);
     state = AsyncData(updated);
   }
+}
+
+List<MessageWithParts> _upsertMessage(
+  List<MessageWithParts> current,
+  MessageWithParts incoming,
+) {
+  final index = current.indexWhere(
+    (m) => _messageId(m) == _messageId(incoming),
+  );
+  final updated = List<MessageWithParts>.from(current);
+  if (index >= 0) {
+    updated[index] = _mergeMessagePreservingParts(updated[index], incoming);
+  } else {
+    updated.add(incoming);
+  }
+  return updated;
+}
+
+MessageWithParts _mergeMessagePreservingParts(
+  MessageWithParts current,
+  MessageWithParts incoming,
+) {
+  if (incoming.parts.isNotEmpty) {
+    return incoming;
+  }
+  return MessageWithParts(info: incoming.info, parts: current.parts);
 }
