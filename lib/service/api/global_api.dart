@@ -20,7 +20,7 @@ Future<GlobalApi> globalApi(Ref ref) async {
 
 class GlobalApi {
   static const Duration _initialReconnectDelay = Duration(seconds: 1);
-  static const Duration _maxReconnectDelay = Duration(seconds: 30);
+  static const Duration _maxReconnectDelay = Duration(seconds: 5);
 
   final ApiClient _client;
   final Future<void> Function(Duration duration) _reconnectDelay;
@@ -59,6 +59,7 @@ class GlobalApi {
     StreamSubscription<String>? streamSubscription;
     Completer<_GlobalEventStreamExit>? streamExitCompleter;
     void Function()? cancelReconnectWait;
+    Future<void>? reconnectWait;
     var isCancelled = false;
     var reconnectAttempt = 0;
     DateTime? lastConnectedAt;
@@ -81,12 +82,14 @@ class GlobalApi {
       );
     }
 
-    Future<_GlobalEventStreamExit> consumeCurrentStream() async {
+    Future<_GlobalEventStreamExit> consumeCurrentStream({
+      required void Function() onConnected,
+    }) async {
       final completer = Completer<_GlobalEventStreamExit>();
       streamExitCompleter = completer;
 
       streamSubscription = _client
-          .streamGet('/global/event')
+          .streamGet('/global/event', onConnected: onConnected)
           .listen(
             (data) {
               if (data.trim().isEmpty) return;
@@ -117,15 +120,16 @@ class GlobalApi {
             cancelOnError: true,
           );
 
-      reconnectAttempt = 0;
-      lastConnectedAt = DateTime.now();
-      emitState(GlobalEventConnectionPhase.connected, lastError: null);
-
       return completer.future;
     }
 
     Future<void> reconnectAfter(_GlobalEventStreamExit exit) async {
       if (isCancelled || controller.isClosed) return;
+      final inFlightReconnectWait = reconnectWait;
+      if (inFlightReconnectWait != null) {
+        await inFlightReconnectWait;
+        return;
+      }
 
       reconnectAttempt += 1;
       emitState(
@@ -140,6 +144,14 @@ class GlobalApi {
         },
       );
       final waitCompleter = Completer<void>();
+      late final Future<void> waitFuture;
+      waitFuture = waitCompleter.future.whenComplete(() {
+        if (identical(reconnectWait, waitFuture)) {
+          reconnectWait = null;
+          cancelReconnectWait = null;
+        }
+      });
+      reconnectWait = waitFuture;
       cancelReconnectWait = () {
         if (!waitCompleter.isCompleted) {
           waitCompleter.complete();
@@ -154,8 +166,7 @@ class GlobalApi {
           },
         ),
       );
-      await waitCompleter.future;
-      cancelReconnectWait = null;
+      await waitFuture;
     }
 
     Future<void> run() async {
@@ -169,7 +180,13 @@ class GlobalApi {
                 : GlobalEventConnectionPhase.reconnecting,
             lastError: null,
           );
-          final exit = await consumeCurrentStream();
+          final exit = await consumeCurrentStream(
+            onConnected: () {
+              reconnectAttempt = 0;
+              lastConnectedAt = DateTime.now();
+              emitState(GlobalEventConnectionPhase.connected, lastError: null);
+            },
+          );
           await streamSubscription?.cancel();
           streamSubscription = null;
           streamExitCompleter = null;
@@ -204,6 +221,7 @@ class GlobalApi {
       isCancelled = true;
       cancelReconnectWait?.call();
       cancelReconnectWait = null;
+      reconnectWait = null;
       if (streamExitCompleter case final completer?
           when !completer.isCompleted) {
         completer.complete(const _GlobalEventStreamCancelled());

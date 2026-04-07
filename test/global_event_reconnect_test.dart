@@ -1,5 +1,6 @@
-import 'dart:async';
-import 'dart:collection';
+import 'dart:async'
+    show Completer, Future, Stream, StreamController, StreamView;
+import 'dart:collection' show Queue;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -22,11 +23,34 @@ class _FakeApiClient extends ApiClient {
     String path, {
     Map<String, String>? queryParameters,
     Map<String, String>? extraHeaders,
+    void Function()? onConnected,
   }) {
     if (_streams.isEmpty) {
       throw StateError('No SSE stream queued for $path');
     }
-    return _streams.removeFirst();
+    final stream = _streams.removeFirst();
+    if (stream is _ConnectedTestStream) {
+      return stream.bind(onConnected);
+    }
+    return stream;
+  }
+}
+
+class _ConnectedTestStream extends StreamView<String> {
+  _ConnectedTestStream(super.stream) : _stream = stream;
+
+  final Stream<String> _stream;
+
+  Stream<String> bind(void Function()? onConnected) {
+    return Stream<String>.multi((controller) {
+      onConnected?.call();
+      final subscription = _stream.listen(
+        controller.add,
+        onError: controller.addError,
+        onDone: controller.close,
+      );
+      controller.onCancel = subscription.cancel;
+    });
   }
 }
 
@@ -80,8 +104,8 @@ void main() {
       final globalApi = GlobalApi(
         _FakeApiClient(
           Queue<Stream<String>>.from(<Stream<String>>[
-            firstController.stream,
-            secondController.stream,
+            _ConnectedTestStream(firstController.stream),
+            _ConnectedTestStream(secondController.stream),
           ]),
         ),
         reconnectDelay: delay.call,
@@ -137,6 +161,46 @@ void main() {
         container.read(globalEventConnectionProvider).phase,
         GlobalEventConnectionPhase.connected,
       );
+    },
+  );
+
+  test(
+    'provider does not refresh status snapshot while reconnect attempts keep failing',
+    () async {
+      final delay = _ControlledDelay();
+      final globalApi = GlobalApi(
+        _FakeApiClient(
+          Queue<Stream<String>>.from(<Stream<String>>[
+            Stream<String>.error(StateError('network down')),
+            Stream<String>.error(StateError('still down')),
+          ]),
+        ),
+        reconnectDelay: delay.call,
+      );
+      final sessionApi = _FakeSessionApi();
+      final container = ProviderContainer(
+        overrides: [
+          globalApiProvider.overrideWith((ref) async => globalApi),
+          sessionApiProvider.overrideWith((ref) async => sessionApi),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final eventSub = container.listen(
+        globalEventListenerProvider,
+        (previous, next) {},
+        fireImmediately: true,
+      );
+      addTearDown(eventSub.close);
+
+      await _flushAsyncWork();
+      expect(sessionApi.getSessionStatusCount, 1);
+
+      delay.completeNext();
+      await _flushAsyncWork();
+      await _flushAsyncWork();
+
+      expect(sessionApi.getSessionStatusCount, 1);
     },
   );
 }

@@ -9,7 +9,6 @@ import '../l10n/l10n.dart';
 import '../models/chat_route_args.dart';
 import '../providers/chat_view_state_provider.dart';
 import '../providers/current_directory_provider.dart';
-import '../providers/global_event_provider.dart';
 import '../providers/home_page_provider.dart';
 import '../service/api/api_client.dart';
 import '../theme/app_tokens.dart';
@@ -87,7 +86,6 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
     final l10n = context.l10n;
     final tokens = context.tokens;
 
-    ref.watch(globalEventListenerProvider);
     final homeState = ref.watch(homePagePresentationStateProvider);
     final selectedSession = homeState.selectedSession;
 

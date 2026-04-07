@@ -135,6 +135,42 @@ void main() {
     },
   );
 
+  test('streamGet calls onConnected after a successful SSE response', () async {
+    final baseClient = _FakeHttpClient();
+    final responseController = StreamController<List<int>>();
+    final streamClient = _FakeHttpClient(
+      onSend: (request) async => http.StreamedResponse(
+        responseController.stream,
+        200,
+        request: request,
+      ),
+    );
+    final apiClient = ApiClient(
+      baseUrl: 'http://localhost',
+      client: baseClient,
+      streamClientFactory: () => streamClient,
+    );
+    addTearDown(() async {
+      await responseController.close();
+    });
+
+    var connectedCount = 0;
+    final subscription = apiClient
+        .streamGet(
+          '/global/event',
+          onConnected: () {
+            connectedCount += 1;
+          },
+        )
+        .listen((_) {});
+
+    await _flushAsyncWork();
+
+    expect(connectedCount, 1);
+
+    await subscription.cancel();
+  });
+
   test('close shuts down active SSE clients immediately', () async {
     final baseClient = _FakeHttpClient();
     final responseController = StreamController<List<int>>();

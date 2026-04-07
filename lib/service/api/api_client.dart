@@ -203,6 +203,7 @@ class ApiClient {
     String path, {
     Map<String, String>? queryParameters,
     Map<String, String>? extraHeaders,
+    void Function()? onConnected,
   }) {
     _ensureOpen();
     final uri = _getUri(path, queryParameters: queryParameters);
@@ -244,6 +245,8 @@ class ApiClient {
               message: 'Stream request failed',
             );
           }
+
+          onConnected?.call();
 
           final buffer = StringBuffer();
           var lineBuffer = StringBuffer();
