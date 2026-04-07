@@ -1,15 +1,17 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
+
 import '../l10n/l10n.dart';
 import '../models/chat_route_args.dart';
 import '../providers/chat_view_state_provider.dart';
 import '../providers/current_directory_provider.dart';
-import '../service/api/models/session.dart';
-import '../service/api/session_api.dart';
 import '../providers/global_event_provider.dart';
-import '../providers/permission_provider.dart';
-import '../providers/question_provider.dart';
+import '../providers/home_page_provider.dart';
+import '../service/api/api_client.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/message/message_list.dart';
 import '../widgets/message/chat_input.dart';
@@ -17,6 +19,23 @@ import '../widgets/message/chat_command_popup.dart';
 import '../widgets/permission/session_permission_dock.dart';
 import '../widgets/question/question_card.dart';
 import '../widgets/session/todo_list_widget.dart';
+
+String _homeSessionLoadErrorText(BuildContext context, Object? error) {
+  final l10n = context.l10n;
+  if (error is ApiException) {
+    if (error.statusCode == 401 || error.statusCode == 403) {
+      return l10n.projectListErrorAuthFailed;
+    }
+    if (error.statusCode >= 500) {
+      return l10n.projectListErrorServerUnavailable(error.statusCode);
+    }
+    return l10n.projectListErrorRequestFailed(error.statusCode, error.message);
+  }
+  if (error is SocketException || error is http.ClientException) {
+    return l10n.projectListErrorCannotConnect;
+  }
+  return l10n.projectListErrorLoadFailed;
+}
 
 class MyHomePage extends ConsumerStatefulWidget {
   const MyHomePage({super.key, required this.title, this.args});
@@ -29,64 +48,38 @@ class MyHomePage extends ConsumerStatefulWidget {
 }
 
 class _MyHomePageState extends ConsumerState<MyHomePage> {
-  bool _didBootstrap = false;
   final CommandPanelController _commandPanelController =
       CommandPanelController();
   final GlobalKey<ChatInputState> _chatInputKey = GlobalKey<ChatInputState>();
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_didBootstrap) return;
-    _didBootstrap = true;
+  void initState() {
+    super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _bootstrapChatContext();
+      _bootstrapHomePage();
     });
   }
 
-  Future<void> _bootstrapChatContext() async {
-    final args = widget.args;
-    final directory = args?.directory.trim();
-    if (directory == null || directory.isEmpty) {
-      return;
+  @override
+  void didUpdateWidget(covariant MyHomePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_routeArgsChanged(oldWidget.args, widget.args)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _bootstrapHomePage();
+      });
     }
+  }
 
-    ref.read(currentDirectoryProvider.notifier).set(directory);
+  Future<void> _bootstrapHomePage() async {
+    await ref
+        .read(homePageBootstrapControllerProvider.notifier)
+        .bootstrap(widget.args);
+  }
 
-    final stateNotifier = ref.read(chatViewStateProvider.notifier);
-    if (args?.startNew == true) {
-      stateNotifier.startNew();
-      return;
-    }
-
-    stateNotifier.clear();
-
-    try {
-      final sessions = await ref.refresh(sessionsProvider.future);
-      if (!mounted) return;
-
-      if (sessions.isEmpty) {
-        stateNotifier.startNew();
-        return;
-      }
-
-      final initialSessionId = args?.initialSessionId;
-      if (initialSessionId != null && initialSessionId.isNotEmpty) {
-        for (final session in sessions) {
-          if (session.id == initialSessionId) {
-            stateNotifier.selectSessionId(session.id);
-            return;
-          }
-        }
-      }
-
-      final sortedSessions = List<Session>.from(sessions)
-        ..sort((a, b) => (b.updatedAt ?? 0).compareTo(a.updatedAt ?? 0));
-      stateNotifier.selectSessionId(sortedSessions.first.id);
-    } catch (_) {
-      if (!mounted) return;
-      stateNotifier.startNew();
-    }
+  bool _routeArgsChanged(ChatRouteArgs? previous, ChatRouteArgs? next) {
+    return previous?.directory != next?.directory ||
+        previous?.initialSessionId != next?.initialSessionId ||
+        previous?.startNew != next?.startNew;
   }
 
   @override
@@ -95,38 +88,10 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
     final tokens = context.tokens;
 
     ref.watch(globalEventListenerProvider);
-    final sessionsAsync = ref.watch(sessionsProvider);
-    final chatState = ref.watch(chatViewStateProvider);
-    final sessionId = chatState.sessionId;
-    final isPending = chatState.isPending;
-    final hasActiveOrPendingSession = sessionId != null || isPending;
-    Session? selectedSession;
-    final sessions = sessionsAsync.asData?.value;
-    if (sessions != null && sessionId != null) {
-      for (final session in sessions) {
-        if (session.id == sessionId) {
-          selectedSession = session;
-          break;
-        }
-      }
-    }
-    final permissionRequest = sessionId == null
-        ? null
-        : ref.watch(currentSessionPermissionRequestProvider(sessionId));
-    final hasPermissionBlock = permissionRequest != null;
-    final pendingQuestions = ref.watch(pendingQuestionsProvider).asData?.value;
-    final currentQuestionRequest = sessionId == null
-        ? null
-        : pendingQuestions?.where((q) => q.sessionID == sessionId).firstOrNull;
-    final hasQuestion = currentQuestionRequest != null;
-    final showChatInput =
-        hasActiveOrPendingSession && !hasPermissionBlock && !hasQuestion;
-    final showQuestionOverlay =
-        hasActiveOrPendingSession &&
-        !hasPermissionBlock &&
-        currentQuestionRequest != null;
+    final homeState = ref.watch(homePagePresentationStateProvider);
+    final selectedSession = homeState.selectedSession;
 
-    if (!showChatInput && _commandPanelController.visible) {
+    if (!homeState.canShowCommandPanel && _commandPanelController.visible) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _commandPanelController.hide();
       });
@@ -164,10 +129,44 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
       );
     }
 
+    Widget buildBodyContent() {
+      switch (homeState.bodyMode) {
+        case HomePageBodyMode.messageList:
+          return MessageList(
+            sessionID: selectedSession!.id,
+            onNavigateToSubSession: (sessionId) =>
+                context.push('/sub-session', extra: sessionId),
+          );
+        case HomePageBodyMode.newSessionWelcome:
+          return buildNewSessionWelcome();
+        case HomePageBodyMode.sessionSelection:
+          final text = homeState.hasAnySessions
+              ? l10n.homeSelectSession
+              : l10n.homeNoSession;
+          return Center(
+            child: Text(text, style: TextStyle(color: tokens.mutedForeground)),
+          );
+        case HomePageBodyMode.loading:
+          return const Center(child: CircularProgressIndicator());
+        case HomePageBodyMode.error:
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Text(
+                _homeSessionLoadErrorText(context, homeState.loadError),
+                textAlign: TextAlign.center,
+                style: TextStyle(color: tokens.mutedForeground),
+              ),
+            ),
+          );
+      }
+    }
+
     return PopScope(
       canPop: true,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) return;
+        ref.read(homePageBootstrapControllerProvider.notifier).reset();
         ref.read(chatViewStateProvider.notifier).clear();
         ref.read(currentDirectoryProvider.notifier).clear();
       },
@@ -178,16 +177,14 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
               _HeaderActionButton(
                 icon: Icons.difference_outlined,
                 tooltip: l10n.homeTooltipFileDiff,
-                onTap: () => context.push('/diff', extra: selectedSession!.id),
+                onTap: () => context.push('/diff', extra: selectedSession.id),
               ),
               const SizedBox(width: 8),
               _HeaderActionButton(
                 icon: Icons.info_outline,
                 tooltip: l10n.homeTooltipContext,
-                onTap: () => context.push(
-                  '/session-context',
-                  extra: selectedSession!.id,
-                ),
+                onTap: () =>
+                    context.push('/session-context', extra: selectedSession.id),
               ),
               const SizedBox(width: 12),
             ],
@@ -219,41 +216,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
                         Positioned.fill(
                           child: IgnorePointer(
                             ignoring: _commandPanelController.visible,
-                            child: selectedSession != null
-                                ? MessageList(
-                                    sessionID: selectedSession.id,
-                                    onNavigateToSubSession: (sessionId) =>
-                                        context.push(
-                                          '/sub-session',
-                                          extra: sessionId,
-                                        ),
-                                  )
-                                : isPending
-                                ? buildNewSessionWelcome()
-                                : sessionId != null
-                                ? const Center(
-                                    child: CircularProgressIndicator(),
-                                  )
-                                : sessionsAsync.when(
-                                    data: (sessions) {
-                                      final text = sessions.isEmpty
-                                          ? l10n.homeNoSession
-                                          : l10n.homeSelectSession;
-                                      return Center(
-                                        child: Text(
-                                          text,
-                                          style: TextStyle(
-                                            color: tokens.mutedForeground,
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                    error: (error, stack) =>
-                                        Center(child: Text('$error, $stack')),
-                                    loading: () => const Center(
-                                      child: CircularProgressIndicator(),
-                                    ),
-                                  ),
+                            child: buildBodyContent(),
                           ),
                         ),
                         Positioned.fill(
@@ -274,16 +237,17 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
                     ),
                   ),
                 ),
-                if (selectedSession != null && hasPermissionBlock)
-                  SessionPermissionDock(request: permissionRequest),
-                if (showChatInput)
+                if (selectedSession != null &&
+                    homeState.permissionRequest != null)
+                  SessionPermissionDock(request: homeState.permissionRequest!),
+                if (homeState.showChatInput)
                   ChatInput(
                     key: _chatInputKey,
                     commandPanelController: _commandPanelController,
                   ),
               ],
             ),
-            if (showQuestionOverlay)
+            if (homeState.showQuestionOverlay)
               Positioned.fill(
                 child: IgnorePointer(
                   child: DecoratedBox(
@@ -302,8 +266,9 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
                   ),
                 ),
               ),
-            if (showQuestionOverlay)
-              QuestionOverlayCard(request: currentQuestionRequest),
+            if (homeState.showQuestionOverlay &&
+                homeState.questionRequest != null)
+              QuestionOverlayCard(request: homeState.questionRequest!),
           ],
         ),
       ),
