@@ -1,9 +1,17 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:riverpod/riverpod.dart' show Provider;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../providers/server_config_provider.dart';
 
 part 'api_client.g.dart';
+
+typedef HttpClientFactory = http.Client Function();
+
+final apiHttpClientFactoryProvider = Provider<HttpClientFactory>(
+  (ref) => http.Client.new,
+);
 
 class ApiException implements Exception {
   final int statusCode;
@@ -25,11 +33,16 @@ class ApiException implements Exception {
 @Riverpod(keepAlive: true)
 Future<ApiClient> apiClient(Ref ref) async {
   final config = await ref.watch(serverConfigProvider.future);
-  return ApiClient(
+  final clientFactory = ref.watch(apiHttpClientFactoryProvider);
+  final client = ApiClient(
     baseUrl: config.baseUrl,
     username: config.username,
     password: config.password,
+    client: clientFactory(),
+    streamClientFactory: clientFactory,
   );
+  ref.onDispose(client.close);
+  return client;
 }
 
 class ApiClient {
@@ -37,23 +50,49 @@ class ApiClient {
   final String? _username;
   final String? _password;
   final http.Client _client;
+  final HttpClientFactory _streamClientFactory;
+  final Set<http.Client> _activeStreamClients = <http.Client>{};
+
+  bool _isClosed = false;
 
   ApiClient({
     required String baseUrl,
     String? username,
     String? password,
     http.Client? client,
+    HttpClientFactory? streamClientFactory,
   }) : _baseUrl = baseUrl,
        _username = username,
        _password = password,
-       _client = client ?? http.Client();
+       _client = client ?? http.Client(),
+       _streamClientFactory = streamClientFactory ?? http.Client.new;
 
   String get baseUrl => _baseUrl;
+
+  bool get isClosed => _isClosed;
+
+  void close() {
+    if (_isClosed) return;
+    _isClosed = true;
+    _client.close();
+
+    final activeStreamClients = List<http.Client>.of(_activeStreamClients);
+    _activeStreamClients.clear();
+    for (final streamClient in activeStreamClients) {
+      streamClient.close();
+    }
+  }
 
   Uri _getUri(String path, {Map<String, String>? queryParameters}) {
     return Uri.parse(
       '$_baseUrl$path',
     ).replace(queryParameters: queryParameters);
+  }
+
+  void _ensureOpen() {
+    if (_isClosed) {
+      throw StateError('ApiClient has been closed');
+    }
   }
 
   Map<String, String> _getHeaders() {
@@ -101,6 +140,7 @@ class ApiClient {
     Map<String, String>? queryParameters,
     Map<String, String>? extraHeaders,
   }) async {
+    _ensureOpen();
     final headers = _getHeaders();
     if (extraHeaders != null) headers.addAll(extraHeaders);
     final response = await _client.get(
@@ -116,6 +156,7 @@ class ApiClient {
     Map<String, String>? queryParameters,
     Map<String, String>? extraHeaders,
   }) async {
+    _ensureOpen();
     final headers = _getHeaders();
     if (extraHeaders != null) headers.addAll(extraHeaders);
     final response = await _client.post(
@@ -132,6 +173,7 @@ class ApiClient {
     Map<String, String>? queryParameters,
     Map<String, String>? extraHeaders,
   }) async {
+    _ensureOpen();
     final headers = _getHeaders();
     if (extraHeaders != null) headers.addAll(extraHeaders);
     final response = await _client.patch(
@@ -147,6 +189,7 @@ class ApiClient {
     Map<String, String>? queryParameters,
     Map<String, String>? extraHeaders,
   }) async {
+    _ensureOpen();
     final headers = _getHeaders();
     if (extraHeaders != null) headers.addAll(extraHeaders);
     final response = await _client.delete(
@@ -160,50 +203,108 @@ class ApiClient {
     String path, {
     Map<String, String>? queryParameters,
     Map<String, String>? extraHeaders,
-  }) async* {
+  }) {
+    _ensureOpen();
     final uri = _getUri(path, queryParameters: queryParameters);
     final request = http.Request('GET', uri);
     final headers = _getHeaders()..['Accept'] = 'text/event-stream';
     if (extraHeaders != null) headers.addAll(extraHeaders);
     request.headers.addAll(headers);
 
-    final streamedResponse = await _client.send(request);
+    final streamClient = _streamClientFactory();
+    _activeStreamClients.add(streamClient);
+    StreamSubscription<List<int>>? streamedResponseSubscription;
+    var isCancelled = false;
+    var isStreamClientClosed = false;
 
-    if (streamedResponse.statusCode < 200 ||
-        streamedResponse.statusCode >= 300) {
-      throw ApiException(
-        statusCode: streamedResponse.statusCode,
-        message: 'Stream request failed',
-      );
-    }
-
-    final buffer = StringBuffer();
-    var lineBuffer = StringBuffer();
-
-    await for (final chunk in streamedResponse.stream) {
-      final text = utf8.decode(chunk);
-      for (var i = 0; i < text.length; i++) {
-        final char = text[i];
-        if (char == '\n') {
-          final line = lineBuffer.toString();
-          lineBuffer.clear();
-
-          if (line.startsWith('data:')) {
-            buffer.write(line.substring(5).trim());
-          } else if (line.trim().isEmpty && buffer.isNotEmpty) {
-            yield buffer.toString();
-            buffer.clear();
-          }
-          // ignore 'event:' and other SSE fields
-        } else {
-          lineBuffer.write(char);
-        }
+    Future<void> closeStreamClient() async {
+      if (isStreamClientClosed) return;
+      isStreamClientClosed = true;
+      final removed = _activeStreamClients.remove(streamClient);
+      if (removed || !_isClosed) {
+        streamClient.close();
       }
     }
 
-    // Flush any remaining buffered data
-    if (buffer.isNotEmpty) {
-      yield buffer.toString();
-    }
+    final controller = StreamController<String>();
+
+    controller.onListen = () {
+      unawaited(() async {
+        try {
+          final streamedResponse = await streamClient.send(request);
+          if (isCancelled) {
+            await closeStreamClient();
+            return;
+          }
+
+          if (streamedResponse.statusCode < 200 ||
+              streamedResponse.statusCode >= 300) {
+            throw ApiException(
+              statusCode: streamedResponse.statusCode,
+              message: 'Stream request failed',
+            );
+          }
+
+          final buffer = StringBuffer();
+          var lineBuffer = StringBuffer();
+
+          streamedResponseSubscription = streamedResponse.stream.listen(
+            (chunk) {
+              final text = utf8.decode(chunk);
+              for (var i = 0; i < text.length; i++) {
+                final char = text[i];
+                if (char == '\n') {
+                  final line = lineBuffer.toString();
+                  lineBuffer.clear();
+
+                  if (line.startsWith('data:')) {
+                    buffer.write(line.substring(5).trim());
+                  } else if (line.trim().isEmpty && buffer.isNotEmpty) {
+                    controller.add(buffer.toString());
+                    buffer.clear();
+                  }
+                  // ignore 'event:' and other SSE fields
+                } else {
+                  lineBuffer.write(char);
+                }
+              }
+            },
+            onError: (Object error, StackTrace stackTrace) async {
+              if (!controller.isClosed) {
+                controller.addError(error, stackTrace);
+              }
+              await closeStreamClient();
+              if (!controller.isClosed) {
+                await controller.close();
+              }
+            },
+            onDone: () async {
+              if (buffer.isNotEmpty && !controller.isClosed) {
+                controller.add(buffer.toString());
+              }
+              await closeStreamClient();
+              if (!controller.isClosed) {
+                await controller.close();
+              }
+            },
+            cancelOnError: false,
+          );
+        } catch (error, stackTrace) {
+          if (!controller.isClosed) {
+            controller.addError(error, stackTrace);
+            await controller.close();
+          }
+          await closeStreamClient();
+        }
+      }());
+    };
+
+    controller.onCancel = () async {
+      isCancelled = true;
+      await streamedResponseSubscription?.cancel();
+      await closeStreamClient();
+    };
+
+    return controller.stream;
   }
 }
