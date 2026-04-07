@@ -24,7 +24,9 @@ class _FakeGlobalApi extends GlobalApi {
   final StreamController<GlobalEvent> _controller;
 
   @override
-  Stream<GlobalEvent> subscribeToGlobalEvents() => _controller.stream;
+  Stream<GlobalEvent> subscribeToGlobalEvents({
+    void Function(GlobalEventConnectionState state)? onConnectionStateChanged,
+  }) => _controller.stream;
 }
 
 class _FakeSessionApi extends SessionApi {

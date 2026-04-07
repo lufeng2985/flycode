@@ -21,6 +21,18 @@ import 'todo_provider.dart';
 
 part 'global_event_provider.g.dart';
 
+@Riverpod(keepAlive: true)
+class GlobalEventConnection extends _$GlobalEventConnection {
+  @override
+  GlobalEventConnectionState build() {
+    return const GlobalEventConnectionState.disconnected();
+  }
+
+  void setState(GlobalEventConnectionState next) {
+    state = next;
+  }
+}
+
 bool shouldSendSessionCompletionNotification({
   required SessionCompletionNotificationMode mode,
   required AppLifecycleState lifecycleState,
@@ -40,6 +52,9 @@ class GlobalEventListener extends _$GlobalEventListener {
   @override
   Stream<GlobalEvent> build() async* {
     final api = await ref.watch(globalApiProvider.future);
+    final connectionNotifier = ref.read(globalEventConnectionProvider.notifier);
+    var latestConnectionState = connectionNotifier.state;
+    var isActive = true;
     ref.read(sessionUnreadProvider);
 
     ref.listen<ChatViewState>(chatViewStateProvider, (previous, next) {
@@ -55,13 +70,33 @@ class GlobalEventListener extends _$GlobalEventListener {
     // Prime local status cache from snapshot so UI can recover if SSE dropped
     // previous status transitions (for example, busy -> idle).
     unawaited(ref.read(sessionStatusProvider.notifier).refreshFromServer());
+    ref.onDispose(() {
+      isActive = false;
+    });
 
     // 用 listenSelf 监听自身 stream state 来处理副作用，避免直接 stream.listen() 导致双重订阅
     listenSelf((_, next) {
       next.whenData(_handleEvent);
     });
 
-    yield* api.subscribeToGlobalEvents();
+    yield* api.subscribeToGlobalEvents(
+      onConnectionStateChanged: (nextState) {
+        final previousState = latestConnectionState;
+        latestConnectionState = nextState;
+
+        Future<void>(() async {
+          if (!isActive) return;
+
+          connectionNotifier.setState(nextState);
+          final recovered =
+              nextState.phase == GlobalEventConnectionPhase.connected &&
+              previousState.phase == GlobalEventConnectionPhase.reconnecting;
+          if (recovered && ref.mounted) {
+            await ref.read(sessionStatusProvider.notifier).refreshFromServer();
+          }
+        });
+      },
+    );
   }
 
   void _handleEvent(GlobalEvent event) {
