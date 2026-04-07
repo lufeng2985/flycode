@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../l10n/l10n.dart';
 import '../providers/file_provider.dart';
 import '../service/api/models/file_content.dart';
+import '../theme/app_tokens.dart';
 
 // ──────────────────────────────────────────────
 // 工具函数
@@ -209,9 +210,10 @@ class _ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final pagePadding = context.tokens.pageHorizontalPadding;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.symmetric(horizontal: pagePadding, vertical: 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

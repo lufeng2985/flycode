@@ -19,6 +19,7 @@ class AppThemeTokens extends ThemeExtension<AppThemeTokens> {
   final double radiusM;
   final double radiusL;
   final double radiusPill;
+  final double pageHorizontalPadding;
 
   const AppThemeTokens({
     required this.card,
@@ -38,6 +39,7 @@ class AppThemeTokens extends ThemeExtension<AppThemeTokens> {
     required this.radiusM,
     required this.radiusL,
     required this.radiusPill,
+    required this.pageHorizontalPadding,
   });
 
   static const AppThemeTokens light = AppThemeTokens(
@@ -58,6 +60,7 @@ class AppThemeTokens extends ThemeExtension<AppThemeTokens> {
     radiusM: 24,
     radiusL: 24,
     radiusPill: 999,
+    pageHorizontalPadding: 16,
   );
 
   static const AppThemeTokens dark = AppThemeTokens(
@@ -78,6 +81,7 @@ class AppThemeTokens extends ThemeExtension<AppThemeTokens> {
     radiusM: 24,
     radiusL: 24,
     radiusPill: 999,
+    pageHorizontalPadding: 16,
   );
 
   @override
@@ -99,6 +103,7 @@ class AppThemeTokens extends ThemeExtension<AppThemeTokens> {
     double? radiusM,
     double? radiusL,
     double? radiusPill,
+    double? pageHorizontalPadding,
   }) {
     return AppThemeTokens(
       card: card ?? this.card,
@@ -118,6 +123,8 @@ class AppThemeTokens extends ThemeExtension<AppThemeTokens> {
       radiusM: radiusM ?? this.radiusM,
       radiusL: radiusL ?? this.radiusL,
       radiusPill: radiusPill ?? this.radiusPill,
+      pageHorizontalPadding:
+          pageHorizontalPadding ?? this.pageHorizontalPadding,
     );
   }
 
@@ -159,6 +166,9 @@ class AppThemeTokens extends ThemeExtension<AppThemeTokens> {
       radiusM: lerpDouble(radiusM, other.radiusM, t) ?? radiusM,
       radiusL: lerpDouble(radiusL, other.radiusL, t) ?? radiusL,
       radiusPill: lerpDouble(radiusPill, other.radiusPill, t) ?? radiusPill,
+      pageHorizontalPadding:
+          lerpDouble(pageHorizontalPadding, other.pageHorizontalPadding, t) ??
+          pageHorizontalPadding,
     );
   }
 }

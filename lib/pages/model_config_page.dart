@@ -121,6 +121,7 @@ class _ModelConfigPageState extends ConsumerState<ModelConfigPage> {
   ) {
     final theme = Theme.of(context);
     final tokens = context.tokens;
+    final pagePadding = tokens.pageHorizontalPadding;
     final configsAsync = ref.watch(modelConfigProvider);
     final connectedProviders = providerList.all
         .where((p) => providerList.connected.contains(p.id))
@@ -130,7 +131,7 @@ class _ModelConfigPageState extends ConsumerState<ModelConfigPage> {
       children: [
         Divider(height: 1, color: tokens.border.withValues(alpha: 0.45)),
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 10),
+          padding: EdgeInsets.fromLTRB(pagePadding, 12, pagePadding, 10),
           child: TextField(
             controller: _searchController,
             decoration: InputDecoration(
@@ -197,7 +198,7 @@ class _ModelConfigPageState extends ConsumerState<ModelConfigPage> {
               }
 
               return ListView.builder(
-                padding: const EdgeInsets.fromLTRB(20, 6, 20, 20),
+                padding: EdgeInsets.fromLTRB(pagePadding, 6, pagePadding, 20),
                 itemCount: visibleProviders.length,
                 itemBuilder: (context, index) {
                   final provider = visibleProviders[index];
@@ -430,6 +431,7 @@ class _ProviderFilterChips extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final tokens = context.tokens;
+    final pagePadding = tokens.pageHorizontalPadding;
 
     Widget chip({required String value, required String label}) {
       final selected = selectedFilter == value;
@@ -464,7 +466,7 @@ class _ProviderFilterChips extends StatelessWidget {
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 6),
+      padding: EdgeInsets.fromLTRB(pagePadding, 0, pagePadding, 6),
       child: Row(
         children: [
           chip(
@@ -602,7 +604,7 @@ class _ErrorState extends StatelessWidget {
     final tokens = context.tokens;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
+        padding: EdgeInsets.symmetric(horizontal: tokens.pageHorizontalPadding),
         child: Text(
           message,
           textAlign: TextAlign.center,

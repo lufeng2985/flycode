@@ -11,6 +11,7 @@ import '../../service/api/api_client.dart';
 import '../../service/api/file_api.dart';
 import '../../service/api/models/file_node.dart';
 import '../../service/api/project_api.dart';
+import '../../theme/app_tokens.dart';
 
 // ---------------------------------------------------------------------------
 // 公开入口：显示打开项目底部 Sheet
@@ -417,6 +418,7 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final colorScheme = Theme.of(context).colorScheme;
+    final pagePadding = context.tokens.pageHorizontalPadding;
 
     return Container(
       decoration: const BoxDecoration(
@@ -444,7 +446,7 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
 
             // 标题
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: EdgeInsets.symmetric(horizontal: pagePadding),
               child: Row(
                 children: [
                   Text(
@@ -559,11 +561,13 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
   }
 
   Widget _buildResultContent(ColorScheme colorScheme) {
+    final pagePadding = context.tokens.pageHorizontalPadding;
+
     // 错误状态
     if (_error != null) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: EdgeInsets.symmetric(horizontal: pagePadding),
           child: Row(
             children: [
               Icon(

@@ -164,6 +164,7 @@ class ProjectListPage extends ConsumerWidget {
     final asyncServerConfig = ref.watch(serverConfigProvider);
     final pinnedProjectsAsync = ref.watch(projectPinsProvider);
     final contentBottomPadding = MediaQuery.paddingOf(context).bottom + 16;
+    final pagePadding = tokens.pageHorizontalPadding;
 
     Future<void> refreshProjects() async {
       await Future.wait([
@@ -183,7 +184,7 @@ class ProjectListPage extends ConsumerWidget {
 
     Widget buildHeader() {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+        padding: EdgeInsets.fromLTRB(pagePadding, 8, pagePadding, 0),
         child: SizedBox(
           height: 64,
           child: Row(
@@ -241,7 +242,12 @@ class ProjectListPage extends ConsumerWidget {
               onRefresh: refreshProjects,
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.fromLTRB(24, 0, 24, contentBottomPadding),
+                padding: EdgeInsets.fromLTRB(
+                  pagePadding,
+                  0,
+                  pagePadding,
+                  contentBottomPadding,
+                ),
                 children: [
                   SizedBox(height: MediaQuery.of(context).size.height * 0.12),
                   Icon(
@@ -373,9 +379,9 @@ class ProjectListPage extends ConsumerWidget {
                     child: ListView.separated(
                       physics: const AlwaysScrollableScrollPhysics(),
                       padding: EdgeInsets.fromLTRB(
-                        24,
+                        pagePadding,
                         20,
-                        24,
+                        pagePadding,
                         contentBottomPadding,
                       ),
                       itemCount: sortedProjects.length,

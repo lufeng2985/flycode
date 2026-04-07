@@ -27,6 +27,7 @@ class _MainTabPageState extends State<MainTabPage> {
     final l10n = context.l10n;
     final colorScheme = Theme.of(context).colorScheme;
     final tokens = context.tokens;
+    final pagePadding = tokens.pageHorizontalPadding;
 
     return Scaffold(
       extendBody: true,
@@ -37,7 +38,7 @@ class _MainTabPageState extends State<MainTabPage> {
       bottomNavigationBar: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 12, 24, 20),
+          padding: EdgeInsets.fromLTRB(pagePadding, 12, pagePadding, 20),
           child: Container(
             height: 56,
             padding: const EdgeInsets.all(4),

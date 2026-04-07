@@ -22,6 +22,7 @@ class AboutPage extends StatelessWidget {
     final theme = Theme.of(context);
     final tokens = context.tokens;
     final contentBottomPadding = MediaQuery.paddingOf(context).bottom + 20;
+    final pagePadding = tokens.pageHorizontalPadding;
 
     return Scaffold(
       appBar: AppBar(
@@ -40,7 +41,12 @@ class AboutPage extends StatelessWidget {
         ),
       ),
       body: ListView(
-        padding: EdgeInsets.fromLTRB(20, 16, 20, contentBottomPadding),
+        padding: EdgeInsets.fromLTRB(
+          pagePadding,
+          16,
+          pagePadding,
+          contentBottomPadding,
+        ),
         children: [
           _HeroSection(
             appName: _appName,

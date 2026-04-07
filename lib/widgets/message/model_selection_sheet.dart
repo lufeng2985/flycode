@@ -48,6 +48,7 @@ class _ModelSelectionSheetState extends ConsumerState<ModelSelectionSheet> {
     final configsAsync = ref.watch(modelConfigProvider);
     final theme = Theme.of(context);
     final tokens = context.tokens;
+    final pagePadding = tokens.pageHorizontalPadding;
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.75,
@@ -73,7 +74,7 @@ class _ModelSelectionSheetState extends ConsumerState<ModelSelectionSheet> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 6, 10, 12),
+              padding: EdgeInsets.fromLTRB(pagePadding, 6, 10, 12),
               child: Row(
                 children: [
                   Expanded(
@@ -96,7 +97,7 @@ class _ModelSelectionSheetState extends ConsumerState<ModelSelectionSheet> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              padding: EdgeInsets.fromLTRB(pagePadding, 0, pagePadding, 12),
               child: TextField(
                 controller: _searchController,
                 autofocus: false,
@@ -201,7 +202,7 @@ class _ModelSelectionSheetState extends ConsumerState<ModelSelectionSheet> {
     final tokens = context.tokens;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
+        padding: EdgeInsets.symmetric(horizontal: tokens.pageHorizontalPadding),
         child: Text(
           message,
           textAlign: TextAlign.center,
@@ -217,6 +218,7 @@ class _ModelSelectionSheetState extends ConsumerState<ModelSelectionSheet> {
   ) {
     final theme = Theme.of(context);
     final tokens = context.tokens;
+    final pagePadding = tokens.pageHorizontalPadding;
 
     Widget chip({required String key, required String label}) {
       final selected = _selectedFilterKey == key;
@@ -249,7 +251,7 @@ class _ModelSelectionSheetState extends ConsumerState<ModelSelectionSheet> {
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      padding: EdgeInsets.fromLTRB(pagePadding, 0, pagePadding, 10),
       child: Row(
         children: [
           chip(key: _filterAll, label: context.l10n.commonAll),

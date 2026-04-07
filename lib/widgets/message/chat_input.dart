@@ -1484,7 +1484,12 @@ class _SessionHistorySheet extends ConsumerWidget {
 
             // Header
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 2, 24, 12),
+              padding: EdgeInsets.fromLTRB(
+                tokens.pageHorizontalPadding,
+                2,
+                tokens.pageHorizontalPadding,
+                12,
+              ),
               child: Row(
                 children: [
                   Expanded(
@@ -1539,7 +1544,12 @@ class _SessionHistorySheet extends ConsumerWidget {
                   final dates = grouped.keys.toList();
 
                   return ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 20),
+                    padding: EdgeInsets.fromLTRB(
+                      tokens.pageHorizontalPadding,
+                      12,
+                      tokens.pageHorizontalPadding,
+                      20,
+                    ),
                     itemCount: dates.length,
                     itemBuilder: (context, index) {
                       final date = dates[index];
@@ -1779,7 +1789,12 @@ class _VariantSelectionSheet extends StatelessWidget {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 6, 10, 10),
+              padding: EdgeInsets.fromLTRB(
+                tokens.pageHorizontalPadding,
+                6,
+                10,
+                10,
+              ),
               child: Row(
                 children: [
                   Expanded(

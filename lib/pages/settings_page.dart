@@ -28,6 +28,7 @@ class SettingsPage extends ConsumerWidget {
     final contentBottomPadding = MediaQuery.paddingOf(context).bottom + 16;
     final mutedColor = tokens.mutedForeground;
     final dividerColor = tokens.accent;
+    final pagePadding = tokens.pageHorizontalPadding;
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
@@ -47,7 +48,12 @@ class SettingsPage extends ConsumerWidget {
         ),
       ),
       body: ListView(
-        padding: EdgeInsets.fromLTRB(24, 12, 24, contentBottomPadding),
+        padding: EdgeInsets.fromLTRB(
+          pagePadding,
+          12,
+          pagePadding,
+          contentBottomPadding,
+        ),
         children: [
           _SectionTitle(title: l10n.settingsSectionGeneral),
           _SettingsRow(

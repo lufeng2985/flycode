@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../l10n/l10n.dart';
 import '../providers/session_provider.dart';
 import '../service/api/models/session.dart';
+import '../theme/app_tokens.dart';
 import '../widgets/message/diff_view.dart';
 
 // ──────────────────────────────────────────────
@@ -41,7 +42,10 @@ class SessionDiffPage extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.symmetric(
+              horizontal: context.tokens.pageHorizontalPadding,
+              vertical: 24,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
