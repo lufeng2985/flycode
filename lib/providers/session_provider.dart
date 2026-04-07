@@ -11,7 +11,8 @@ class SessionMessagesNotifier extends _$SessionMessagesNotifier {
   @override
   Future<List<MessageWithParts>> build(String sessionID) async {
     final api = await ref.watch(sessionApiProvider.future);
-    return api.getSessionMessages(sessionID);
+    final messages = await api.getSessionMessages(sessionID);
+    return _normalizeMessages(messages);
   }
 
   /// SSE: message.updated — 新增或更新一条消息（保留已有 parts）
@@ -52,7 +53,7 @@ class SessionMessagesNotifier extends _$SessionMessagesNotifier {
     }
 
     final updated = List<MessageWithParts>.from(current);
-    updated[msgIndex] = MessageWithParts(info: msg.info, parts: newParts);
+    updated[msgIndex] = _messageWithNormalizedParts(msg.info, newParts);
     state = AsyncData(updated);
   }
 
@@ -68,7 +69,7 @@ class SessionMessagesNotifier extends _$SessionMessagesNotifier {
     final newParts = msg.parts.where((p) => _partId(p) != partID).toList();
 
     final updated = List<MessageWithParts>.from(current);
-    updated[msgIndex] = MessageWithParts(info: msg.info, parts: newParts);
+    updated[msgIndex] = _messageWithNormalizedParts(msg.info, newParts);
     state = AsyncData(updated);
   }
 
@@ -118,7 +119,7 @@ class SessionMessagesNotifier extends _$SessionMessagesNotifier {
     }
 
     final updated = List<MessageWithParts>.from(current);
-    updated[msgIndex] = MessageWithParts(info: msg.info, parts: newParts);
+    updated[msgIndex] = _messageWithNormalizedParts(msg.info, newParts);
     state = AsyncData(updated);
   }
 }
@@ -131,9 +132,21 @@ String _messageId(MessageWithParts m) {
 }
 
 String? _partId(Object part) {
-  if (part is ToolPart) return part.id;
-  if (part is TextPart) return part.id;
-  return null;
+  return switch (part) {
+    TextPart value => value.id,
+    FilePart value => value.id,
+    ToolPart value => value.id,
+    ReasoningPart value => value.id,
+    StepStartPart value => value.id,
+    StepFinishPart value => value.id,
+    SnapshotPart value => value.id,
+    PatchPart value => value.id,
+    AgentPart value => value.id,
+    RetryPart value => value.id,
+    CompactionPart value => value.id,
+    SubtaskPart value => value.id,
+    _ => null,
+  };
 }
 
 @riverpod
@@ -148,7 +161,8 @@ class SubSessionMessagesNotifier extends _$SubSessionMessagesNotifier {
   @override
   Future<List<MessageWithParts>> build(String sessionID) async {
     final api = await ref.watch(sessionApiProvider.future);
-    return api.getSessionMessages(sessionID);
+    final messages = await api.getSessionMessages(sessionID);
+    return _normalizeMessages(messages);
   }
 
   void updateMessage(String msgSessionID, MessageWithParts message) {
@@ -181,7 +195,7 @@ class SubSessionMessagesNotifier extends _$SubSessionMessagesNotifier {
       newParts.add(newPart);
     }
     final updated = List<MessageWithParts>.from(current);
-    updated[msgIndex] = MessageWithParts(info: msg.info, parts: newParts);
+    updated[msgIndex] = _messageWithNormalizedParts(msg.info, newParts);
     state = AsyncData(updated);
   }
 
@@ -194,7 +208,7 @@ class SubSessionMessagesNotifier extends _$SubSessionMessagesNotifier {
     final msg = current[msgIndex];
     final newParts = msg.parts.where((p) => _partId(p) != partID).toList();
     final updated = List<MessageWithParts>.from(current);
-    updated[msgIndex] = MessageWithParts(info: msg.info, parts: newParts);
+    updated[msgIndex] = _messageWithNormalizedParts(msg.info, newParts);
     state = AsyncData(updated);
   }
 
@@ -242,7 +256,7 @@ class SubSessionMessagesNotifier extends _$SubSessionMessagesNotifier {
     }
 
     final updated = List<MessageWithParts>.from(current);
-    updated[msgIndex] = MessageWithParts(info: msg.info, parts: newParts);
+    updated[msgIndex] = _messageWithNormalizedParts(msg.info, newParts);
     state = AsyncData(updated);
   }
 }
@@ -258,7 +272,7 @@ List<MessageWithParts> _upsertMessage(
   if (index >= 0) {
     updated[index] = _mergeMessagePreservingParts(updated[index], incoming);
   } else {
-    updated.add(incoming);
+    updated.add(_messageWithNormalizedParts(incoming.info, incoming.parts));
   }
   return updated;
 }
@@ -268,7 +282,41 @@ MessageWithParts _mergeMessagePreservingParts(
   MessageWithParts incoming,
 ) {
   if (incoming.parts.isNotEmpty) {
-    return incoming;
+    return _messageWithNormalizedParts(incoming.info, incoming.parts);
   }
-  return MessageWithParts(info: incoming.info, parts: current.parts);
+  return _messageWithNormalizedParts(incoming.info, current.parts);
+}
+
+List<MessageWithParts> _normalizeMessages(List<MessageWithParts> messages) {
+  return messages
+      .map(
+        (message) => _messageWithNormalizedParts(message.info, message.parts),
+      )
+      .toList();
+}
+
+MessageWithParts _messageWithNormalizedParts(Object info, List<Object> parts) {
+  return MessageWithParts(info: info, parts: _normalizeParts(parts));
+}
+
+List<Object> _normalizeParts(List<Object> parts) {
+  final normalized = List<Object>.from(parts);
+  final seenByPartId = <String, int>{};
+
+  for (var i = 0; i < normalized.length; i++) {
+    final partId = _partId(normalized[i]);
+    if (partId == null) continue;
+
+    final existingIndex = seenByPartId[partId];
+    if (existingIndex == null) {
+      seenByPartId[partId] = i;
+      continue;
+    }
+
+    normalized[existingIndex] = normalized[i];
+    normalized.removeAt(i);
+    i -= 1;
+  }
+
+  return normalized;
 }

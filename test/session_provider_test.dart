@@ -10,7 +10,8 @@ import 'package:flycode/service/api/api_client.dart';
 import 'package:flycode/service/api/global_api.dart';
 import 'package:flycode/service/api/models/global_event.dart';
 import 'package:flycode/service/api/models/message.dart' as msg;
-import 'package:flycode/service/api/models/parts.dart' show TextPart;
+import 'package:flycode/service/api/models/parts.dart'
+    show PartTime, ReasoningPart, TextPart;
 import 'package:flycode/service/api/session_api.dart';
 
 const _kSessionId = 'sub-1';
@@ -94,6 +95,22 @@ msg.MessageWithParts _messageInfoOnly({
       tokens: msg.MessageTokens(output: 42),
     ),
     parts: const <Object>[],
+  );
+}
+
+ReasoningPart _reasoningPart({
+  required String sessionID,
+  required String messageID,
+  required String partID,
+  required String text,
+}) {
+  return ReasoningPart(
+    id: partID,
+    sessionID: sessionID,
+    messageID: messageID,
+    type: 'reasoning',
+    text: text,
+    time: PartTime(start: 1, end: 2),
   );
 }
 
@@ -265,6 +282,134 @@ void main() {
           .requireValue
           .single;
       expect((subSessionMessage.parts.single as TextPart).text, 'keep me');
+    },
+  );
+
+  test(
+    'sub-session updatePart replaces existing reasoning part by id',
+    () async {
+      final initial = msg.MessageWithParts(
+        info: _messageWithText(
+          sessionID: _kSessionId,
+          messageID: _kMessageId,
+          text: 'placeholder',
+        ).info,
+        parts: <Object>[
+          _reasoningPart(
+            sessionID: _kSessionId,
+            messageID: _kMessageId,
+            partID: 'part-reasoning',
+            text: 'before',
+          ),
+        ],
+      );
+      final api = _FakeSessionApi(<String, List<msg.MessageWithParts>>{
+        _kSessionId: <msg.MessageWithParts>[initial],
+      });
+      final container = ProviderContainer(
+        overrides: [sessionApiProvider.overrideWith((ref) async => api)],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(subSessionMessagesProvider(_kSessionId).future);
+
+      container
+          .read(subSessionMessagesProvider(_kSessionId).notifier)
+          .updatePart(
+            _kSessionId,
+            _kMessageId,
+            _reasoningPart(
+              sessionID: _kSessionId,
+              messageID: _kMessageId,
+              partID: 'part-reasoning',
+              text: 'after',
+            ),
+          );
+
+      final updated = container
+          .read(subSessionMessagesProvider(_kSessionId))
+          .requireValue
+          .single;
+      expect(updated.parts, hasLength(1));
+      expect((updated.parts.single as ReasoningPart).text, 'after');
+    },
+  );
+
+  test(
+    'sub-session build normalizes duplicate part ids from initial payload',
+    () async {
+      final initial = msg.MessageWithParts(
+        info: _messageWithText(
+          sessionID: _kSessionId,
+          messageID: _kMessageId,
+          text: 'placeholder',
+        ).info,
+        parts: <Object>[
+          _reasoningPart(
+            sessionID: _kSessionId,
+            messageID: _kMessageId,
+            partID: 'part-reasoning',
+            text: 'before',
+          ),
+          _reasoningPart(
+            sessionID: _kSessionId,
+            messageID: _kMessageId,
+            partID: 'part-reasoning',
+            text: 'after',
+          ),
+        ],
+      );
+      final api = _FakeSessionApi(<String, List<msg.MessageWithParts>>{
+        _kSessionId: <msg.MessageWithParts>[initial],
+      });
+      final container = ProviderContainer(
+        overrides: [sessionApiProvider.overrideWith((ref) async => api)],
+      );
+      addTearDown(container.dispose);
+
+      final message = (await container.read(
+        subSessionMessagesProvider(_kSessionId).future,
+      )).single;
+
+      expect(message.parts, hasLength(1));
+      expect((message.parts.single as ReasoningPart).text, 'after');
+    },
+  );
+
+  test(
+    'appendPartDelta updates existing text part instead of appending duplicate',
+    () async {
+      final initial = _messageWithText(
+        sessionID: _kSessionId,
+        messageID: _kMessageId,
+        text: 'hello',
+      );
+      final api = _FakeSessionApi(<String, List<msg.MessageWithParts>>{
+        _kSessionId: <msg.MessageWithParts>[initial],
+      });
+      final container = ProviderContainer(
+        overrides: [sessionApiProvider.overrideWith((ref) async => api)],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(subSessionMessagesProvider(_kSessionId).future);
+
+      container
+          .read(subSessionMessagesProvider(_kSessionId).notifier)
+          .appendPartDelta(
+            _kSessionId,
+            _kMessageId,
+            'part-$_kMessageId',
+            'text',
+            ' world',
+          );
+
+      final updated = container
+          .read(subSessionMessagesProvider(_kSessionId))
+          .requireValue
+          .single;
+      expect(updated.parts, hasLength(1));
+      expect((updated.parts.single as TextPart).text, 'hello world');
     },
   );
 }
