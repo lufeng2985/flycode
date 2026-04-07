@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -18,6 +21,11 @@ Future<void> _drainMicrotasks() async {
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
+    debugSessionUnreadPreferencesLoader = SharedPreferences.getInstance;
+  });
+
+  tearDown(() {
+    debugSessionUnreadPreferencesLoader = SharedPreferences.getInstance;
   });
 
   test('idle/error update unread and markViewed clears it', () async {
@@ -82,4 +90,89 @@ void main() {
     final keyB = sessionUnreadCacheKeyForDirectory('/tmp/worktree-b');
     expect(keyA, isNot(keyB));
   });
+
+  test(
+    'late restore replays newer unread updates instead of overwriting them',
+    () async {
+      final directory = '/tmp/worktree';
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        sessionUnreadCacheKeyForDirectory(directory): jsonEncode(
+          <String, Object>{
+            'unseen': <String, int>{'sess-a': 1},
+            'errors': <String>[],
+          },
+        ),
+      });
+
+      final restoreGate = Completer<SharedPreferences>();
+      debugSessionUnreadPreferencesLoader = () => restoreGate.future;
+
+      final container = ProviderContainer(
+        overrides: [
+          currentDirectoryProvider.overrideWith(() => _FakeCurrentDirectory()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      expect(container.read(sessionUnreadProvider).unseenCount('sess-a'), 0);
+
+      await container
+          .read(sessionUnreadProvider.notifier)
+          .addTurnComplete('sess-b');
+
+      final interim = container.read(sessionUnreadProvider);
+      expect(interim.unseenCount('sess-a'), 0);
+      expect(interim.unseenCount('sess-b'), 1);
+
+      restoreGate.complete(await SharedPreferences.getInstance());
+      await _drainMicrotasks();
+
+      final restored = container.read(sessionUnreadProvider);
+      expect(restored.unseenCount('sess-a'), 1);
+      expect(restored.unseenCount('sess-b'), 1);
+
+      final prefs = await SharedPreferences.getInstance();
+      final persisted =
+          jsonDecode(
+                prefs.getString(sessionUnreadCacheKeyForDirectory(directory))!,
+              )
+              as Map<String, dynamic>;
+      expect(persisted['unseen'], <String, dynamic>{'sess-a': 1, 'sess-b': 1});
+    },
+  );
+
+  test(
+    'late restore does not reintroduce sessions that were viewed while hydrating',
+    () async {
+      final directory = '/tmp/worktree';
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        sessionUnreadCacheKeyForDirectory(directory): jsonEncode(
+          <String, Object>{
+            'unseen': <String, int>{'sess-a': 2},
+            'errors': <String>['sess-a'],
+          },
+        ),
+      });
+
+      final restoreGate = Completer<SharedPreferences>();
+      debugSessionUnreadPreferencesLoader = () => restoreGate.future;
+
+      final container = ProviderContainer(
+        overrides: [
+          currentDirectoryProvider.overrideWith(() => _FakeCurrentDirectory()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container.read(sessionUnreadProvider);
+      await container.read(sessionUnreadProvider.notifier).markViewed('sess-a');
+
+      restoreGate.complete(await SharedPreferences.getInstance());
+      await _drainMicrotasks();
+
+      final restored = container.read(sessionUnreadProvider);
+      expect(restored.unseenCount('sess-a'), 0);
+      expect(restored.hasError('sess-a'), isFalse);
+    },
+  );
 }
