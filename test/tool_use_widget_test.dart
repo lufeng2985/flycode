@@ -57,7 +57,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('renders multiple args and keeps expand action visible', (
+  testWidgets('renders multiple args and keeps collapse action visible', (
     tester,
   ) async {
     final grepPart = completedToolPart(
@@ -87,7 +87,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(Wrap), findsOneWidget);
-    expect(find.byIcon(Icons.expand_more), findsOneWidget);
+    expect(find.byIcon(Icons.expand_less), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

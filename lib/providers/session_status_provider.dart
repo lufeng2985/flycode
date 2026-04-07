@@ -15,7 +15,7 @@ class SessionStatusNotifier extends _$SessionStatusNotifier {
   static const Duration _pollInterval = Duration(seconds: 5);
 
   Timer? _pollTimer;
-  bool _isRefreshing = false;
+  Future<void>? _refreshFuture;
 
   @override
   Map<String, SessionStatus> build() {
@@ -46,9 +46,28 @@ class SessionStatusNotifier extends _$SessionStatusNotifier {
   ///
   /// This is used as a reconciliation fallback when SSE misses an update.
   Future<void> refreshFromServer() async {
-    if (_isRefreshing) return;
-    _isRefreshing = true;
+    final inFlightRefresh = _refreshFuture;
+    if (inFlightRefresh != null) {
+      await inFlightRefresh;
+      return;
+    }
 
+    final refresh = _refreshFromServerInternal();
+    _refreshFuture = refresh;
+
+    try {
+      await refresh;
+    } finally {
+      if (identical(_refreshFuture, refresh)) {
+        _refreshFuture = null;
+      }
+      if (ref.mounted) {
+        _syncPolling();
+      }
+    }
+  }
+
+  Future<void> _refreshFromServerInternal() async {
     try {
       final api = await ref.read(sessionApiProvider.future);
       if (!ref.mounted) return;
@@ -59,11 +78,6 @@ class SessionStatusNotifier extends _$SessionStatusNotifier {
       state = Map.unmodifiable(_parseStatusSnapshot(raw));
     } catch (_) {
       // Keep current state when snapshot fetch fails.
-    } finally {
-      _isRefreshing = false;
-      if (ref.mounted) {
-        _syncPolling();
-      }
     }
   }
 
