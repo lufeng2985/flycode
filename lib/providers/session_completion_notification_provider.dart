@@ -1,9 +1,8 @@
-import 'dart:async';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flycode/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'hydrated_state.dart';
 import 'shared_preferences_provider.dart';
 
 const _kSessionCompletionNotificationModeKey =
@@ -55,66 +54,26 @@ final sessionCompletionNotificationModeProvider =
 
 class SessionCompletionNotificationModeNotifier
     extends Notifier<SessionCompletionNotificationMode> {
-  bool _isRestoring = false;
-  int _restoreGeneration = 0;
-  SessionCompletionNotificationMode? _pendingMode;
-  Completer<void>? _restoreCompleter;
+  late final HydratedValueController<SessionCompletionNotificationMode>
+  _hydration = HydratedValueController<SessionCompletionNotificationMode>(
+    readState: () => state,
+    writeState: (value) => state = value,
+    load: () => readSessionCompletionNotificationModeFromStorage(
+      () => ref.read(sharedPreferencesProvider.future),
+    ),
+    persist: _persist,
+    isMounted: () => ref.mounted,
+  );
 
   @override
   SessionCompletionNotificationMode build() {
-    _startRestore();
+    _hydration.startRestore();
     return SessionCompletionNotificationMode.backgroundOnly;
   }
 
   Future<void> setMode(SessionCompletionNotificationMode mode) async {
-    if (state == mode && _pendingMode == null) return;
-    state = mode;
-
-    if (_isRestoring) {
-      _pendingMode = mode;
-      await _restoreCompleter?.future;
-      return;
-    }
-
-    await _persist(mode);
-    _pendingMode = null;
-  }
-
-  void _startRestore() {
-    _isRestoring = true;
-    final generation = ++_restoreGeneration;
-    _restoreCompleter = Completer<void>();
-    unawaited(_restore(generation));
-  }
-
-  Future<void> _restore(int generation) async {
-    final restoreCompleter = _restoreCompleter;
-
-    try {
-      final restoredMode =
-          await readSessionCompletionNotificationModeFromStorage(
-            () => ref.read(sharedPreferencesProvider.future),
-          );
-      if (!ref.mounted || _restoreGeneration != generation) return;
-
-      final nextMode = _pendingMode ?? restoredMode;
-      _isRestoring = false;
-      _restoreGeneration = 0;
-      _pendingMode = null;
-
-      if (state != nextMode) {
-        state = nextMode;
-      }
-
-      await _persist(nextMode);
-    } finally {
-      if (identical(_restoreCompleter, restoreCompleter)) {
-        _restoreCompleter = null;
-      }
-      if (restoreCompleter != null && !restoreCompleter.isCompleted) {
-        restoreCompleter.complete();
-      }
-    }
+    if (state == mode && !_hydration.isHydrating) return;
+    await _hydration.setValue(mode, waitForHydration: true);
   }
 
   Future<void> _persist(SessionCompletionNotificationMode mode) async {

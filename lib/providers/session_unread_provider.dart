@@ -1,9 +1,9 @@
-import 'dart:async';
 import 'dart:convert';
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'current_directory_provider.dart';
+import 'hydrated_state.dart';
 import 'shared_preferences_provider.dart';
 
 part 'session_unread_provider.g.dart';
@@ -93,10 +93,22 @@ class _SessionUnreadMutation {
 
 @Riverpod(keepAlive: true)
 class SessionUnreadNotifier extends _$SessionUnreadNotifier {
-  int _restoreGeneration = 0;
   String? _hydratingDirectory;
-  final List<_SessionUnreadMutation> _pendingMutations =
-      <_SessionUnreadMutation>[];
+  late final HydratedMutationController<
+    SessionUnreadState,
+    _SessionUnreadMutation
+  >
+  _hydration =
+      HydratedMutationController<SessionUnreadState, _SessionUnreadMutation>(
+        readState: () => state,
+        writeState: (value) => state = _freezeState(value),
+        load: _loadRestoredState,
+        persist: (value) => _persistCurrentState(_hydratingDirectory, value),
+        applyMutation: (current, mutation) => mutation.apply(current),
+        isMounted: () => ref.mounted,
+        canApplyRestore: () =>
+            ref.read(currentDirectoryProvider) == _hydratingDirectory,
+      );
 
   @override
   SessionUnreadState build() {
@@ -122,7 +134,7 @@ class SessionUnreadNotifier extends _$SessionUnreadNotifier {
 
   Future<void> markViewed(String sessionID) async {
     if (sessionID.isEmpty) return;
-    if (!_isHydrating &&
+    if (!_hydration.isHydrating &&
         !state.unseenCountBySession.containsKey(sessionID) &&
         !state.errorSessionIDs.contains(sessionID)) {
       return;
@@ -133,68 +145,18 @@ class SessionUnreadNotifier extends _$SessionUnreadNotifier {
 
   Future<void> clearSession(String sessionID) => markViewed(sessionID);
 
-  bool get _isHydrating =>
-      _restoreGeneration > 0 && _hydratingDirectory != null;
-
   void _startRestore(String directory) {
-    _restoreGeneration += 1;
     _hydratingDirectory = directory;
-    _pendingMutations.clear();
-    final generation = _restoreGeneration;
-    unawaited(_restore(directory, generation));
+    _hydration.startRestore();
   }
 
   void _cancelRestore() {
-    _restoreGeneration += 1;
     _hydratingDirectory = null;
-    _pendingMutations.clear();
-  }
-
-  Future<void> _restore(String directory, int generation) async {
-    SessionUnreadState restoredState = const SessionUnreadState.empty();
-
-    try {
-      final prefs = await ref.read(sharedPreferencesProvider.future);
-      final key = sessionUnreadCacheKeyForDirectory(directory);
-      final raw = prefs.getString(key);
-      restoredState = _parseRestoredState(raw);
-    } catch (_) {
-      // Keep current state when local cache is invalid.
-    }
-
-    if (!ref.mounted) return;
-    if (_restoreGeneration != generation) return;
-    if (ref.read(currentDirectoryProvider) != directory) return;
-
-    var nextState = restoredState;
-    for (final mutation in _pendingMutations) {
-      nextState = mutation.apply(nextState);
-    }
-
-    _pendingMutations.clear();
-    _restoreGeneration = 0;
-    _hydratingDirectory = null;
-    state = _freezeState(nextState);
-
-    await _persistState(directory, state);
-  }
-
-  Future<void> _persist() async {
-    final directory = ref.read(currentDirectoryProvider);
-    if (directory == null || directory.isEmpty) return;
-
-    await _persistState(directory, state);
+    _hydration.cancelRestore();
   }
 
   Future<void> _applyMutation(_SessionUnreadMutation mutation) async {
-    if (_isHydrating) {
-      _pendingMutations.add(mutation);
-      state = _freezeState(mutation.apply(state));
-      return;
-    }
-
-    state = _freezeState(mutation.apply(state));
-    await _persist();
+    await _hydration.apply(mutation);
   }
 
   SessionUnreadState _parseRestoredState(String? raw) {
@@ -242,10 +204,29 @@ class SessionUnreadNotifier extends _$SessionUnreadNotifier {
     );
   }
 
-  Future<void> _persistState(
-    String directory,
+  Future<SessionUnreadState> _loadRestoredState() async {
+    final directory = _hydratingDirectory;
+    if (directory == null || directory.isEmpty) {
+      return const SessionUnreadState.empty();
+    }
+
+    try {
+      final prefs = await ref.read(sharedPreferencesProvider.future);
+      final key = sessionUnreadCacheKeyForDirectory(directory);
+      final raw = prefs.getString(key);
+      return _parseRestoredState(raw);
+    } catch (_) {
+      // Keep current state when local cache is invalid.
+      return const SessionUnreadState.empty();
+    }
+  }
+
+  Future<void> _persistCurrentState(
+    String? directory,
     SessionUnreadState snapshot,
   ) async {
+    if (directory == null || directory.isEmpty) return;
+
     final payload = <String, dynamic>{
       'unseen': snapshot.unseenCountBySession,
       'errors': snapshot.errorSessionIDs.toList(),

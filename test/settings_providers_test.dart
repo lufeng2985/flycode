@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -60,6 +62,35 @@ void main() {
   });
 
   test(
+    'appLanguageProvider late restore does not override newer selection',
+    () async {
+      final repository = _DelayedLocalPreferencesRepository(
+        restoredLanguage: AppLanguage.en,
+      );
+      final container = ProviderContainer(
+        overrides: [
+          localPreferencesRepositoryProvider.overrideWithValue(repository),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      expect(container.read(appLanguageProvider), AppLanguage.system);
+
+      await container
+          .read(appLanguageProvider.notifier)
+          .setLanguage(AppLanguage.zh);
+      expect(container.read(appLanguageProvider), AppLanguage.zh);
+
+      repository.completeRestore();
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(container.read(appLanguageProvider), AppLanguage.zh);
+      expect(repository.savedLanguages, <AppLanguage>[AppLanguage.zh]);
+    },
+  );
+
+  test(
     'onboarding controller invalidates completed provider after saving',
     () async {
       final container = ProviderContainer();
@@ -116,6 +147,31 @@ class _TrackingLocalPreferencesRepository extends LocalPreferencesRepository {
   @override
   Future<void> saveServerSetupCompleted(bool completed) async {
     savedServerSetupCompleted.add(completed);
+  }
+}
+
+class _DelayedLocalPreferencesRepository extends LocalPreferencesRepository {
+  _DelayedLocalPreferencesRepository({required this.restoredLanguage})
+    : super(preferencesLoader: _unusedLoader);
+
+  final AppLanguage restoredLanguage;
+  final Completer<AppLanguage> _restoreCompleter = Completer<AppLanguage>();
+  final List<AppLanguage> savedLanguages = <AppLanguage>[];
+
+  void completeRestore() {
+    if (!_restoreCompleter.isCompleted) {
+      _restoreCompleter.complete(restoredLanguage);
+    }
+  }
+
+  @override
+  Future<AppLanguage> loadAppLanguage() {
+    return _restoreCompleter.future;
+  }
+
+  @override
+  Future<void> saveAppLanguage(AppLanguage language) async {
+    savedLanguages.add(language);
   }
 }
 
