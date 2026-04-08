@@ -6,46 +6,41 @@ import '../service/api/models/session.dart';
 
 part 'session_provider.g.dart';
 
-@riverpod
-class SessionMessagesNotifier extends _$SessionMessagesNotifier {
-  @override
-  Future<List<MessageWithParts>> build(String sessionID) async {
-    final api = await ref.watch(sessionApiProvider.future);
-    final messages = await api.getSessionMessages(sessionID);
-    return _normalizeMessages(messages);
+final class MessageListStateReducer {
+  const MessageListStateReducer._();
+
+  static List<MessageWithParts> updateMessage(
+    List<MessageWithParts> current,
+    MessageWithParts message,
+  ) {
+    return _upsertMessage(current, message);
   }
 
-  /// SSE: message.updated — 新增或更新一条消息（保留已有 parts）
-  void updateMessage(String sessionID, MessageWithParts message) {
-    if (this.sessionID != sessionID) return;
-
-    final current = state.asData?.value ?? [];
-    state = AsyncData(_upsertMessage(current, message));
+  static List<MessageWithParts> removeMessage(
+    List<MessageWithParts> current,
+    String messageID,
+  ) {
+    return current
+        .where((message) => _messageId(message) != messageID)
+        .toList();
   }
 
-  /// SSE: message.removed — 删除一条消息
-  void removeMessage(String sessionID, String messageID) {
-    if (this.sessionID != sessionID) return;
+  static List<MessageWithParts> updatePart(
+    List<MessageWithParts> current,
+    String messageID,
+    Object newPart,
+  ) {
+    final msgIndex = current.indexWhere(
+      (message) => _messageId(message) == messageID,
+    );
+    if (msgIndex < 0) return current;
 
-    final current = state.asData?.value ?? [];
-    final updated = current.where((m) => _messageId(m) != messageID).toList();
-    state = AsyncData(updated);
-  }
-
-  /// SSE: message.part.updated — 新增或更新某条消息的一个 part
-  void updatePart(String sessionID, String messageID, Object newPart) {
-    if (this.sessionID != sessionID) return;
-
-    final current = state.asData?.value ?? [];
-    final msgIndex = current.indexWhere((m) => _messageId(m) == messageID);
-    if (msgIndex < 0) return;
-
-    final msg = current[msgIndex];
-    final existingIndex = msg.parts.indexWhere(
-      (p) => partId(p) == partId(newPart),
+    final message = current[msgIndex];
+    final existingIndex = message.parts.indexWhere(
+      (part) => partId(part) == partId(newPart),
     );
 
-    final newParts = List<Object>.from(msg.parts);
+    final newParts = List<Object>.from(message.parts);
     if (existingIndex >= 0) {
       newParts[existingIndex] = newPart;
     } else {
@@ -53,48 +48,54 @@ class SessionMessagesNotifier extends _$SessionMessagesNotifier {
     }
 
     final updated = List<MessageWithParts>.from(current);
-    updated[msgIndex] = _messageWithNormalizedParts(msg.info, newParts);
-    state = AsyncData(updated);
+    updated[msgIndex] = _messageWithNormalizedParts(message.info, newParts);
+    return updated;
   }
 
-  /// SSE: message.part.removed — 删除某条消息的一个 part
-  void removePart(String sessionID, String messageID, String partID) {
-    if (this.sessionID != sessionID) return;
+  static List<MessageWithParts> removePart(
+    List<MessageWithParts> current,
+    String messageID,
+    String partID,
+  ) {
+    final msgIndex = current.indexWhere(
+      (message) => _messageId(message) == messageID,
+    );
+    if (msgIndex < 0) return current;
 
-    final current = state.asData?.value ?? [];
-    final msgIndex = current.indexWhere((m) => _messageId(m) == messageID);
-    if (msgIndex < 0) return;
-
-    final msg = current[msgIndex];
-    final newParts = msg.parts.where((p) => partId(p) != partID).toList();
+    final message = current[msgIndex];
+    final newParts = message.parts
+        .where((part) => partId(part) != partID)
+        .toList();
 
     final updated = List<MessageWithParts>.from(current);
-    updated[msgIndex] = _messageWithNormalizedParts(msg.info, newParts);
-    state = AsyncData(updated);
+    updated[msgIndex] = _messageWithNormalizedParts(message.info, newParts);
+    return updated;
   }
 
-  /// SSE: message.part.delta — 增量追加某个 part 的文本内容
-  void appendPartDelta(
+  static List<MessageWithParts> appendPartDelta(
+    List<MessageWithParts> current,
     String sessionID,
     String messageID,
     String partID,
     String field,
     String delta,
   ) {
-    if (this.sessionID != sessionID) return;
-    if (field != 'text' || delta.isEmpty) return;
+    if (field != 'text' || delta.isEmpty) return current;
 
-    final current = state.asData?.value ?? [];
-    final msgIndex = current.indexWhere((m) => _messageId(m) == messageID);
-    if (msgIndex < 0) return;
+    final msgIndex = current.indexWhere(
+      (message) => _messageId(message) == messageID,
+    );
+    if (msgIndex < 0) return current;
 
-    final msg = current[msgIndex];
-    final partIndex = msg.parts.indexWhere((p) => partId(p) == partID);
+    final message = current[msgIndex];
+    final partIndex = message.parts.indexWhere(
+      (part) => partId(part) == partID,
+    );
 
-    final newParts = List<Object>.from(msg.parts);
+    final newParts = List<Object>.from(message.parts);
     if (partIndex >= 0) {
-      final part = msg.parts[partIndex];
-      if (part is! TextPart) return;
+      final part = message.parts[partIndex];
+      if (part is! TextPart) return current;
       newParts[partIndex] = TextPart(
         id: part.id,
         sessionID: part.sessionID,
@@ -119,8 +120,75 @@ class SessionMessagesNotifier extends _$SessionMessagesNotifier {
     }
 
     final updated = List<MessageWithParts>.from(current);
-    updated[msgIndex] = _messageWithNormalizedParts(msg.info, newParts);
-    state = AsyncData(updated);
+    updated[msgIndex] = _messageWithNormalizedParts(message.info, newParts);
+    return updated;
+  }
+}
+
+@riverpod
+class SessionMessagesNotifier extends _$SessionMessagesNotifier {
+  @override
+  Future<List<MessageWithParts>> build(String sessionID) async {
+    final api = await ref.watch(sessionApiProvider.future);
+    final messages = await api.getSessionMessages(sessionID);
+    return _normalizeMessages(messages);
+  }
+
+  /// SSE: message.updated — 新增或更新一条消息（保留已有 parts）
+  void updateMessage(String sessionID, MessageWithParts message) {
+    if (this.sessionID != sessionID) return;
+    _setState(MessageListStateReducer.updateMessage(_currentMessages, message));
+  }
+
+  /// SSE: message.removed — 删除一条消息
+  void removeMessage(String sessionID, String messageID) {
+    if (this.sessionID != sessionID) return;
+    _setState(
+      MessageListStateReducer.removeMessage(_currentMessages, messageID),
+    );
+  }
+
+  /// SSE: message.part.updated — 新增或更新某条消息的一个 part
+  void updatePart(String sessionID, String messageID, Object newPart) {
+    if (this.sessionID != sessionID) return;
+    _setState(
+      MessageListStateReducer.updatePart(_currentMessages, messageID, newPart),
+    );
+  }
+
+  /// SSE: message.part.removed — 删除某条消息的一个 part
+  void removePart(String sessionID, String messageID, String partID) {
+    if (this.sessionID != sessionID) return;
+    _setState(
+      MessageListStateReducer.removePart(_currentMessages, messageID, partID),
+    );
+  }
+
+  /// SSE: message.part.delta — 增量追加某个 part 的文本内容
+  void appendPartDelta(
+    String sessionID,
+    String messageID,
+    String partID,
+    String field,
+    String delta,
+  ) {
+    if (this.sessionID != sessionID) return;
+    _setState(
+      MessageListStateReducer.appendPartDelta(
+        _currentMessages,
+        sessionID,
+        messageID,
+        partID,
+        field,
+        delta,
+      ),
+    );
+  }
+
+  List<MessageWithParts> get _currentMessages => state.asData?.value ?? [];
+
+  void _setState(List<MessageWithParts> messages) {
+    state = AsyncData(messages);
   }
 }
 
@@ -149,49 +217,28 @@ class SubSessionMessagesNotifier extends _$SubSessionMessagesNotifier {
 
   void updateMessage(String msgSessionID, MessageWithParts message) {
     if (msgSessionID != sessionID) return;
-    final current = state.asData?.value ?? [];
-    state = AsyncData(_upsertMessage(current, message));
+    _setState(MessageListStateReducer.updateMessage(_currentMessages, message));
   }
 
   void removeMessage(String msgSessionID, String messageID) {
     if (msgSessionID != sessionID) return;
-    final current = state.asData?.value ?? [];
-    final updated = current.where((m) => _messageId(m) != messageID).toList();
-    state = AsyncData(updated);
+    _setState(
+      MessageListStateReducer.removeMessage(_currentMessages, messageID),
+    );
   }
 
   void updatePart(String msgSessionID, String messageID, Object newPart) {
     if (msgSessionID != sessionID) return;
-    final current = state.asData?.value ?? [];
-    final msgIndex = current.indexWhere((m) => _messageId(m) == messageID);
-    if (msgIndex < 0) return;
-
-    final msg = current[msgIndex];
-    final existingIndex = msg.parts.indexWhere(
-      (p) => partId(p) == partId(newPart),
+    _setState(
+      MessageListStateReducer.updatePart(_currentMessages, messageID, newPart),
     );
-    final newParts = List<Object>.from(msg.parts);
-    if (existingIndex >= 0) {
-      newParts[existingIndex] = newPart;
-    } else {
-      newParts.add(newPart);
-    }
-    final updated = List<MessageWithParts>.from(current);
-    updated[msgIndex] = _messageWithNormalizedParts(msg.info, newParts);
-    state = AsyncData(updated);
   }
 
   void removePart(String msgSessionID, String messageID, String partID) {
     if (msgSessionID != sessionID) return;
-    final current = state.asData?.value ?? [];
-    final msgIndex = current.indexWhere((m) => _messageId(m) == messageID);
-    if (msgIndex < 0) return;
-
-    final msg = current[msgIndex];
-    final newParts = msg.parts.where((p) => partId(p) != partID).toList();
-    final updated = List<MessageWithParts>.from(current);
-    updated[msgIndex] = _messageWithNormalizedParts(msg.info, newParts);
-    state = AsyncData(updated);
+    _setState(
+      MessageListStateReducer.removePart(_currentMessages, messageID, partID),
+    );
   }
 
   void appendPartDelta(
@@ -202,44 +249,22 @@ class SubSessionMessagesNotifier extends _$SubSessionMessagesNotifier {
     String delta,
   ) {
     if (msgSessionID != sessionID) return;
-    if (field != 'text' || delta.isEmpty) return;
+    _setState(
+      MessageListStateReducer.appendPartDelta(
+        _currentMessages,
+        msgSessionID,
+        messageID,
+        partID,
+        field,
+        delta,
+      ),
+    );
+  }
 
-    final current = state.asData?.value ?? [];
-    final msgIndex = current.indexWhere((m) => _messageId(m) == messageID);
-    if (msgIndex < 0) return;
+  List<MessageWithParts> get _currentMessages => state.asData?.value ?? [];
 
-    final msg = current[msgIndex];
-    final partIndex = msg.parts.indexWhere((p) => partId(p) == partID);
-    final newParts = List<Object>.from(msg.parts);
-    if (partIndex >= 0) {
-      final part = msg.parts[partIndex];
-      if (part is! TextPart) return;
-      newParts[partIndex] = TextPart(
-        id: part.id,
-        sessionID: part.sessionID,
-        messageID: part.messageID,
-        type: part.type,
-        text: '${part.text}$delta',
-        synthetic: part.synthetic,
-        ignored: part.ignored,
-        time: part.time,
-        metadata: part.metadata,
-      );
-    } else {
-      newParts.add(
-        TextPart(
-          id: partID,
-          sessionID: msgSessionID,
-          messageID: messageID,
-          type: 'text',
-          text: delta,
-        ),
-      );
-    }
-
-    final updated = List<MessageWithParts>.from(current);
-    updated[msgIndex] = _messageWithNormalizedParts(msg.info, newParts);
-    state = AsyncData(updated);
+  void _setState(List<MessageWithParts> messages) {
+    state = AsyncData(messages);
   }
 }
 
