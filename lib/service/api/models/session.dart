@@ -2,6 +2,10 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'session.g.dart';
 
+String _stringOrEmpty(Object? value) => value?.toString() ?? '';
+
+int _intOrZero(Object? value) => (value as num?)?.toInt() ?? 0;
+
 @JsonSerializable(createFactory: false, createToJson: false)
 class SessionTime {
   final int created;
@@ -49,11 +53,13 @@ class FileDiff {
   });
 
   factory FileDiff.fromJson(Map<String, dynamic> json) => FileDiff(
-    file: json['file'] as String,
-    before: json['before'] as String,
-    after: json['after'] as String,
-    additions: (json['additions'] as num).toInt(),
-    deletions: (json['deletions'] as num).toInt(),
+    file: _stringOrEmpty(
+      json['file'] ?? json['relativePath'] ?? json['filePath'],
+    ),
+    before: _stringOrEmpty(json['before']),
+    after: _stringOrEmpty(json['after']),
+    additions: _intOrZero(json['additions']),
+    deletions: _intOrZero(json['deletions']),
     status: json['status'] as String?,
   );
   Map<String, dynamic> toJson() => {

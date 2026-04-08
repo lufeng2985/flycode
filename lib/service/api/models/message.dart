@@ -1,6 +1,10 @@
 import 'package:json_annotation/json_annotation.dart';
 import 'parts.dart';
 
+String _stringOrEmpty(Object? value) => value?.toString() ?? '';
+
+int _intOrZero(Object? value) => (value as num?)?.toInt() ?? 0;
+
 @JsonSerializable(createFactory: false, createToJson: false)
 class MessageTime {
   final int created;
@@ -106,6 +110,7 @@ class FileDiff {
   final String after;
   final int additions;
   final int deletions;
+  final String? status;
 
   FileDiff({
     required this.file,
@@ -113,14 +118,18 @@ class FileDiff {
     required this.after,
     required this.additions,
     required this.deletions,
+    this.status,
   });
 
   factory FileDiff.fromJson(Map<String, dynamic> json) => FileDiff(
-    file: json['file'] as String,
-    before: json['before'] as String,
-    after: json['after'] as String,
-    additions: (json['additions'] as num).toInt(),
-    deletions: (json['deletions'] as num).toInt(),
+    file: _stringOrEmpty(
+      json['file'] ?? json['relativePath'] ?? json['filePath'],
+    ),
+    before: _stringOrEmpty(json['before']),
+    after: _stringOrEmpty(json['after']),
+    additions: _intOrZero(json['additions']),
+    deletions: _intOrZero(json['deletions']),
+    status: json['status'] as String?,
   );
   Map<String, dynamic> toJson() => {
     'file': file,
@@ -128,6 +137,7 @@ class FileDiff {
     'after': after,
     'additions': additions,
     'deletions': deletions,
+    if (status != null) 'status': status,
   };
 }
 
@@ -143,7 +153,7 @@ class UserMessageSummary {
       UserMessageSummary(
         title: json['title'] as String?,
         body: json['body'] as String?,
-        diffs: (json['diffs'] as List<dynamic>)
+        diffs: (json['diffs'] as List<dynamic>? ?? const [])
             .map((e) => FileDiff.fromJson(e as Map<String, dynamic>))
             .toList(),
       );
