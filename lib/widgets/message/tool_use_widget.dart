@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:highlight/highlight.dart' show highlight, Node;
 import 'package:shimmer/shimmer.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../service/api/models/parts.dart';
 import '../../theme/app_tokens.dart';
+import '../../utils/external_link_launcher.dart';
 import 'code_highlight_theme.dart';
 import 'diff_view.dart';
 import 'message_markdown_theme.dart';
@@ -520,9 +520,7 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
   Future<void> _launchUrl(String url) async {
     final uri = Uri.tryParse(url);
     if (uri == null) return;
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
+    await launchExternalUri(uri);
   }
 }
 

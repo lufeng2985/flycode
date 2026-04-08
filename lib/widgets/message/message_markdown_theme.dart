@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../theme/app_tokens.dart';
+import '../../utils/external_link_launcher.dart';
 
 typedef MessageMarkdownLinkLauncher = Future<void> Function(Uri uri);
 
@@ -26,9 +26,7 @@ Future<void> openMessageMarkdownLink(String? href) async {
 }
 
 Future<void> _launchMarkdownLink(Uri uri) async {
-  if (await canLaunchUrl(uri)) {
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
-  }
+  await launchExternalUri(uri);
 }
 
 MarkdownStyleSheet buildMessageMarkdownStyleSheet(BuildContext context) {
