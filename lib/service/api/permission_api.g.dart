@@ -26,7 +26,7 @@ final class PermissionApiProvider
         argument: null,
         retry: null,
         name: r'permissionApiProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -46,4 +46,4 @@ final class PermissionApiProvider
   }
 }
 
-String _$permissionApiHash() => r'7d64fd6aaae4cff1167587a0ed4802f8539db1b7';
+String _$permissionApiHash() => r'b00d80d656cf9e4b408ceac39c612069ebb92041';

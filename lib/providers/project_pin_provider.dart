@@ -1,4 +1,3 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../database/dao/project_pin_dao.dart';
@@ -8,15 +7,17 @@ import 'server_config_provider.dart';
 
 part 'project_pin_provider.g.dart';
 
-final projectPinDatabaseHelperProvider = Provider<DatabaseHelper>((ref) {
+@Riverpod(keepAlive: true)
+DatabaseHelper projectPinDatabaseHelper(Ref ref) {
   return DatabaseHelper();
-});
+}
 
-final projectPinDaoProvider = FutureProvider<ProjectPinDao>((ref) async {
+@Riverpod(keepAlive: true)
+Future<ProjectPinDao> projectPinDao(Ref ref) async {
   final dbHelper = ref.watch(projectPinDatabaseHelperProvider);
   final db = await dbHelper.database;
   return ProjectPinDao(db);
-});
+}
 
 @riverpod
 class ProjectPins extends _$ProjectPins {

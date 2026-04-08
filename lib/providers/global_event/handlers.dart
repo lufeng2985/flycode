@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../service/api/models/global_event.dart';
 import '../../service/api/models/message.dart';
@@ -20,45 +20,51 @@ import '../session_unread_provider.dart';
 import '../todo_provider.dart';
 import 'notification_policy.dart';
 
+part 'handlers.g.dart';
+
 abstract interface class GlobalEventHandler {
   void handle(Object payload);
 }
 
-final globalEventSessionHandlerProvider = Provider<GlobalEventHandler>((ref) {
+@Riverpod(keepAlive: true)
+GlobalEventHandler globalEventSessionHandler(Ref ref) {
   return _SessionGlobalEventHandler(ref);
-});
+}
 
-final globalEventMessageHandlerProvider = Provider<GlobalEventHandler>((ref) {
+@Riverpod(keepAlive: true)
+GlobalEventHandler globalEventMessageHandler(Ref ref) {
   return _MessageGlobalEventHandler(ref);
-});
+}
 
-final globalEventQuestionHandlerProvider = Provider<GlobalEventHandler>((ref) {
+@Riverpod(keepAlive: true)
+GlobalEventHandler globalEventQuestionHandler(Ref ref) {
   return _QuestionGlobalEventHandler(ref);
-});
+}
 
-final globalEventPermissionHandlerProvider = Provider<GlobalEventHandler>((
-  ref,
-) {
+@Riverpod(keepAlive: true)
+GlobalEventHandler globalEventPermissionHandler(Ref ref) {
   return _PermissionGlobalEventHandler(ref);
-});
+}
 
-final globalEventTodoHandlerProvider = Provider<GlobalEventHandler>((ref) {
+@Riverpod(keepAlive: true)
+GlobalEventHandler globalEventTodoHandler(Ref ref) {
   return _TodoGlobalEventHandler(ref);
-});
+}
 
-final globalEventStatusHandlerProvider = Provider<GlobalEventHandler>((ref) {
+@Riverpod(keepAlive: true)
+GlobalEventHandler globalEventStatusHandler(Ref ref) {
   return _StatusGlobalEventHandler(ref);
-});
+}
 
-final globalEventUnreadHandlerProvider = Provider<GlobalEventHandler>((ref) {
+@Riverpod(keepAlive: true)
+GlobalEventHandler globalEventUnreadHandler(Ref ref) {
   return _UnreadGlobalEventHandler(ref);
-});
+}
 
-final globalEventNotificationHandlerProvider = Provider<GlobalEventHandler>((
-  ref,
-) {
+@Riverpod(keepAlive: true)
+GlobalEventHandler globalEventNotificationHandler(Ref ref) {
   return _NotificationGlobalEventHandler(ref);
-});
+}
 
 class _SessionGlobalEventHandler implements GlobalEventHandler {
   const _SessionGlobalEventHandler(this.ref);

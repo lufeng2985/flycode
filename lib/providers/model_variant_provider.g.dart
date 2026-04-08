@@ -41,7 +41,7 @@ final class ModelVariantProvider
   }
 }
 
-String _$modelVariantHash() => r'f35631fd9d05feae11519c386b63f8c39ee3d013';
+String _$modelVariantHash() => r'a68d73730212de38e05e5b8e2b786a231162117d';
 
 abstract class _$ModelVariant extends $Notifier<ModelVariantState> {
   ModelVariantState build();

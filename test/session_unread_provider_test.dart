@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:flycode/providers/current_directory_provider.dart';
+import 'package:flycode/providers/shared_preferences_provider.dart';
 import 'package:flycode/providers/session_unread_provider.dart';
 
 class _FakeCurrentDirectory extends CurrentDirectory {
@@ -21,17 +22,15 @@ Future<void> _drainMicrotasks() async {
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
-    debugSessionUnreadPreferencesLoader = SharedPreferences.getInstance;
-  });
-
-  tearDown(() {
-    debugSessionUnreadPreferencesLoader = SharedPreferences.getInstance;
   });
 
   test('idle/error update unread and markViewed clears it', () async {
     final container = ProviderContainer(
       overrides: [
         currentDirectoryProvider.overrideWith(() => _FakeCurrentDirectory()),
+        sharedPreferencesProvider.overrideWith(
+          (ref) => SharedPreferences.getInstance(),
+        ),
       ],
     );
     addTearDown(container.dispose);
@@ -59,6 +58,9 @@ void main() {
       final first = ProviderContainer(
         overrides: [
           currentDirectoryProvider.overrideWith(() => _FakeCurrentDirectory()),
+          sharedPreferencesProvider.overrideWith(
+            (ref) => SharedPreferences.getInstance(),
+          ),
         ],
       );
       addTearDown(first.dispose);
@@ -71,6 +73,9 @@ void main() {
       final second = ProviderContainer(
         overrides: [
           currentDirectoryProvider.overrideWith(() => _FakeCurrentDirectory()),
+          sharedPreferencesProvider.overrideWith(
+            (ref) => SharedPreferences.getInstance(),
+          ),
         ],
       );
       addTearDown(second.dispose);
@@ -105,11 +110,11 @@ void main() {
       });
 
       final restoreGate = Completer<SharedPreferences>();
-      debugSessionUnreadPreferencesLoader = () => restoreGate.future;
 
       final container = ProviderContainer(
         overrides: [
           currentDirectoryProvider.overrideWith(() => _FakeCurrentDirectory()),
+          sharedPreferencesProvider.overrideWith((ref) => restoreGate.future),
         ],
       );
       addTearDown(container.dispose);
@@ -155,11 +160,11 @@ void main() {
       });
 
       final restoreGate = Completer<SharedPreferences>();
-      debugSessionUnreadPreferencesLoader = () => restoreGate.future;
 
       final container = ProviderContainer(
         overrides: [
           currentDirectoryProvider.overrideWith(() => _FakeCurrentDirectory()),
+          sharedPreferencesProvider.overrideWith((ref) => restoreGate.future),
         ],
       );
       addTearDown(container.dispose);

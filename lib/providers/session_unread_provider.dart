@@ -1,21 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'current_directory_provider.dart';
+import 'shared_preferences_provider.dart';
 
 part 'session_unread_provider.g.dart';
 
 const String _kSessionUnreadCacheKeyPrefix = 'session_unread_v1:';
-
-typedef SessionUnreadPreferencesLoader = Future<SharedPreferences> Function();
-
-@visibleForTesting
-SessionUnreadPreferencesLoader debugSessionUnreadPreferencesLoader =
-    SharedPreferences.getInstance;
 
 String sessionUnreadCacheKeyForDirectory(String directory) {
   return '$_kSessionUnreadCacheKeyPrefix${Uri.encodeComponent(directory)}';
@@ -161,7 +154,7 @@ class SessionUnreadNotifier extends _$SessionUnreadNotifier {
     SessionUnreadState restoredState = const SessionUnreadState.empty();
 
     try {
-      final prefs = await debugSessionUnreadPreferencesLoader();
+      final prefs = await ref.read(sharedPreferencesProvider.future);
       final key = sessionUnreadCacheKeyForDirectory(directory);
       final raw = prefs.getString(key);
       restoredState = _parseRestoredState(raw);
@@ -258,7 +251,7 @@ class SessionUnreadNotifier extends _$SessionUnreadNotifier {
       'errors': snapshot.errorSessionIDs.toList(),
     };
 
-    final prefs = await debugSessionUnreadPreferencesLoader();
+    final prefs = await ref.read(sharedPreferencesProvider.future);
     await prefs.setString(
       sessionUnreadCacheKeyForDirectory(directory),
       jsonEncode(payload),

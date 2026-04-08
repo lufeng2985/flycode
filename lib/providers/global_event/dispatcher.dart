@@ -1,13 +1,16 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../service/api/models/global_event.dart';
 import '../current_directory_provider.dart';
 import 'handlers.dart';
 import 'router.dart';
 
-final globalEventDispatcherProvider = Provider<GlobalEventDispatcher>((ref) {
+part 'dispatcher.g.dart';
+
+@Riverpod(keepAlive: true)
+GlobalEventDispatcher globalEventDispatcher(Ref ref) {
   return GlobalEventDispatcher(ref);
-});
+}
 
 class GlobalEventDispatcher {
   const GlobalEventDispatcher(this.ref);

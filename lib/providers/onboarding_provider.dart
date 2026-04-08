@@ -1,11 +1,15 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import 'shared_preferences_provider.dart';
+
+part 'onboarding_provider.g.dart';
 
 const String _kServerSetupCompletedKey = 'server_setup_completed_v1';
 const String _kServerConfigKey = 'server_config';
 
-final serverSetupCompletedProvider = FutureProvider<bool>((ref) async {
-  final prefs = await SharedPreferences.getInstance();
+@riverpod
+Future<bool> serverSetupCompleted(Ref ref) async {
+  final prefs = await ref.watch(sharedPreferencesProvider.future);
 
   final completed = prefs.getBool(_kServerSetupCompletedKey);
   if (completed != null) {
@@ -21,11 +25,12 @@ final serverSetupCompletedProvider = FutureProvider<bool>((ref) async {
   }
 
   return false;
-});
+}
 
-final onboardingControllerProvider = Provider<OnboardingController>((ref) {
+@riverpod
+OnboardingController onboardingController(Ref ref) {
   return OnboardingController(ref);
-});
+}
 
 class OnboardingController {
   OnboardingController(this._ref);
@@ -33,7 +38,7 @@ class OnboardingController {
   final Ref _ref;
 
   Future<void> markServerSetupCompleted() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _ref.read(sharedPreferencesProvider.future);
     await prefs.setBool(_kServerSetupCompletedKey, true);
     _ref.invalidate(serverSetupCompletedProvider);
   }

@@ -4,7 +4,7 @@ import 'models/permission.dart';
 
 part 'permission_api.g.dart';
 
-@riverpod
+@Riverpod(keepAlive: true)
 Future<PermissionApi> permissionApi(Ref ref) async {
   final client = await ref.watch(apiClientProvider.future);
   return PermissionApi(client);

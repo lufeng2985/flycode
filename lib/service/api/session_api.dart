@@ -9,7 +9,7 @@ import 'models/command_input.dart';
 
 part 'session_api.g.dart';
 
-@riverpod
+@Riverpod(keepAlive: true)
 Future<SessionApi> sessionApi(Ref ref) async {
   final client = await ref.watch(apiClientProvider.future);
   return SessionApi(client);

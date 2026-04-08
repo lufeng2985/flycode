@@ -26,7 +26,7 @@ final class SessionApiProvider
         argument: null,
         retry: null,
         name: r'sessionApiProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -45,7 +45,7 @@ final class SessionApiProvider
   }
 }
 
-String _$sessionApiHash() => r'cf372e7230aec866c688bb1c8f18a677c07e755c';
+String _$sessionApiHash() => r'c8e5e575ab5bb6c195fd1862c14d7767f9325e29';
 
 @ProviderFor(sessions)
 final sessionsProvider = SessionsProvider._();

@@ -1,6 +1,9 @@
 import 'dart:convert';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../providers/shared_preferences_provider.dart';
 import 'api_client.dart';
 import 'models/provider.dart';
 
@@ -11,13 +14,20 @@ const String _providerListCachePrefix = 'provider_list_cache';
 @Riverpod(keepAlive: true)
 Future<ProviderApi> providerApi(Ref ref) async {
   final client = await ref.watch(apiClientProvider.future);
-  return ProviderApi(client);
+  return ProviderApi(
+    client,
+    preferencesLoader: () => ref.read(sharedPreferencesProvider.future),
+  );
 }
 
 class ProviderApi {
   final ApiClient _client;
+  final Future<SharedPreferences> Function() _preferencesLoader;
 
-  ProviderApi(this._client);
+  ProviderApi(
+    this._client, {
+    required Future<SharedPreferences> Function() preferencesLoader,
+  }) : _preferencesLoader = preferencesLoader;
 
   Future<ProviderListResponse> list({
     String? directory,
@@ -25,7 +35,7 @@ class ProviderApi {
     Duration cacheTtl = const Duration(minutes: 10),
   }) async {
     final cacheKey = _cacheKey(directory);
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _preferencesLoader();
     final cached = _readCache(
       prefs: prefs,
       cacheKey: cacheKey,

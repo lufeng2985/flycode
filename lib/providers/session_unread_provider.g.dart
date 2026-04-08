@@ -42,7 +42,7 @@ final class SessionUnreadNotifierProvider
 }
 
 String _$sessionUnreadNotifierHash() =>
-    r'9ddaefe2f977bf32817edc92b5756bb8258396ca';
+    r'45c340afbf2a2443cf5f2fc6f53e23e0d31c1c2e';
 
 abstract class _$SessionUnreadNotifier extends $Notifier<SessionUnreadState> {
   SessionUnreadState build();

@@ -11,6 +11,7 @@ import 'providers/app_language_provider.dart';
 import 'providers/app_lifecycle_provider.dart';
 import 'providers/global_event_provider.dart';
 import 'providers/session_completion_notification_provider.dart';
+import 'providers/shared_preferences_provider.dart';
 import 'router.dart';
 import 'service/notification/local_notification_service.dart';
 import 'theme/app_theme.dart';
@@ -36,7 +37,9 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   }
 
   Future<void> _ensureNotificationPermissionOnStartup() async {
-    final mode = await readSessionCompletionNotificationModeFromStorage();
+    final mode = await readSessionCompletionNotificationModeFromStorage(
+      () => ref.read(sharedPreferencesProvider.future),
+    );
     if (mode == SessionCompletionNotificationMode.none) return;
     if (!mounted) return;
     await ref.read(localNotificationServiceProvider).ensurePermissionPrompted();

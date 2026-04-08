@@ -1,18 +1,18 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:http/http.dart' as http;
-import 'package:riverpod/riverpod.dart' show Provider;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+
 import '../../providers/server_config_provider.dart';
 
 part 'api_client.g.dart';
 
 typedef HttpClientFactory = http.Client Function();
 
-final apiHttpClientFactoryProvider = Provider<HttpClientFactory>(
-  (ref) => http.Client.new,
-);
+@Riverpod(keepAlive: true)
+HttpClientFactory apiHttpClientFactory(Ref ref) => http.Client.new;
 
 enum ApiExceptionKind { http, timeout, network, cancelled, unknown }
 

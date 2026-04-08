@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../service/api/models/agent.dart';
 import '../service/api/models/message.dart';
@@ -10,6 +9,7 @@ import '../service/api/models/provider.dart';
 import 'agent_provider.dart';
 import 'chat_config_provider.dart';
 import 'provider_list_provider.dart';
+import 'shared_preferences_provider.dart';
 
 part 'model_variant_provider.g.dart';
 
@@ -128,7 +128,7 @@ class ModelVariant extends _$ModelVariant {
   }
 
   Future<void> _restoreSelections() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await ref.read(sharedPreferencesProvider.future);
     final raw = prefs.getString(_kModelVariantCacheKey);
     if (raw == null || raw.trim().isEmpty) return;
 
@@ -156,7 +156,7 @@ class ModelVariant extends _$ModelVariant {
   }
 
   Future<void> _persistSelections() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await ref.read(sharedPreferencesProvider.future);
     await prefs.setString(_kModelVariantCacheKey, jsonEncode(_selectedByModel));
   }
 

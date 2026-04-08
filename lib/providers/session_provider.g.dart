@@ -56,7 +56,7 @@ final class SessionMessagesNotifierProvider
 }
 
 String _$sessionMessagesNotifierHash() =>
-    r'bccc97b63379130f8ba5f1a275fc57f6ffe461b9';
+    r'69195f622aefd89d6157c5f12292bd52a67f7025';
 
 final class SessionMessagesNotifierFamily extends $Family
     with
@@ -236,7 +236,7 @@ final class SubSessionMessagesNotifierProvider
 }
 
 String _$subSessionMessagesNotifierHash() =>
-    r'6e2093fa8ae09221367f7a628bf2408780feb73c';
+    r'48029642ce9b34c5e5d1c2e4a08c4fd669152a9e';
 
 /// 子 Session 消息列表（只读，支持 SSE 实时更新）
 

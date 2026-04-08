@@ -9,6 +9,87 @@ part of 'project_pin_provider.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 
+@ProviderFor(projectPinDatabaseHelper)
+final projectPinDatabaseHelperProvider = ProjectPinDatabaseHelperProvider._();
+
+final class ProjectPinDatabaseHelperProvider
+    extends $FunctionalProvider<DatabaseHelper, DatabaseHelper, DatabaseHelper>
+    with $Provider<DatabaseHelper> {
+  ProjectPinDatabaseHelperProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'projectPinDatabaseHelperProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$projectPinDatabaseHelperHash();
+
+  @$internal
+  @override
+  $ProviderElement<DatabaseHelper> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  DatabaseHelper create(Ref ref) {
+    return projectPinDatabaseHelper(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(DatabaseHelper value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<DatabaseHelper>(value),
+    );
+  }
+}
+
+String _$projectPinDatabaseHelperHash() =>
+    r'0d584364aea397092e90ac8873b97aab42b74abc';
+
+@ProviderFor(projectPinDao)
+final projectPinDaoProvider = ProjectPinDaoProvider._();
+
+final class ProjectPinDaoProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<ProjectPinDao>,
+          ProjectPinDao,
+          FutureOr<ProjectPinDao>
+        >
+    with $FutureModifier<ProjectPinDao>, $FutureProvider<ProjectPinDao> {
+  ProjectPinDaoProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'projectPinDaoProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$projectPinDaoHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<ProjectPinDao> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<ProjectPinDao> create(Ref ref) {
+    return projectPinDao(ref);
+  }
+}
+
+String _$projectPinDaoHash() => r'3794301f469c86b948c33a7b34069233a97fc7bb';
+
 @ProviderFor(ProjectPins)
 final projectPinsProvider = ProjectPinsProvider._();
 

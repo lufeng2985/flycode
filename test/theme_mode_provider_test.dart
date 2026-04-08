@@ -4,17 +4,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:flycode/providers/shared_preferences_provider.dart';
 import 'package:flycode/theme/app_theme_mode.dart';
 import 'package:flycode/theme/theme_mode_provider.dart';
 
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
-    debugThemeModePreferencesLoader = SharedPreferences.getInstance;
-  });
-
-  tearDown(() {
-    debugThemeModePreferencesLoader = SharedPreferences.getInstance;
   });
 
   test('late restore does not override a newer user theme selection', () async {
@@ -23,9 +19,12 @@ void main() {
     });
 
     final restoreGate = Completer<SharedPreferences>();
-    debugThemeModePreferencesLoader = () => restoreGate.future;
 
-    final container = ProviderContainer();
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWith((ref) => restoreGate.future),
+      ],
+    );
     addTearDown(container.dispose);
 
     expect(container.read(themeModeProvider), AppThemeMode.system);

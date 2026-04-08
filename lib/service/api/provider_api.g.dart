@@ -46,4 +46,4 @@ final class ProviderApiProvider
   }
 }
 
-String _$providerApiHash() => r'49aef454f4432b0a2841cea17bd74c7191ab4ec5';
+String _$providerApiHash() => r'6a53f856d3af1c214309b501748bd57a6615137b';

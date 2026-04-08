@@ -1,24 +1,16 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../providers/shared_preferences_provider.dart';
 import 'app_theme_mode.dart';
+
+part 'theme_mode_provider.g.dart';
 
 const _kThemeModeKey = 'app_theme_mode_v1';
 
-typedef ThemeModePreferencesLoader = Future<SharedPreferences> Function();
-
-@visibleForTesting
-ThemeModePreferencesLoader debugThemeModePreferencesLoader =
-    SharedPreferences.getInstance;
-
-final themeModeProvider = NotifierProvider<ThemeModeNotifier, AppThemeMode>(
-  ThemeModeNotifier.new,
-);
-
-class ThemeModeNotifier extends Notifier<AppThemeMode> {
+@Riverpod(keepAlive: true)
+class ThemeMode extends _$ThemeMode {
   bool _isRestoring = false;
   int _restoreGeneration = 0;
   AppThemeMode? _pendingMode;
@@ -49,7 +41,7 @@ class ThemeModeNotifier extends Notifier<AppThemeMode> {
   }
 
   Future<void> _restore(int generation) async {
-    final prefs = await debugThemeModePreferencesLoader();
+    final prefs = await ref.read(sharedPreferencesProvider.future);
     final restoredMode = AppThemeModeX.fromStorageValue(
       prefs.getString(_kThemeModeKey),
     );
@@ -69,7 +61,7 @@ class ThemeModeNotifier extends Notifier<AppThemeMode> {
   }
 
   Future<void> _persist(AppThemeMode mode) async {
-    final prefs = await debugThemeModePreferencesLoader();
+    final prefs = await ref.read(sharedPreferencesProvider.future);
     await prefs.setString(_kThemeModeKey, mode.storageValue);
   }
 }

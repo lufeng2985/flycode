@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flycode/l10n/app_localizations.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'shared_preferences_provider.dart';
 
 const _kSessionCompletionNotificationModeKey =
     'session_completion_notification_mode_v1';
@@ -53,32 +55,82 @@ final sessionCompletionNotificationModeProvider =
 
 class SessionCompletionNotificationModeNotifier
     extends Notifier<SessionCompletionNotificationMode> {
+  bool _isRestoring = false;
+  int _restoreGeneration = 0;
+  SessionCompletionNotificationMode? _pendingMode;
+  Completer<void>? _restoreCompleter;
+
   @override
   SessionCompletionNotificationMode build() {
-    unawaited(_restore());
+    _startRestore();
     return SessionCompletionNotificationMode.backgroundOnly;
   }
 
   Future<void> setMode(SessionCompletionNotificationMode mode) async {
-    if (state == mode) return;
+    if (state == mode && _pendingMode == null) return;
     state = mode;
-    final prefs = await SharedPreferences.getInstance();
+
+    if (_isRestoring) {
+      _pendingMode = mode;
+      await _restoreCompleter?.future;
+      return;
+    }
+
+    await _persist(mode);
+    _pendingMode = null;
+  }
+
+  void _startRestore() {
+    _isRestoring = true;
+    final generation = ++_restoreGeneration;
+    _restoreCompleter = Completer<void>();
+    unawaited(_restore(generation));
+  }
+
+  Future<void> _restore(int generation) async {
+    final restoreCompleter = _restoreCompleter;
+
+    try {
+      final restoredMode =
+          await readSessionCompletionNotificationModeFromStorage(
+            () => ref.read(sharedPreferencesProvider.future),
+          );
+      if (!ref.mounted || _restoreGeneration != generation) return;
+
+      final nextMode = _pendingMode ?? restoredMode;
+      _isRestoring = false;
+      _restoreGeneration = 0;
+      _pendingMode = null;
+
+      if (state != nextMode) {
+        state = nextMode;
+      }
+
+      await _persist(nextMode);
+    } finally {
+      if (identical(_restoreCompleter, restoreCompleter)) {
+        _restoreCompleter = null;
+      }
+      if (restoreCompleter != null && !restoreCompleter.isCompleted) {
+        restoreCompleter.complete();
+      }
+    }
+  }
+
+  Future<void> _persist(SessionCompletionNotificationMode mode) async {
+    final prefs = await ref.read(sharedPreferencesProvider.future);
     await prefs.setString(
       _kSessionCompletionNotificationModeKey,
       mode.storageValue,
     );
   }
-
-  Future<void> _restore() async {
-    final mode = await readSessionCompletionNotificationModeFromStorage();
-    if (!ref.mounted) return;
-    state = mode;
-  }
 }
 
 Future<SessionCompletionNotificationMode>
-readSessionCompletionNotificationModeFromStorage() async {
-  final prefs = await SharedPreferences.getInstance();
+readSessionCompletionNotificationModeFromStorage(
+  Future<SharedPreferences> Function() preferencesLoader,
+) async {
+  final prefs = await preferencesLoader();
   final value = prefs.getString(_kSessionCompletionNotificationModeKey);
   return SessionCompletionNotificationModeX.fromStorageValue(value);
 }

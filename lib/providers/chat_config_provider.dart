@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+
 import 'chat_view_state_provider.dart';
 import '../service/api/models/agent.dart' as agent_model;
 import '../service/api/models/message.dart';
+import 'shared_preferences_provider.dart';
 import 'session_provider.dart';
 
 part 'chat_config_provider.g.dart';
@@ -142,7 +144,7 @@ class ChatConfigNotifier extends _$ChatConfigNotifier {
   }
 
   Future<MessageModel?> _readCachedModel() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await ref.read(sharedPreferencesProvider.future);
     final raw = prefs.getString(_kLastUsedModelCacheKey);
     if (raw == null || raw.trim().isEmpty) return null;
 
@@ -160,7 +162,7 @@ class ChatConfigNotifier extends _$ChatConfigNotifier {
   }
 
   Future<void> _persistModel(MessageModel model) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await ref.read(sharedPreferencesProvider.future);
     await prefs.setString(_kLastUsedModelCacheKey, jsonEncode(model.toJson()));
   }
 

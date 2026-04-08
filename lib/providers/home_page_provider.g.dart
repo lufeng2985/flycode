@@ -43,7 +43,7 @@ final class HomePageBootstrapControllerProvider
 }
 
 String _$homePageBootstrapControllerHash() =>
-    r'643834f4cf6e02f60b8dba562237d6be9b069f35';
+    r'a8f388c3e2c4ee4b16da4cf10719206ff72af69f';
 
 abstract class _$HomePageBootstrapController extends $Notifier<String?> {
   String? build();

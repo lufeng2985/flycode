@@ -1,17 +1,15 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
 import '../service/api/models/permission.dart';
 import '../service/api/models/session.dart';
 import '../service/api/permission_api.dart';
 import '../service/api/session_api.dart';
 import 'current_directory_provider.dart';
 
-final pendingPermissionsProvider =
-    AsyncNotifierProvider<PendingPermissionsNotifier, List<PermissionRequest>>(
-      PendingPermissionsNotifier.new,
-    );
+part 'permission_provider.g.dart';
 
-class PendingPermissionsNotifier
-    extends AsyncNotifier<List<PermissionRequest>> {
+@Riverpod(keepAlive: true)
+class PendingPermissions extends _$PendingPermissions {
   final Set<String> _responding = <String>{};
 
   @override
@@ -62,31 +60,30 @@ class PendingPermissionsNotifier
   }
 }
 
-final allSessionsProvider = FutureProvider<List<Session>>((ref) async {
+@Riverpod(keepAlive: true)
+Future<List<Session>> allSessions(Ref ref) async {
   final api = await ref.watch(sessionApiProvider.future);
   final directory = ref.watch(currentDirectoryProvider);
   return api.getSessions(directory: directory, roots: false);
-});
+}
 
-final currentSessionPermissionRequestProvider =
-    Provider.family<PermissionRequest?, String>((ref, sessionID) {
-      final pending = ref.watch(pendingPermissionsProvider).asData?.value ?? [];
-      if (pending.isEmpty) return null;
+@Riverpod(keepAlive: true)
+PermissionRequest? currentSessionPermissionRequest(Ref ref, String sessionID) {
+  final pending = ref.watch(pendingPermissionsProvider).asData?.value ?? [];
+  if (pending.isEmpty) return null;
 
-      final allSessions = ref.watch(allSessionsProvider).asData?.value ?? [];
-      final subtree = collectSessionTree(sessionID, allSessions);
-      for (final request in pending) {
-        if (subtree.contains(request.sessionID)) return request;
-      }
-      return null;
-    });
+  final allSessions = ref.watch(allSessionsProvider).asData?.value ?? [];
+  final subtree = collectSessionTree(sessionID, allSessions);
+  for (final request in pending) {
+    if (subtree.contains(request.sessionID)) return request;
+  }
+  return null;
+}
 
-final currentSessionHasPermissionBlockProvider = Provider.family<bool, String>((
-  ref,
-  sessionID,
-) {
+@Riverpod(keepAlive: true)
+bool currentSessionHasPermissionBlock(Ref ref, String sessionID) {
   return ref.watch(currentSessionPermissionRequestProvider(sessionID)) != null;
-});
+}
 
 Set<String> collectSessionTree(String rootID, List<Session> allSessions) {
   final childrenByParent = <String, List<String>>{};

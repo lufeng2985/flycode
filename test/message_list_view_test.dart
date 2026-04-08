@@ -14,7 +14,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeProviderApi extends ProviderApi {
-  _FakeProviderApi() : super(ApiClient(baseUrl: 'http://localhost'));
+  _FakeProviderApi()
+    : super(
+        ApiClient(baseUrl: 'http://localhost'),
+        preferencesLoader: SharedPreferences.getInstance,
+      );
 
   @override
   Future<ProviderListResponse> list({
