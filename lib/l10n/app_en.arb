@@ -138,6 +138,7 @@
   "homeTooltipContext": "Context",
   "homeNoSession": "No sessions",
   "homeSelectSession": "Select a session",
+  "messageListLoadFailed": "Failed to load messages. Please try again later.",
   "modelConfigTitle": "Model Configuration",
   "modelConfigRefreshed": "Model list refreshed",
   "modelConfigRefreshFailed": "Refresh failed: {error}",

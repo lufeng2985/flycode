@@ -138,6 +138,7 @@
   "homeTooltipContext": "上下文",
   "homeNoSession": "暂无会话",
   "homeSelectSession": "请选择一个会话",
+  "messageListLoadFailed": "消息加载失败，请稍后重试",
   "modelConfigTitle": "模型配置",
   "modelConfigRefreshed": "模型列表已刷新",
   "modelConfigRefreshFailed": "刷新失败: {error}",

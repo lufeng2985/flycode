@@ -1,6 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../l10n/l10n.dart';
 import '../providers/session_provider.dart';
+import '../widgets/message/message_error_state.dart';
 import '../widgets/message/message_list.dart';
 
 /// 子 Session 只读消息列表页
@@ -15,6 +18,7 @@ class SubSessionPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final messagesAsync = ref.watch(subSessionMessagesProvider(sessionID));
+    final l10n = context.l10n;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF2F4F7),
@@ -41,24 +45,10 @@ class SubSessionPage extends ConsumerWidget {
       body: messagesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) {
-          debugPrint('SubSessionPage Error: $error\n$stack');
-          return Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                  const SizedBox(height: 16),
-                  SelectableText(
-                    'Error: $error\n\nStack trace:\n$stack',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-          );
+          if (kDebugMode) {
+            debugPrint('SubSessionPage Error: $error\n$stack');
+          }
+          return MessageErrorState(message: l10n.messageListLoadFailed);
         },
         data: (messages) => MessageListView(messages: messages),
       ),

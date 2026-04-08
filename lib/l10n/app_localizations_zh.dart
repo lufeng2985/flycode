@@ -272,6 +272,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeSelectSession => '请选择一个会话';
 
   @override
+  String get messageListLoadFailed => '消息加载失败，请稍后重试';
+
+  @override
   String get modelConfigTitle => '模型配置';
 
   @override

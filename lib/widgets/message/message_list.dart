@@ -1,9 +1,12 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../l10n/l10n.dart';
 import '../../providers/session_provider.dart';
 import '../../service/api/models/message.dart';
 import '../../service/api/models/parts.dart';
 import '../../theme/app_tokens.dart';
+import 'message_error_state.dart';
 import 'message_bubble.dart';
 
 class MessageList extends ConsumerWidget {
@@ -19,37 +22,15 @@ class MessageList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final messagesAsync = ref.watch(sessionMessagesProvider(sessionID));
+    final l10n = context.l10n;
 
     return messagesAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stack) {
-        debugPrint('MessageList Error: $error\n$stack');
-        return Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Builder(
-              builder: (context) {
-                final theme = Theme.of(context);
-                return Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 48,
-                      color: theme.colorScheme.error,
-                    ),
-                    const SizedBox(height: 16),
-                    SelectableText(
-                      'Error: $error\n\nStack trace:\n$stack',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-        );
+        if (kDebugMode) {
+          debugPrint('MessageList Error: $error\n$stack');
+        }
+        return MessageErrorState(message: l10n.messageListLoadFailed);
       },
       data: (messages) => _MessageListBody(
         messages: messages,
