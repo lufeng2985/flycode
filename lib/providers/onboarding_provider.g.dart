@@ -41,7 +41,7 @@ final class ServerSetupCompletedProvider
 }
 
 String _$serverSetupCompletedHash() =>
-    r'2a8936d5eb7d7fdb03f7db02e75284f0ec7a859c';
+    r'9c8ee2e1067efa7aeb734bfc8f9fa2ce0962e907';
 
 @ProviderFor(onboardingController)
 final onboardingControllerProvider = OnboardingControllerProvider._();

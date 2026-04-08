@@ -2,12 +2,10 @@ import 'dart:async';
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../providers/shared_preferences_provider.dart';
+import '../providers/local_preferences_repository.dart';
 import 'app_theme_mode.dart';
 
 part 'theme_mode_provider.g.dart';
-
-const _kThemeModeKey = 'app_theme_mode_v1';
 
 @Riverpod(keepAlive: true)
 class ThemeMode extends _$ThemeMode {
@@ -41,10 +39,8 @@ class ThemeMode extends _$ThemeMode {
   }
 
   Future<void> _restore(int generation) async {
-    final prefs = await ref.read(sharedPreferencesProvider.future);
-    final restoredMode = AppThemeModeX.fromStorageValue(
-      prefs.getString(_kThemeModeKey),
-    );
+    final repository = ref.read(localPreferencesRepositoryProvider);
+    final restoredMode = await repository.loadThemeMode();
     if (!ref.mounted) return;
     if (_restoreGeneration != generation) return;
 
@@ -61,7 +57,7 @@ class ThemeMode extends _$ThemeMode {
   }
 
   Future<void> _persist(AppThemeMode mode) async {
-    final prefs = await ref.read(sharedPreferencesProvider.future);
-    await prefs.setString(_kThemeModeKey, mode.storageValue);
+    final repository = ref.read(localPreferencesRepositoryProvider);
+    await repository.saveThemeMode(mode);
   }
 }

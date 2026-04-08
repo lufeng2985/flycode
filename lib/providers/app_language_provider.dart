@@ -3,11 +3,9 @@ import 'dart:async';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../l10n/app_language.dart' as app_language;
-import 'shared_preferences_provider.dart';
+import 'local_preferences_repository.dart';
 
 part 'app_language_provider.g.dart';
-
-const _kAppLanguageKey = 'app_language_v1';
 
 @Riverpod(keepAlive: true, name: 'appLanguageProvider')
 class AppLanguageNotifier extends _$AppLanguageNotifier {
@@ -20,14 +18,14 @@ class AppLanguageNotifier extends _$AppLanguageNotifier {
   Future<void> setLanguage(app_language.AppLanguage language) async {
     if (state == language) return;
     state = language;
-    final prefs = await ref.read(sharedPreferencesProvider.future);
-    await prefs.setString(_kAppLanguageKey, language.storageValue);
+    final repository = ref.read(localPreferencesRepositoryProvider);
+    await repository.saveAppLanguage(language);
   }
 
   Future<void> _restore() async {
-    final prefs = await ref.read(sharedPreferencesProvider.future);
-    final value = prefs.getString(_kAppLanguageKey);
+    final repository = ref.read(localPreferencesRepositoryProvider);
+    final value = await repository.loadAppLanguage();
     if (!ref.mounted) return;
-    state = app_language.AppLanguageX.fromStorageValue(value);
+    state = value;
   }
 }
