@@ -21,7 +21,7 @@ final class ProjectPinDatabaseHelperProvider
         argument: null,
         retry: null,
         name: r'projectPinDatabaseHelperProvider',
-        isAutoDispose: false,
+        isAutoDispose: true,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -49,7 +49,7 @@ final class ProjectPinDatabaseHelperProvider
 }
 
 String _$projectPinDatabaseHelperHash() =>
-    r'0d584364aea397092e90ac8873b97aab42b74abc';
+    r'ac49a7b78ee5152d55a401329ff0f645a802631d';
 
 @ProviderFor(projectPinDao)
 final projectPinDaoProvider = ProjectPinDaoProvider._();
@@ -68,7 +68,7 @@ final class ProjectPinDaoProvider
         argument: null,
         retry: null,
         name: r'projectPinDaoProvider',
-        isAutoDispose: false,
+        isAutoDispose: true,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -88,7 +88,7 @@ final class ProjectPinDaoProvider
   }
 }
 
-String _$projectPinDaoHash() => r'3794301f469c86b948c33a7b34069233a97fc7bb';
+String _$projectPinDaoHash() => r'8f1bf8ad2f5d0a78bcb34df262a6d06b515ea2d7';
 
 @ProviderFor(ProjectPins)
 final projectPinsProvider = ProjectPinsProvider._();

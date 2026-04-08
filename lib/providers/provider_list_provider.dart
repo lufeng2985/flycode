@@ -4,7 +4,7 @@ import '../service/api/models/provider.dart';
 
 part 'provider_list_provider.g.dart';
 
-@Riverpod(keepAlive: true)
+@riverpod
 class ProviderList extends _$ProviderList {
   @override
   Future<ProviderListResponse> build() async {

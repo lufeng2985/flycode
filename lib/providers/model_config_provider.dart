@@ -5,12 +5,12 @@ import '../database/dao/model_config_dao.dart';
 
 part 'model_config_provider.g.dart';
 
-@Riverpod(keepAlive: true)
+@riverpod
 DatabaseHelper databaseHelper(Ref ref) {
   return DatabaseHelper();
 }
 
-@Riverpod(keepAlive: true)
+@riverpod
 Future<ModelConfigDao> modelConfigDao(Ref ref) async {
   final dbHelper = ref.watch(databaseHelperProvider);
   final db = await dbHelper.database;

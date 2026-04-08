@@ -81,7 +81,7 @@ final class AllSessionsProvider
         argument: null,
         retry: null,
         name: r'allSessionsProvider',
-        isAutoDispose: false,
+        isAutoDispose: true,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -101,7 +101,7 @@ final class AllSessionsProvider
   }
 }
 
-String _$allSessionsHash() => r'7a8ae3843bf1079ca88c2b72495e7cfe85e52206';
+String _$allSessionsHash() => r'4d1e8dbb5bddeff8749b0a48571384be3255d6d9';
 
 @ProviderFor(currentSessionPermissionRequest)
 final currentSessionPermissionRequestProvider =
@@ -121,7 +121,7 @@ final class CurrentSessionPermissionRequestProvider
   }) : super(
          retry: null,
          name: r'currentSessionPermissionRequestProvider',
-         isAutoDispose: false,
+         isAutoDispose: true,
          dependencies: null,
          $allTransitiveDependencies: null,
        );
@@ -169,7 +169,7 @@ final class CurrentSessionPermissionRequestProvider
 }
 
 String _$currentSessionPermissionRequestHash() =>
-    r'08e2a9040fc3c44d6b88c00c3d56bb19bf911e4f';
+    r'd194d310fe51d60babb62ad9be21aca82207afc2';
 
 final class CurrentSessionPermissionRequestFamily extends $Family
     with $FunctionalFamilyOverride<PermissionRequest?, String> {
@@ -179,7 +179,7 @@ final class CurrentSessionPermissionRequestFamily extends $Family
         name: r'currentSessionPermissionRequestProvider',
         dependencies: null,
         $allTransitiveDependencies: null,
-        isAutoDispose: false,
+        isAutoDispose: true,
       );
 
   CurrentSessionPermissionRequestProvider call(String sessionID) =>
@@ -205,7 +205,7 @@ final class CurrentSessionHasPermissionBlockProvider
   }) : super(
          retry: null,
          name: r'currentSessionHasPermissionBlockProvider',
-         isAutoDispose: false,
+         isAutoDispose: true,
          dependencies: null,
          $allTransitiveDependencies: null,
        );
@@ -252,7 +252,7 @@ final class CurrentSessionHasPermissionBlockProvider
 }
 
 String _$currentSessionHasPermissionBlockHash() =>
-    r'06f083e93aa655013d3a57f2cac0d64823e6f273';
+    r'c9b6b4ca9e3593d8c845b47cde6491d98c73d566';
 
 final class CurrentSessionHasPermissionBlockFamily extends $Family
     with $FunctionalFamilyOverride<bool, String> {
@@ -262,7 +262,7 @@ final class CurrentSessionHasPermissionBlockFamily extends $Family
         name: r'currentSessionHasPermissionBlockProvider',
         dependencies: null,
         $allTransitiveDependencies: null,
-        isAutoDispose: false,
+        isAutoDispose: true,
       );
 
   CurrentSessionHasPermissionBlockProvider call(String sessionID) =>

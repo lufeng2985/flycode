@@ -21,7 +21,7 @@ final class DatabaseHelperProvider
         argument: null,
         retry: null,
         name: r'databaseHelperProvider',
-        isAutoDispose: false,
+        isAutoDispose: true,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -48,7 +48,7 @@ final class DatabaseHelperProvider
   }
 }
 
-String _$databaseHelperHash() => r'58556b75b05652cf1b077db4f63da63f60aa2fbc';
+String _$databaseHelperHash() => r'd9a91b257d3ed9a4f2d87bd829e17dc900678685';
 
 @ProviderFor(modelConfigDao)
 final modelConfigDaoProvider = ModelConfigDaoProvider._();
@@ -67,7 +67,7 @@ final class ModelConfigDaoProvider
         argument: null,
         retry: null,
         name: r'modelConfigDaoProvider',
-        isAutoDispose: false,
+        isAutoDispose: true,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -87,7 +87,7 @@ final class ModelConfigDaoProvider
   }
 }
 
-String _$modelConfigDaoHash() => r'd8ce37cf6dd726c2bd053b3aa9691d8af29c7b5b';
+String _$modelConfigDaoHash() => r'b2412c4c2481360c21cb0a1e4846b3a7c24b5c02';
 
 @ProviderFor(ModelConfigNotifier)
 final modelConfigProvider = ModelConfigNotifierProvider._();

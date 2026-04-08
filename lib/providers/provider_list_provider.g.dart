@@ -20,7 +20,7 @@ final class ProviderListProvider
         argument: null,
         retry: null,
         name: r'providerListProvider',
-        isAutoDispose: false,
+        isAutoDispose: true,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -33,7 +33,7 @@ final class ProviderListProvider
   ProviderList create() => ProviderList();
 }
 
-String _$providerListHash() => r'c7e87525f8831f5c56f7fa7c1880152c823f6238';
+String _$providerListHash() => r'b716f614954154f388d1d11403693319b1fcbd7c';
 
 abstract class _$ProviderList extends $AsyncNotifier<ProviderListResponse> {
   FutureOr<ProviderListResponse> build();

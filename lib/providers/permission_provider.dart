@@ -60,14 +60,14 @@ class PendingPermissions extends _$PendingPermissions {
   }
 }
 
-@Riverpod(keepAlive: true)
+@riverpod
 Future<List<Session>> allSessions(Ref ref) async {
   final api = await ref.watch(sessionApiProvider.future);
   final directory = ref.watch(currentDirectoryProvider);
   return api.getSessions(directory: directory, roots: false);
 }
 
-@Riverpod(keepAlive: true)
+@riverpod
 PermissionRequest? currentSessionPermissionRequest(Ref ref, String sessionID) {
   final pending = ref.watch(pendingPermissionsProvider).asData?.value ?? [];
   if (pending.isEmpty) return null;
@@ -80,7 +80,7 @@ PermissionRequest? currentSessionPermissionRequest(Ref ref, String sessionID) {
   return null;
 }
 
-@Riverpod(keepAlive: true)
+@riverpod
 bool currentSessionHasPermissionBlock(Ref ref, String sessionID) {
   return ref.watch(currentSessionPermissionRequestProvider(sessionID)) != null;
 }

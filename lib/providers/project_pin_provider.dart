@@ -7,12 +7,12 @@ import 'server_config_provider.dart';
 
 part 'project_pin_provider.g.dart';
 
-@Riverpod(keepAlive: true)
+@riverpod
 DatabaseHelper projectPinDatabaseHelper(Ref ref) {
   return DatabaseHelper();
 }
 
-@Riverpod(keepAlive: true)
+@riverpod
 Future<ProjectPinDao> projectPinDao(Ref ref) async {
   final dbHelper = ref.watch(projectPinDatabaseHelperProvider);
   final db = await dbHelper.database;
