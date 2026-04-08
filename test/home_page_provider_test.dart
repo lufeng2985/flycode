@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -36,6 +38,37 @@ class _FakeSessionApi extends SessionApi {
       throw error!;
     }
     return List<Session>.from(sessions);
+  }
+}
+
+class _PendingResponseSessionApi extends SessionApi {
+  _PendingResponseSessionApi() : super(ApiClient(baseUrl: 'http://localhost'));
+
+  final List<Completer<List<Session>>> _pendingResponses = [];
+  final List<String?> directories = [];
+  int getSessionsCallCount = 0;
+
+  @override
+  Future<List<Session>> getSessions({
+    String? directory,
+    bool? roots,
+    int? start,
+    String? search,
+    int? limit,
+  }) {
+    getSessionsCallCount += 1;
+    directories.add(directory);
+    final completer = Completer<List<Session>>();
+    _pendingResponses.add(completer);
+    return completer.future;
+  }
+
+  void completeRequest(int index, List<Session> sessions) {
+    _pendingResponses[index].complete(List<Session>.from(sessions));
+  }
+
+  void failRequest(int index, Object error) {
+    _pendingResponses[index].completeError(error);
   }
 }
 
@@ -157,6 +190,89 @@ void main() {
           .read(homePageBootstrapControllerProvider.notifier)
           .bootstrap(const ChatRouteArgs(directory: '/tmp/project'));
 
+      expect(container.read(chatViewStateProvider), (
+        sessionId: null,
+        isPending: true,
+      ));
+    });
+
+    test('ignores stale bootstrap results after route changes', () async {
+      final api = _PendingResponseSessionApi();
+      final container = ProviderContainer(
+        overrides: [sessionApiProvider.overrideWith((ref) async => api)],
+      );
+      addTearDown(container.dispose);
+      final notifier = container.read(
+        homePageBootstrapControllerProvider.notifier,
+      );
+
+      final firstBootstrap = notifier.bootstrap(
+        const ChatRouteArgs(
+          directory: '/tmp/project-a',
+          initialSessionId: 'stale-session',
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(api.getSessionsCallCount, 1);
+      expect(api.directories, ['/tmp/project-a']);
+
+      final secondBootstrap = notifier.bootstrap(
+        const ChatRouteArgs(
+          directory: '/tmp/project-b',
+          initialSessionId: 'fresh-session',
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(api.getSessionsCallCount, 2);
+      expect(api.directories, ['/tmp/project-a', '/tmp/project-b']);
+
+      api.completeRequest(1, [_session(id: 'fresh-session', updatedAt: 20)]);
+      await secondBootstrap;
+
+      expect(container.read(currentDirectoryProvider), '/tmp/project-b');
+      expect(container.read(chatViewStateProvider), (
+        sessionId: 'fresh-session',
+        isPending: false,
+      ));
+
+      api.completeRequest(0, [_session(id: 'stale-session', updatedAt: 10)]);
+      await firstBootstrap;
+
+      expect(container.read(chatViewStateProvider), (
+        sessionId: 'fresh-session',
+        isPending: false,
+      ));
+    });
+
+    test('ignores stale bootstrap failures after route changes', () async {
+      final api = _PendingResponseSessionApi();
+      final container = ProviderContainer(
+        overrides: [sessionApiProvider.overrideWith((ref) async => api)],
+      );
+      addTearDown(container.dispose);
+      final notifier = container.read(
+        homePageBootstrapControllerProvider.notifier,
+      );
+
+      final firstBootstrap = notifier.bootstrap(
+        const ChatRouteArgs(directory: '/tmp/project-a'),
+      );
+      final secondBootstrap = notifier.bootstrap(
+        const ChatRouteArgs(directory: '/tmp/project-b', startNew: true),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      await secondBootstrap;
+      expect(container.read(chatViewStateProvider), (
+        sessionId: null,
+        isPending: true,
+      ));
+
+      api.failRequest(0, Exception('stale request failed'));
+      await firstBootstrap;
+
+      expect(container.read(currentDirectoryProvider), '/tmp/project-b');
       expect(container.read(chatViewStateProvider), (
         sessionId: null,
         isPending: true,

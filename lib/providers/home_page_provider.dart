@@ -120,12 +120,16 @@ Session? selectBootstrapSession(
 
 @Riverpod(keepAlive: true)
 class HomePageBootstrapController extends _$HomePageBootstrapController {
+  int _bootstrapGeneration = 0;
+
   @override
   String? build() => null;
 
   Future<void> bootstrap(ChatRouteArgs? args) async {
     final routeKey = _routeKey(args);
     if (state == routeKey) return;
+
+    final generation = ++_bootstrapGeneration;
     state = routeKey;
 
     final directory = args?.directory.trim();
@@ -145,6 +149,8 @@ class HomePageBootstrapController extends _$HomePageBootstrapController {
 
     try {
       final sessions = await ref.refresh(sessionsProvider.future);
+      if (!_isLatestBootstrap(generation)) return;
+
       final bootstrapSession = selectBootstrapSession(
         sessions,
         initialSessionId: args?.initialSessionId,
@@ -155,13 +161,17 @@ class HomePageBootstrapController extends _$HomePageBootstrapController {
       }
       viewState.startNew();
     } catch (_) {
+      if (!_isLatestBootstrap(generation)) return;
       viewState.startNew();
     }
   }
 
   void reset() {
+    _bootstrapGeneration++;
     state = null;
   }
+
+  bool _isLatestBootstrap(int generation) => generation == _bootstrapGeneration;
 
   String _routeKey(ChatRouteArgs? args) {
     final directory = args?.directory.trim() ?? '';
