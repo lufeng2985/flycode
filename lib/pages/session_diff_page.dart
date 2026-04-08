@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../l10n/l10n.dart';
 import '../providers/session_provider.dart';
+import '../route_navigation.dart';
 import '../service/api/models/session.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/message/diff_view.dart';
@@ -282,7 +282,7 @@ class _FileDiffTile extends StatelessWidget {
             const SizedBox(width: 6),
             // 查看文件内容按钮
             GestureDetector(
-              onTap: () => context.push('/file', extra: diff.file),
+              onTap: () => context.pushFileContentByPath(diff.file),
               child: Tooltip(
                 message: context.l10n.sessionDiffViewFileContent,
                 child: Container(

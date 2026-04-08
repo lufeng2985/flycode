@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 
 import '../l10n/l10n.dart';
@@ -10,6 +9,7 @@ import '../models/chat_route_args.dart';
 import '../providers/chat_view_state_provider.dart';
 import '../providers/current_directory_provider.dart';
 import '../providers/home_page_provider.dart';
+import '../route_navigation.dart';
 import '../service/api/api_client.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/message/message_list.dart';
@@ -141,7 +141,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
           return MessageList(
             sessionID: selectedSession!.id,
             onNavigateToSubSession: (sessionId) =>
-                context.push('/sub-session', extra: sessionId),
+                context.pushSubSessionById(sessionId),
           );
         case HomePageBodyMode.newSessionWelcome:
           return buildNewSessionWelcome();
@@ -186,14 +186,13 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
               _HeaderActionButton(
                 icon: Icons.difference_outlined,
                 tooltip: l10n.homeTooltipFileDiff,
-                onTap: () => context.push('/diff', extra: selectedSession.id),
+                onTap: () => context.pushSessionDiffById(selectedSession.id),
               ),
               const SizedBox(width: 8),
               _HeaderActionButton(
                 icon: Icons.info_outline,
                 tooltip: l10n.homeTooltipContext,
-                onTap: () =>
-                    context.push('/session-context', extra: selectedSession.id),
+                onTap: () => context.pushSessionContextById(selectedSession.id),
               ),
               const SizedBox(width: 12),
             ],

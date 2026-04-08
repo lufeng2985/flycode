@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'l10n/l10n.dart';
 import 'models/chat_route_args.dart';
+import 'models/typed_route_args.dart';
 import 'pages/app_entry_page.dart';
 import 'pages/about_page.dart';
 import 'pages/file_content_page.dart';
@@ -18,6 +19,7 @@ import 'pages/model_config_page.dart';
 import 'pages/session_completion_notification_page.dart';
 import 'pages/sub_session_page.dart';
 import 'models/server_config.dart';
+import 'route_navigation.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(
   debugLabel: 'root',
@@ -79,35 +81,35 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const ProjectListPage(),
     ),
     GoRoute(
-      path: '/diff',
+      path: sessionDiffRoutePath,
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
-        final sessionID = state.extra as String;
-        return SessionDiffPage(sessionID: sessionID);
+        final args = state.extra as SessionDiffRouteArgs;
+        return SessionDiffPage(sessionID: args.sessionID);
       },
     ),
     GoRoute(
-      path: '/file',
+      path: fileContentRoutePath,
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
-        final filePath = state.extra as String;
-        return FileContentPage(filePath: filePath);
+        final args = state.extra as FileContentRouteArgs;
+        return FileContentPage(filePath: args.filePath);
       },
     ),
     GoRoute(
-      path: '/sub-session',
+      path: subSessionRoutePath,
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
-        final sessionID = state.extra as String;
-        return SubSessionPage(sessionID: sessionID);
+        final args = state.extra as SubSessionRouteArgs;
+        return SubSessionPage(sessionID: args.sessionID);
       },
     ),
     GoRoute(
-      path: '/session-context',
+      path: sessionContextRoutePath,
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
-        final sessionID = state.extra as String;
-        return SessionContextPage(sessionID: sessionID);
+        final args = state.extra as SessionContextRouteArgs;
+        return SessionContextPage(sessionID: args.sessionID);
       },
     ),
   ],
