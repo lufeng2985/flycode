@@ -23,7 +23,6 @@ class _ModelSelectionSheetState extends ConsumerState<ModelSelectionSheet> {
   String _selectedFilterKey = _filterAll;
 
   static const String _filterAll = 'all';
-  static const String _filterFavorite = 'favorite';
 
   @override
   void initState() {
@@ -191,8 +190,7 @@ class _ModelSelectionSheetState extends ConsumerState<ModelSelectionSheet> {
   }
 
   String? get _selectedProviderId {
-    if (_selectedFilterKey == _filterAll ||
-        _selectedFilterKey == _filterFavorite) {
+    if (_selectedFilterKey == _filterAll) {
       return null;
     }
     return _selectedFilterKey;
@@ -255,8 +253,6 @@ class _ModelSelectionSheetState extends ConsumerState<ModelSelectionSheet> {
       child: Row(
         children: [
           chip(key: _filterAll, label: context.l10n.commonAll),
-          const SizedBox(width: 8),
-          chip(key: _filterFavorite, label: context.l10n.commonFavorite),
           for (final provider in providers) ...[
             const SizedBox(width: 8),
             chip(key: provider.id, label: provider.name),
