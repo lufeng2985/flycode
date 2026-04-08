@@ -115,4 +115,26 @@ void main() {
     expect(subtitleFinder, findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('tapping blank header space toggles expandable content', (
+    tester,
+  ) async {
+    final part = completedToolPart(
+      tool: 'write',
+      input: {'filePath': '/Users/jeffrey/project/flycode/lib/app.dart'},
+    );
+
+    await tester.pumpWidget(
+      buildHarness(ToolUseWidget(toolPart: part), width: 320),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.expand_less), findsOneWidget);
+
+    final toolRect = tester.getRect(find.byType(ToolUseWidget));
+    await tester.tapAt(Offset(toolRect.right - 48, toolRect.top + 12));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.expand_more), findsOneWidget);
+  });
 }

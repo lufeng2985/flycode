@@ -268,6 +268,7 @@ class _ToolUseWidgetState extends State<ToolUseWidget> {
         : null;
 
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: _canNavigate
           ? () => widget.onNavigateToSubSession!(_subSessionId!)
           : _hasExpandableContent
