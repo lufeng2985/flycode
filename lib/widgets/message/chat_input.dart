@@ -1301,23 +1301,23 @@ class _ConfigToolBar extends StatelessWidget {
           children: [
             InkWell(
               onTap: onShowSessionHistory,
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(6),
               child: Padding(
-                padding: const EdgeInsets.all(2),
+                padding: const EdgeInsets.all(4),
                 child: Icon(
                   Icons.history,
-                  size: 17,
+                  size: 19,
                   color: tokens.mutedForeground,
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 6),
             InkWell(
               onTap: onStartNewSession,
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(6),
               child: Padding(
-                padding: const EdgeInsets.all(2),
-                child: Icon(Icons.add, size: 17, color: tokens.mutedForeground),
+                padding: const EdgeInsets.all(4),
+                child: Icon(Icons.add, size: 19, color: tokens.mutedForeground),
               ),
             ),
           ],
