@@ -36,6 +36,12 @@ String _homeSessionLoadErrorText(BuildContext context, Object? error) {
   return l10n.projectListErrorLoadFailed;
 }
 
+String? _directoryTitle(String? directory) {
+  if (directory == null || directory.isEmpty) return null;
+  final parts = directory.replaceAll('\\', '/').split('/');
+  return parts.lastWhere((part) => part.isNotEmpty, orElse: () => directory);
+}
+
 class MyHomePage extends ConsumerStatefulWidget {
   const MyHomePage({super.key, required this.title, this.args});
 
@@ -87,6 +93,8 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
     final tokens = context.tokens;
 
     final homeState = ref.watch(homePagePresentationStateProvider);
+    final currentDirectory = ref.watch(currentDirectoryProvider);
+    final title = _directoryTitle(currentDirectory);
     final selectedSession = homeState.selectedSession;
 
     if (!homeState.canShowCommandPanel && _commandPanelController.visible) {
@@ -170,6 +178,9 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
       },
       child: Scaffold(
         appBar: AppBar(
+          centerTitle: false,
+          titleSpacing: 4,
+          title: title == null ? null : Text(title),
           actions: [
             if (selectedSession != null) ...[
               _HeaderActionButton(
