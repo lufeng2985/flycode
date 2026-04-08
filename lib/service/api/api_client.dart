@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:riverpod/riverpod.dart' show Provider;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -13,21 +14,39 @@ final apiHttpClientFactoryProvider = Provider<HttpClientFactory>(
   (ref) => http.Client.new,
 );
 
+enum ApiExceptionKind { http, timeout, network, cancelled, unknown }
+
 class ApiException implements Exception {
   final int statusCode;
   final String? name;
   final dynamic data;
   final String message;
+  final ApiExceptionKind kind;
+  final bool retryable;
+  final Object? cause;
 
   ApiException({
     required this.statusCode,
     this.name,
     this.data,
     required this.message,
-  });
+    this.kind = ApiExceptionKind.http,
+    bool? retryable,
+    this.cause,
+  }) : retryable = retryable ?? _defaultRetryable(kind, statusCode);
+
+  static bool _defaultRetryable(ApiExceptionKind kind, int statusCode) {
+    if (kind == ApiExceptionKind.timeout || kind == ApiExceptionKind.network) {
+      return true;
+    }
+    if (kind != ApiExceptionKind.http) {
+      return false;
+    }
+    return statusCode == 408 || statusCode == 429 || statusCode >= 500;
+  }
 
   @override
-  String toString() => 'ApiException: $statusCode $name - $message';
+  String toString() => 'ApiException: $statusCode $kind $name - $message';
 }
 
 @Riverpod(keepAlive: true)
@@ -46,6 +65,11 @@ Future<ApiClient> apiClient(Ref ref) async {
 }
 
 class ApiClient {
+  static const Duration _requestTimeout = Duration(seconds: 15);
+  static const int _timeoutStatusCode = 408;
+  static const int _networkStatusCode = 503;
+  static const int _unknownStatusCode = 500;
+
   final String _baseUrl;
   final String? _username;
   final String? _password;
@@ -135,6 +159,45 @@ class ApiClient {
     );
   }
 
+  Future<dynamic> _executeRequest(
+    Future<http.Response> Function() request,
+  ) async {
+    try {
+      final response = await request().timeout(_requestTimeout);
+      return _handleResponse(response);
+    } on ApiException {
+      rethrow;
+    } on TimeoutException catch (error) {
+      throw ApiException(
+        statusCode: _timeoutStatusCode,
+        kind: ApiExceptionKind.timeout,
+        message: 'Request timed out',
+        cause: error,
+      );
+    } on SocketException catch (error) {
+      throw ApiException(
+        statusCode: _networkStatusCode,
+        kind: ApiExceptionKind.network,
+        message: error.message,
+        cause: error,
+      );
+    } on http.ClientException catch (error) {
+      throw ApiException(
+        statusCode: _networkStatusCode,
+        kind: ApiExceptionKind.network,
+        message: error.message,
+        cause: error,
+      );
+    } catch (error) {
+      throw ApiException(
+        statusCode: _unknownStatusCode,
+        kind: ApiExceptionKind.unknown,
+        message: 'Unexpected network error',
+        cause: error,
+      );
+    }
+  }
+
   Future<dynamic> get(
     String path, {
     Map<String, String>? queryParameters,
@@ -143,11 +206,12 @@ class ApiClient {
     _ensureOpen();
     final headers = _getHeaders();
     if (extraHeaders != null) headers.addAll(extraHeaders);
-    final response = await _client.get(
-      _getUri(path, queryParameters: queryParameters),
-      headers: headers,
+    return _executeRequest(
+      () => _client.get(
+        _getUri(path, queryParameters: queryParameters),
+        headers: headers,
+      ),
     );
-    return _handleResponse(response);
   }
 
   Future<dynamic> post(
@@ -159,12 +223,13 @@ class ApiClient {
     _ensureOpen();
     final headers = _getHeaders();
     if (extraHeaders != null) headers.addAll(extraHeaders);
-    final response = await _client.post(
-      _getUri(path, queryParameters: queryParameters),
-      headers: headers,
-      body: body != null ? jsonEncode(body) : null,
+    return _executeRequest(
+      () => _client.post(
+        _getUri(path, queryParameters: queryParameters),
+        headers: headers,
+        body: body != null ? jsonEncode(body) : null,
+      ),
     );
-    return _handleResponse(response);
   }
 
   Future<dynamic> patch(
@@ -176,12 +241,13 @@ class ApiClient {
     _ensureOpen();
     final headers = _getHeaders();
     if (extraHeaders != null) headers.addAll(extraHeaders);
-    final response = await _client.patch(
-      _getUri(path, queryParameters: queryParameters),
-      headers: headers,
-      body: body != null ? jsonEncode(body) : null,
+    return _executeRequest(
+      () => _client.patch(
+        _getUri(path, queryParameters: queryParameters),
+        headers: headers,
+        body: body != null ? jsonEncode(body) : null,
+      ),
     );
-    return _handleResponse(response);
   }
 
   Future<dynamic> delete(
@@ -192,11 +258,12 @@ class ApiClient {
     _ensureOpen();
     final headers = _getHeaders();
     if (extraHeaders != null) headers.addAll(extraHeaders);
-    final response = await _client.delete(
-      _getUri(path, queryParameters: queryParameters),
-      headers: headers,
+    return _executeRequest(
+      () => _client.delete(
+        _getUri(path, queryParameters: queryParameters),
+        headers: headers,
+      ),
     );
-    return _handleResponse(response);
   }
 
   Stream<String> streamGet(

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'dart:io';
-import 'package:http/http.dart' as http;
 import '../l10n/l10n.dart';
 import '../providers/onboarding_provider.dart';
 import '../providers/server_config_provider.dart';
@@ -70,6 +68,12 @@ class _ServerConfigPageState extends ConsumerState<ServerConfigPage> {
       if (error.statusCode == 401 || error.statusCode == 403) {
         return l10n.serverConfigErrorAuthFailed;
       }
+      if (error.kind == ApiExceptionKind.timeout) {
+        return l10n.serverConfigErrorNetworkRequestFailed;
+      }
+      if (error.kind == ApiExceptionKind.network) {
+        return l10n.serverConfigErrorCannotConnect;
+      }
       if (error.statusCode >= 500) {
         return l10n.serverConfigErrorServer(error.statusCode);
       }
@@ -77,12 +81,6 @@ class _ServerConfigPageState extends ConsumerState<ServerConfigPage> {
         error.statusCode,
         error.message,
       );
-    }
-    if (error is SocketException) {
-      return l10n.serverConfigErrorCannotConnect;
-    }
-    if (error is http.ClientException) {
-      return l10n.serverConfigErrorNetworkRequestFailed;
     }
     if (error is FormatException) {
       return l10n.serverConfigErrorFormat;

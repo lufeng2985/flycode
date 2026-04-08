@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -91,6 +92,184 @@ void main() {
 
       expect(secondApiClient.isClosed, isTrue);
       expect(secondRawClient.closeCount, 1);
+    },
+  );
+
+  test('get returns decoded json response', () async {
+    final apiClient = ApiClient(
+      baseUrl: 'http://localhost',
+      client: _FakeHttpClient(),
+    );
+
+    final result = await apiClient.get('/global/health');
+
+    expect(result, <String, dynamic>{});
+  });
+
+  test('post encodes request body and merges headers', () async {
+    final client = _FakeHttpClient();
+    final apiClient = ApiClient(
+      baseUrl: 'http://localhost',
+      username: 'user',
+      password: 'pass',
+      client: client,
+    );
+
+    await apiClient.post(
+      '/session',
+      body: <String, dynamic>{'name': 'demo'},
+      extraHeaders: <String, String>{'x-test': '1'},
+    );
+
+    final request = client.requests.single as http.Request;
+    expect(request.method, 'POST');
+    expect(request.headers['x-test'], '1');
+    expect(
+      request.headers['authorization'],
+      'Basic ${base64Encode(utf8.encode('user:pass'))}',
+    );
+    expect(request.body, '{"name":"demo"}');
+  });
+
+  test('http errors are parsed into ApiException', () async {
+    final apiClient = ApiClient(
+      baseUrl: 'http://localhost',
+      client: _FakeHttpClient(
+        onSend: (request) async => http.StreamedResponse(
+          Stream<List<int>>.value(
+            utf8.encode(
+              '{"name":"bad_request","message":"Nope","data":{"field":"id"}}',
+            ),
+          ),
+          400,
+          request: request,
+        ),
+      ),
+    );
+
+    final matcher = throwsA(
+      isA<ApiException>()
+          .having((e) => e.kind, 'kind', ApiExceptionKind.http)
+          .having((e) => e.statusCode, 'statusCode', 400)
+          .having((e) => e.name, 'name', 'bad_request')
+          .having((e) => e.message, 'message', 'Nope')
+          .having((e) => e.retryable, 'retryable', isFalse)
+          .having((e) => e.data, 'data', <String, dynamic>{'field': 'id'}),
+    );
+
+    await expectLater(apiClient.get('/fail'), matcher);
+  });
+
+  test('http non-json errors preserve body text', () async {
+    final apiClient = ApiClient(
+      baseUrl: 'http://localhost',
+      client: _FakeHttpClient(
+        onSend: (request) async => http.StreamedResponse(
+          Stream<List<int>>.value(utf8.encode('server exploded')),
+          500,
+          request: request,
+        ),
+      ),
+    );
+
+    final matcher = throwsA(
+      isA<ApiException>()
+          .having((e) => e.statusCode, 'statusCode', 500)
+          .having((e) => e.message, 'message', 'server exploded')
+          .having((e) => e.retryable, 'retryable', isTrue),
+    );
+
+    await expectLater(apiClient.get('/fail'), matcher);
+  });
+
+  test('request timeout is mapped to retryable ApiException', () async {
+    final apiClient = ApiClient(
+      baseUrl: 'http://localhost',
+      client: _FakeHttpClient(
+        onSend: (request) async {
+          throw TimeoutException('slow request');
+        },
+      ),
+    );
+
+    final matcher = throwsA(
+      isA<ApiException>()
+          .having((e) => e.kind, 'kind', ApiExceptionKind.timeout)
+          .having((e) => e.statusCode, 'statusCode', 408)
+          .having((e) => e.message, 'message', 'Request timed out')
+          .having((e) => e.retryable, 'retryable', isTrue)
+          .having((e) => e.cause, 'cause', isA<TimeoutException>()),
+    );
+
+    await expectLater(apiClient.get('/slow'), matcher);
+  });
+
+  test('socket exceptions are mapped to retryable network errors', () async {
+    final apiClient = ApiClient(
+      baseUrl: 'http://localhost',
+      client: _FakeHttpClient(
+        onSend: (request) async {
+          throw const SocketException('network down');
+        },
+      ),
+    );
+
+    final matcher = throwsA(
+      isA<ApiException>()
+          .having((e) => e.kind, 'kind', ApiExceptionKind.network)
+          .having((e) => e.statusCode, 'statusCode', 503)
+          .having((e) => e.message, 'message', contains('network down'))
+          .having((e) => e.retryable, 'retryable', isTrue)
+          .having((e) => e.cause, 'cause', isA<SocketException>()),
+    );
+
+    await expectLater(apiClient.get('/offline'), matcher);
+  });
+
+  test('client exceptions are mapped to retryable network errors', () async {
+    final apiClient = ApiClient(
+      baseUrl: 'http://localhost',
+      client: _FakeHttpClient(
+        onSend: (request) async {
+          throw http.ClientException('connection reset');
+        },
+      ),
+    );
+
+    final matcher = throwsA(
+      isA<ApiException>()
+          .having((e) => e.kind, 'kind', ApiExceptionKind.network)
+          .having((e) => e.statusCode, 'statusCode', 503)
+          .having((e) => e.message, 'message', 'connection reset')
+          .having((e) => e.retryable, 'retryable', isTrue)
+          .having((e) => e.cause, 'cause', isA<http.ClientException>()),
+    );
+
+    await expectLater(apiClient.get('/offline'), matcher);
+  });
+
+  test(
+    'unexpected exceptions are mapped to non-retryable unknown errors',
+    () async {
+      final apiClient = ApiClient(
+        baseUrl: 'http://localhost',
+        client: _FakeHttpClient(
+          onSend: (request) async {
+            throw StateError('boom');
+          },
+        ),
+      );
+
+      final matcher = throwsA(
+        isA<ApiException>()
+            .having((e) => e.kind, 'kind', ApiExceptionKind.unknown)
+            .having((e) => e.statusCode, 'statusCode', 500)
+            .having((e) => e.message, 'message', 'Unexpected network error')
+            .having((e) => e.retryable, 'retryable', isFalse)
+            .having((e) => e.cause, 'cause', isA<StateError>()),
+      );
+
+      await expectLater(apiClient.get('/boom'), matcher);
     },
   );
 
