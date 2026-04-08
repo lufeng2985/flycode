@@ -163,6 +163,32 @@ void main() {
     );
   });
 
+  test('scopeForGlobalEventPayload maps known payloads to expected scopes', () {
+    expect(
+      scopeForGlobalEventPayload(
+        EventSessionUpdated(
+          type: 'session.updated',
+          info: _session('session-1'),
+        ),
+      ),
+      GlobalEventScope.project,
+    );
+    expect(
+      scopeForGlobalEventPayload(
+        EventQuestionRejected(
+          type: 'question.rejected',
+          sessionID: 'session-1',
+          requestID: 'question-1',
+        ),
+      ),
+      GlobalEventScope.project,
+    );
+    expect(
+      scopeForGlobalEventPayload(const EventUnknown('future.event')),
+      GlobalEventScope.global,
+    );
+  });
+
   test('dispatcher filters by directory before invoking handlers', () {
     final sessionHandler = _RecordingHandler();
     final messageHandler = _RecordingHandler();
@@ -202,6 +228,95 @@ void main() {
     expect(statusHandler.payloads, isEmpty);
   });
 
+  test(
+    'dispatcher drops project-scoped events when current directory is null',
+    () {
+      final sessionHandler = _RecordingHandler();
+      final messageHandler = _RecordingHandler();
+      final questionHandler = _RecordingHandler();
+      final permissionHandler = _RecordingHandler();
+      final todoHandler = _RecordingHandler();
+      final unreadHandler = _RecordingHandler();
+      final notificationHandler = _RecordingHandler();
+      final statusHandler = _RecordingHandler();
+      final container = _createContainer(
+        sessionHandler: sessionHandler,
+        messageHandler: messageHandler,
+        questionHandler: questionHandler,
+        permissionHandler: permissionHandler,
+        todoHandler: todoHandler,
+        unreadHandler: unreadHandler,
+        notificationHandler: notificationHandler,
+        statusHandler: statusHandler,
+      );
+      addTearDown(container.dispose);
+
+      container
+          .read(globalEventDispatcherProvider)
+          .dispatch(
+            GlobalEvent(
+              directory: '/tmp/project',
+              payload: EventSessionIdle(
+                type: 'session.idle',
+                sessionID: 'session-1',
+              ),
+            ),
+          );
+
+      expect(unreadHandler.payloads, isEmpty);
+      expect(notificationHandler.payloads, isEmpty);
+      expect(sessionHandler.payloads, isEmpty);
+      expect(messageHandler.payloads, isEmpty);
+      expect(questionHandler.payloads, isEmpty);
+      expect(permissionHandler.payloads, isEmpty);
+      expect(todoHandler.payloads, isEmpty);
+      expect(statusHandler.payloads, isEmpty);
+    },
+  );
+
+  test(
+    'dispatcher allows global-scoped events without a current directory',
+    () {
+      final sessionHandler = _RecordingHandler();
+      final messageHandler = _RecordingHandler();
+      final questionHandler = _RecordingHandler();
+      final permissionHandler = _RecordingHandler();
+      final todoHandler = _RecordingHandler();
+      final unreadHandler = _RecordingHandler();
+      final notificationHandler = _RecordingHandler();
+      final statusHandler = _RecordingHandler();
+      final container = _createContainer(
+        sessionHandler: sessionHandler,
+        messageHandler: messageHandler,
+        questionHandler: questionHandler,
+        permissionHandler: permissionHandler,
+        todoHandler: todoHandler,
+        unreadHandler: unreadHandler,
+        notificationHandler: notificationHandler,
+        statusHandler: statusHandler,
+      );
+      addTearDown(container.dispose);
+
+      container
+          .read(globalEventDispatcherProvider)
+          .dispatch(
+            GlobalEvent(
+              directory: '',
+              payload: const EventUnknown('future.event'),
+            ),
+          );
+
+      expect(sessionHandler.payloads, isEmpty);
+      expect(messageHandler.payloads, isEmpty);
+      expect(questionHandler.payloads, isEmpty);
+      expect(permissionHandler.payloads, isEmpty);
+      expect(todoHandler.payloads, isEmpty);
+      expect(unreadHandler.payloads, isEmpty);
+      expect(notificationHandler.payloads, isEmpty);
+      expect(statusHandler.payloads, isEmpty);
+    },
+  );
+
   test('dispatcher fans out multi-target payloads to both handlers', () {
     final sessionHandler = _RecordingHandler();
     final messageHandler = _RecordingHandler();
@@ -222,6 +337,8 @@ void main() {
       statusHandler: statusHandler,
     );
     addTearDown(container.dispose);
+
+    container.read(currentDirectoryProvider.notifier).set('/tmp/project');
 
     final payload = EventSessionIdle(
       type: 'session.idle',
