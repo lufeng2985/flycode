@@ -110,16 +110,8 @@ class _MessageGlobalEventHandler implements GlobalEventHandler {
 
     if (payload is EventMessagePartUpdated) {
       final newPart = payload.part;
-      final sessionID = switch (newPart) {
-        ToolPart part => part.sessionID,
-        TextPart part => part.sessionID,
-        _ => null,
-      };
-      final messageID = switch (newPart) {
-        ToolPart part => part.messageID,
-        TextPart part => part.messageID,
-        _ => null,
-      };
+      final sessionID = partSessionId(newPart);
+      final messageID = partMessageId(newPart);
       if (sessionID == null || messageID == null) return;
 
       ref

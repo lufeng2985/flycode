@@ -1059,3 +1059,57 @@ class SubtaskPart {
     'agent': agent,
   };
 }
+
+String? partId(Object part) {
+  return switch (part) {
+    TextPart value => value.id,
+    FilePart value => value.id,
+    ToolPart value => value.id,
+    ReasoningPart value => value.id,
+    StepStartPart value => value.id,
+    StepFinishPart value => value.id,
+    SnapshotPart value => value.id,
+    PatchPart value => value.id,
+    AgentPart value => value.id,
+    RetryPart value => value.id,
+    CompactionPart value => value.id,
+    SubtaskPart value => value.id,
+    _ => null,
+  };
+}
+
+String? partSessionId(Object part) {
+  return switch (part) {
+    TextPart value => value.sessionID,
+    FilePart value => value.sessionID,
+    ToolPart value => value.sessionID,
+    ReasoningPart value => value.sessionID,
+    StepStartPart value => value.sessionID,
+    StepFinishPart value => value.sessionID,
+    SnapshotPart value => value.sessionID,
+    PatchPart value => value.sessionID,
+    AgentPart value => value.sessionID,
+    RetryPart value => value.sessionID,
+    CompactionPart value => value.sessionID,
+    SubtaskPart value => value.sessionID,
+    _ => null,
+  };
+}
+
+String? partMessageId(Object part) {
+  return switch (part) {
+    TextPart value => value.messageID,
+    FilePart value => value.messageID,
+    ToolPart value => value.messageID,
+    ReasoningPart value => value.messageID,
+    StepStartPart value => value.messageID,
+    StepFinishPart value => value.messageID,
+    SnapshotPart value => value.messageID,
+    PatchPart value => value.messageID,
+    AgentPart value => value.messageID,
+    RetryPart value => value.messageID,
+    CompactionPart value => value.messageID,
+    SubtaskPart value => value.messageID,
+    _ => null,
+  };
+}

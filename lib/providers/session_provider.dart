@@ -42,7 +42,7 @@ class SessionMessagesNotifier extends _$SessionMessagesNotifier {
 
     final msg = current[msgIndex];
     final existingIndex = msg.parts.indexWhere(
-      (p) => _partId(p) == _partId(newPart),
+      (p) => partId(p) == partId(newPart),
     );
 
     final newParts = List<Object>.from(msg.parts);
@@ -66,7 +66,7 @@ class SessionMessagesNotifier extends _$SessionMessagesNotifier {
     if (msgIndex < 0) return;
 
     final msg = current[msgIndex];
-    final newParts = msg.parts.where((p) => _partId(p) != partID).toList();
+    final newParts = msg.parts.where((p) => partId(p) != partID).toList();
 
     final updated = List<MessageWithParts>.from(current);
     updated[msgIndex] = _messageWithNormalizedParts(msg.info, newParts);
@@ -89,7 +89,7 @@ class SessionMessagesNotifier extends _$SessionMessagesNotifier {
     if (msgIndex < 0) return;
 
     final msg = current[msgIndex];
-    final partIndex = msg.parts.indexWhere((p) => _partId(p) == partID);
+    final partIndex = msg.parts.indexWhere((p) => partId(p) == partID);
 
     final newParts = List<Object>.from(msg.parts);
     if (partIndex >= 0) {
@@ -131,24 +131,6 @@ String _messageId(MessageWithParts m) {
   return '';
 }
 
-String? _partId(Object part) {
-  return switch (part) {
-    TextPart value => value.id,
-    FilePart value => value.id,
-    ToolPart value => value.id,
-    ReasoningPart value => value.id,
-    StepStartPart value => value.id,
-    StepFinishPart value => value.id,
-    SnapshotPart value => value.id,
-    PatchPart value => value.id,
-    AgentPart value => value.id,
-    RetryPart value => value.id,
-    CompactionPart value => value.id,
-    SubtaskPart value => value.id,
-    _ => null,
-  };
-}
-
 @riverpod
 Future<List<FileDiff>> sessionDiff(Ref ref, String sessionID) async {
   final api = await ref.watch(sessionApiProvider.future);
@@ -186,7 +168,7 @@ class SubSessionMessagesNotifier extends _$SubSessionMessagesNotifier {
 
     final msg = current[msgIndex];
     final existingIndex = msg.parts.indexWhere(
-      (p) => _partId(p) == _partId(newPart),
+      (p) => partId(p) == partId(newPart),
     );
     final newParts = List<Object>.from(msg.parts);
     if (existingIndex >= 0) {
@@ -206,7 +188,7 @@ class SubSessionMessagesNotifier extends _$SubSessionMessagesNotifier {
     if (msgIndex < 0) return;
 
     final msg = current[msgIndex];
-    final newParts = msg.parts.where((p) => _partId(p) != partID).toList();
+    final newParts = msg.parts.where((p) => partId(p) != partID).toList();
     final updated = List<MessageWithParts>.from(current);
     updated[msgIndex] = _messageWithNormalizedParts(msg.info, newParts);
     state = AsyncData(updated);
@@ -227,7 +209,7 @@ class SubSessionMessagesNotifier extends _$SubSessionMessagesNotifier {
     if (msgIndex < 0) return;
 
     final msg = current[msgIndex];
-    final partIndex = msg.parts.indexWhere((p) => _partId(p) == partID);
+    final partIndex = msg.parts.indexWhere((p) => partId(p) == partID);
     final newParts = List<Object>.from(msg.parts);
     if (partIndex >= 0) {
       final part = msg.parts[partIndex];
@@ -304,12 +286,12 @@ List<Object> _normalizeParts(List<Object> parts) {
   final seenByPartId = <String, int>{};
 
   for (var i = 0; i < normalized.length; i++) {
-    final partId = _partId(normalized[i]);
-    if (partId == null) continue;
+    final normalizedPartId = partId(normalized[i]);
+    if (normalizedPartId == null) continue;
 
-    final existingIndex = seenByPartId[partId];
+    final existingIndex = seenByPartId[normalizedPartId];
     if (existingIndex == null) {
-      seenByPartId[partId] = i;
+      seenByPartId[normalizedPartId] = i;
       continue;
     }
 

@@ -286,6 +286,156 @@ void main() {
   );
 
   test(
+    'global message.part.updated updates main-session reasoning part',
+    () async {
+      final initial = msg.MessageWithParts(
+        info: _messageWithText(
+          sessionID: _kSessionId,
+          messageID: _kMessageId,
+          text: 'placeholder',
+        ).info,
+        parts: <Object>[
+          _reasoningPart(
+            sessionID: _kSessionId,
+            messageID: _kMessageId,
+            partID: 'part-reasoning',
+            text: 'before',
+          ),
+        ],
+      );
+      final sessionApi = _FakeSessionApi(<String, List<msg.MessageWithParts>>{
+        _kSessionId: <msg.MessageWithParts>[initial],
+      });
+      final controller = StreamController<GlobalEvent>();
+      final globalApi = _FakeGlobalApi(controller);
+      final container = ProviderContainer(
+        overrides: [
+          sessionApiProvider.overrideWith((ref) async => sessionApi),
+          globalApiProvider.overrideWith((ref) async => globalApi),
+        ],
+      );
+      addTearDown(() async {
+        await controller.close();
+        container.dispose();
+      });
+
+      await container.read(sessionMessagesProvider(_kSessionId).future);
+      final sessionState = container
+          .listen<AsyncValue<List<msg.MessageWithParts>>>(
+            sessionMessagesProvider(_kSessionId),
+            (previous, next) {},
+            fireImmediately: true,
+          );
+      addTearDown(sessionState.close);
+      final sub = container.listen<AsyncValue<GlobalEvent>>(
+        globalEventListenerProvider,
+        (previous, next) {},
+        fireImmediately: true,
+      );
+      addTearDown(sub.close);
+      await _flushAsyncWork();
+
+      controller.add(
+        GlobalEvent(
+          directory: '',
+          payload: EventMessagePartUpdated(
+            type: 'message.part.updated',
+            part: _reasoningPart(
+              sessionID: _kSessionId,
+              messageID: _kMessageId,
+              partID: 'part-reasoning',
+              text: 'after',
+            ),
+          ),
+        ),
+      );
+      await _flushAsyncWork();
+
+      final updated = container
+          .read(sessionMessagesProvider(_kSessionId))
+          .requireValue
+          .single;
+      expect(updated.parts, hasLength(1));
+      expect((updated.parts.single as ReasoningPart).text, 'after');
+    },
+  );
+
+  test(
+    'global message.part.updated updates sub-session reasoning part without main-session cache',
+    () async {
+      final initial = msg.MessageWithParts(
+        info: _messageWithText(
+          sessionID: _kSessionId,
+          messageID: _kMessageId,
+          text: 'placeholder',
+        ).info,
+        parts: <Object>[
+          _reasoningPart(
+            sessionID: _kSessionId,
+            messageID: _kMessageId,
+            partID: 'part-reasoning',
+            text: 'before',
+          ),
+        ],
+      );
+      final sessionApi = _FakeSessionApi(<String, List<msg.MessageWithParts>>{
+        _kSessionId: <msg.MessageWithParts>[initial],
+      });
+      final controller = StreamController<GlobalEvent>();
+      final globalApi = _FakeGlobalApi(controller);
+      final container = ProviderContainer(
+        overrides: [
+          sessionApiProvider.overrideWith((ref) async => sessionApi),
+          globalApiProvider.overrideWith((ref) async => globalApi),
+        ],
+      );
+      addTearDown(() async {
+        await controller.close();
+        container.dispose();
+      });
+
+      await container.read(subSessionMessagesProvider(_kSessionId).future);
+      final subSessionState = container
+          .listen<AsyncValue<List<msg.MessageWithParts>>>(
+            subSessionMessagesProvider(_kSessionId),
+            (previous, next) {},
+            fireImmediately: true,
+          );
+      addTearDown(subSessionState.close);
+      final sub = container.listen<AsyncValue<GlobalEvent>>(
+        globalEventListenerProvider,
+        (previous, next) {},
+        fireImmediately: true,
+      );
+      addTearDown(sub.close);
+      await _flushAsyncWork();
+
+      controller.add(
+        GlobalEvent(
+          directory: '',
+          payload: EventMessagePartUpdated(
+            type: 'message.part.updated',
+            part: _reasoningPart(
+              sessionID: _kSessionId,
+              messageID: _kMessageId,
+              partID: 'part-reasoning',
+              text: 'after',
+            ),
+          ),
+        ),
+      );
+      await _flushAsyncWork();
+
+      final updated = container
+          .read(subSessionMessagesProvider(_kSessionId))
+          .requireValue
+          .single;
+      expect(updated.parts, hasLength(1));
+      expect((updated.parts.single as ReasoningPart).text, 'after');
+    },
+  );
+
+  test(
     'sub-session updatePart replaces existing reasoning part by id',
     () async {
       final initial = msg.MessageWithParts(
