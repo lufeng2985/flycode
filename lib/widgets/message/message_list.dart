@@ -9,6 +9,8 @@ import '../../theme/app_tokens.dart';
 import 'message_error_state.dart';
 import 'message_bubble.dart';
 
+enum _PendingScrollAction { none, jumpToBottom, animateToBottom }
+
 class MessageList extends ConsumerWidget {
   final String sessionID;
   final void Function(String sessionId)? onNavigateToSubSession;
@@ -85,15 +87,13 @@ class _MessageListViewState extends State<MessageListView> {
   bool _isDetachedFromBottom = false;
   bool _showScrollToBottomButton = false;
   List<MessageWithParts>? _frozenMessages;
+  _PendingScrollAction _pendingScrollAction = _PendingScrollAction.none;
+  bool _scrollActionScheduled = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_scrollController.hasClients) return;
-      _jumpToBottom();
-      _syncDetachedState();
-    });
+    _requestScrollAction(_PendingScrollAction.jumpToBottom);
   }
 
   @override
@@ -110,10 +110,7 @@ class _MessageListViewState extends State<MessageListView> {
     if (_autoFollowBottom &&
         !_isDetachedFromBottom &&
         _didBottomAffectingContentChange(oldWidget.messages, widget.messages)) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || !_scrollController.hasClients) return;
-        _jumpToBottom();
-      });
+      _requestScrollAction(_PendingScrollAction.jumpToBottom);
     }
   }
 
@@ -175,10 +172,7 @@ class _MessageListViewState extends State<MessageListView> {
     });
 
     if (!shouldDetach) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || !_scrollController.hasClients) return;
-        _jumpToBottom();
-      });
+      _requestScrollAction(_PendingScrollAction.jumpToBottom);
     }
   }
 
@@ -202,11 +196,7 @@ class _MessageListViewState extends State<MessageListView> {
       _showScrollToBottomButton = false;
       _frozenMessages = null;
     });
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_scrollController.hasClients) return;
-      _jumpToBottom();
-    });
+    _requestScrollAction(_PendingScrollAction.jumpToBottom);
   }
 
   double _distanceFromBottom() {
@@ -229,14 +219,54 @@ class _MessageListViewState extends State<MessageListView> {
       _isDetachedFromBottom = false;
       _showScrollToBottomButton = false;
     });
+    _requestScrollAction(_PendingScrollAction.animateToBottom);
+  }
 
+  void _requestScrollAction(_PendingScrollAction action) {
+    if (action == _PendingScrollAction.none) return;
+
+    _pendingScrollAction = switch ((_pendingScrollAction, action)) {
+      (_PendingScrollAction.animateToBottom, _) =>
+        _PendingScrollAction.animateToBottom,
+      (_, _PendingScrollAction.animateToBottom) =>
+        _PendingScrollAction.animateToBottom,
+      _ => _PendingScrollAction.jumpToBottom,
+    };
+
+    if (_scrollActionScheduled) {
+      return;
+    }
+    _scrollActionScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted || !_scrollController.hasClients) return;
-      await _scrollController.animateTo(
-        _scrollController.position.minScrollExtent,
-        duration: widget.scrollToBottomAnimationDuration,
-        curve: Curves.easeOutCubic,
-      );
+      _scrollActionScheduled = false;
+      if (!mounted || _pendingScrollAction == _PendingScrollAction.none) {
+        return;
+      }
+      if (!_scrollController.hasClients) {
+        _requestScrollAction(_pendingScrollAction);
+        return;
+      }
+
+      final actionToRun = _pendingScrollAction;
+      _pendingScrollAction = _PendingScrollAction.none;
+
+      switch (actionToRun) {
+        case _PendingScrollAction.none:
+          return;
+        case _PendingScrollAction.jumpToBottom:
+          _jumpToBottom();
+          _syncDetachedState();
+          break;
+        case _PendingScrollAction.animateToBottom:
+          await _scrollController.animateTo(
+            _scrollController.position.minScrollExtent,
+            duration: widget.scrollToBottomAnimationDuration,
+            curve: Curves.easeOutCubic,
+          );
+          if (mounted) {
+            _syncDetachedState();
+          }
+      }
     });
   }
 

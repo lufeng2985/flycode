@@ -56,23 +56,40 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
   final CommandPanelController _commandPanelController =
       CommandPanelController();
   final GlobalKey<ChatInputState> _chatInputKey = GlobalKey<ChatInputState>();
+  late final ProviderSubscription<bool> _commandPanelAvailabilitySubscription;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _bootstrapHomePage();
-    });
+    _commandPanelAvailabilitySubscription = ref.listenManual<bool>(
+      homePagePresentationStateProvider.select(
+        (state) => state.canShowCommandPanel,
+      ),
+      (previous, next) {
+        if (next || !_commandPanelController.visible) {
+          return;
+        }
+        _commandPanelController.hide();
+      },
+    );
+    _scheduleBootstrap();
   }
 
   @override
   void didUpdateWidget(covariant MyHomePage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (_routeArgsChanged(oldWidget.args, widget.args)) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _bootstrapHomePage();
-      });
+      _scheduleBootstrap();
     }
+  }
+
+  void _scheduleBootstrap() {
+    Future<void>.microtask(() async {
+      if (!mounted) {
+        return;
+      }
+      await _bootstrapHomePage();
+    });
   }
 
   Future<void> _bootstrapHomePage() async {
@@ -96,12 +113,6 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
     final currentDirectory = ref.watch(currentDirectoryProvider);
     final title = _directoryTitle(currentDirectory);
     final selectedSession = homeState.selectedSession;
-
-    if (!homeState.canShowCommandPanel && _commandPanelController.visible) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _commandPanelController.hide();
-      });
-    }
 
     Widget buildNewSessionWelcome() {
       return Center(
@@ -285,6 +296,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
 
   @override
   void dispose() {
+    _commandPanelAvailabilitySubscription.close();
     _commandPanelController.dispose();
     super.dispose();
   }

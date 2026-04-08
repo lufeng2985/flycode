@@ -88,27 +88,30 @@ IgnorePointer _scrollButtonGuard(WidgetTester tester) {
   );
 }
 
-double _scrollOffset(WidgetTester tester) {
-  final scrollable = tester
+ScrollableState _messageScrollable(WidgetTester tester) {
+  return tester
       .stateList<ScrollableState>(find.byType(Scrollable))
       .firstWhere(
         (state) =>
             state.position.axis == Axis.vertical &&
             state.position.viewportDimension > 300,
       );
+}
+
+double _scrollOffset(WidgetTester tester) {
+  final scrollable = _messageScrollable(tester);
   return scrollable.position.pixels;
 }
 
 bool _isPinnedToBottom(WidgetTester tester) {
-  final scrollable = tester
-      .stateList<ScrollableState>(find.byType(Scrollable))
-      .firstWhere(
-        (state) =>
-            state.position.axis == Axis.vertical &&
-            state.position.viewportDimension > 300,
-      );
+  final scrollable = _messageScrollable(tester);
   return scrollable.position.pixels <=
       scrollable.position.minScrollExtent + 0.5;
+}
+
+bool _isDetachedFromBottom(WidgetTester tester) {
+  final scrollable = _messageScrollable(tester);
+  return scrollable.position.pixels > scrollable.position.minScrollExtent + 72;
 }
 
 void main() {
@@ -220,4 +223,26 @@ void main() {
     expect(find.textContaining('Message 13'), findsOneWidget);
     expect(_isPinnedToBottom(tester), isTrue);
   });
+
+  testWidgets(
+    'reattaches to bottom when user returns near the latest message',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(_buildHarness(_messages(14)));
+      await tester.pumpAndSettle();
+
+      await tester.drag(find.byType(ListView), const Offset(0, 260));
+      await tester.pumpAndSettle();
+
+      expect(_scrollButtonGuard(tester).ignoring, isFalse);
+      expect(_isDetachedFromBottom(tester), isTrue);
+
+      final scrollable = _messageScrollable(tester);
+      scrollable.position.jumpTo(scrollable.position.minScrollExtent + 16);
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(_scrollButtonGuard(tester).ignoring, isTrue);
+      expect(_isPinnedToBottom(tester), isTrue);
+    },
+  );
 }
