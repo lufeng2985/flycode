@@ -143,6 +143,26 @@ void main() {
     expect(completedTaskStyle?.decoration, TextDecoration.lineThrough);
   });
 
+  testWidgets('renders fenced code blocks as selectable text', (tester) async {
+    debugMessageMarkdownLinkLauncher = _noopLauncher;
+
+    await tester.pumpWidget(
+      buildHarness(brightness: Brightness.light, child: buildMessagePart()),
+    );
+    await tester.pumpAndSettle();
+
+    final selectableCodeBlock = tester
+        .widgetList<SelectableText>(find.byType(SelectableText))
+        .where((widget) {
+          final textSpan = widget.textSpan;
+          return textSpan != null &&
+              textSpan.toPlainText().contains('// This is a code block') &&
+              textSpan.toPlainText().contains("print('Hello, World!');");
+        });
+
+    expect(selectableCodeBlock, isNotEmpty);
+  });
+
   testWidgets('tapping markdown link uses link launcher', (tester) async {
     Uri? openedUri;
     debugMessageMarkdownLinkLauncher = (uri) async {

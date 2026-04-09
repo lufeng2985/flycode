@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_highlight/flutter_highlight.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import 'package:highlight/highlight.dart' show Node, highlight;
 import 'package:markdown/markdown.dart' as md;
 
 import 'code_highlight_theme.dart';
@@ -166,32 +166,102 @@ class _CodeBlockWidgetState extends State<_CodeBlockWidget> {
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              child: hasLanguage && normalizedLanguage.isNotEmpty
-                  ? HighlightView(
-                      widget.code,
-                      language: normalizedLanguage,
-                      theme: highlightTheme,
-                      padding: EdgeInsets.zero,
-                      textStyle: const TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 13,
-                        height: 1.5,
-                      ),
-                    )
-                  : SelectableText(
-                      widget.code,
-                      style: TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 13,
-                        height: 1.5,
-                        color: codeTheme.codeColor,
-                      ),
-                    ),
+              child: _buildCodeContent(
+                normalizedLanguage: normalizedLanguage,
+                highlightTheme: highlightTheme,
+                codeColor: codeTheme.codeColor,
+              ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildCodeContent({
+    required String normalizedLanguage,
+    required Map<String, TextStyle> highlightTheme,
+    required Color codeColor,
+  }) {
+    const textStyle = TextStyle(
+      fontFamily: 'monospace',
+      fontSize: 13,
+      height: 1.5,
+    );
+
+    if (widget.language.isEmpty || normalizedLanguage.isEmpty) {
+      return SelectableText(
+        widget.code,
+        style: textStyle.copyWith(color: codeColor),
+      );
+    }
+
+    try {
+      final nodes = highlight
+          .parse(widget.code, language: normalizedLanguage)
+          .nodes;
+      final spans = _convertHighlightedNodes(
+        nodes ?? const <Node>[],
+        highlightTheme,
+      );
+      return SelectableText.rich(
+        TextSpan(
+          style: textStyle.copyWith(
+            color: highlightTheme['root']?.color ?? codeColor,
+          ),
+          children: spans,
+        ),
+      );
+    } on ArgumentError {
+      return SelectableText(
+        widget.code,
+        style: textStyle.copyWith(color: codeColor),
+      );
+    }
+  }
+
+  List<TextSpan> _convertHighlightedNodes(
+    List<Node> nodes,
+    Map<String, TextStyle> theme,
+  ) {
+    final spans = <TextSpan>[];
+    var currentSpans = spans;
+    final stack = <List<TextSpan>>[];
+
+    void traverse(Node node) {
+      if (node.value != null) {
+        currentSpans.add(
+          node.className == null
+              ? TextSpan(text: node.value)
+              : TextSpan(text: node.value, style: theme[node.className!]),
+        );
+        return;
+      }
+
+      final children = node.children;
+      if (children == null || children.isEmpty) {
+        return;
+      }
+
+      final nestedSpans = <TextSpan>[];
+      currentSpans.add(
+        TextSpan(children: nestedSpans, style: theme[node.className ?? '']),
+      );
+      stack.add(currentSpans);
+      currentSpans = nestedSpans;
+
+      for (final child in children) {
+        traverse(child);
+      }
+
+      currentSpans = stack.removeLast();
+    }
+
+    for (final node in nodes) {
+      traverse(node);
+    }
+
+    return spans;
   }
 
   /// Normalizes language name to match flutter_highlight language identifiers.
