@@ -11,9 +11,7 @@ class AboutPage extends StatelessWidget {
 
   static const String _appName = 'FlyCode';
   static const String _appVersion = 'v1.0.0';
-  static const String _siteUrl = 'https://flycode.app';
-  static const String _githubUrl = 'https://github.com/jeffrey/flycode';
-  static const String _privacyUrl = 'https://flycode.app/privacy';
+  static const String _githubUrl = 'https://github.com/jeffy5/flycode';
   static bool _fontLicenseRegistered = false;
 
   @override
@@ -53,31 +51,13 @@ class AboutPage extends StatelessWidget {
             description: l10n.aboutHeroDescription,
           ),
           const SizedBox(height: 14),
-          _SectionLabel(title: l10n.aboutSectionProductInfo),
-          const SizedBox(height: 14),
-          _InfoGroupCard(
-            children: [
-              _InfoRow(
-                title: l10n.aboutOfficialWebsite,
-                value: 'flycode.app',
-                onTap: () => _launchExternalUrl(context, _siteUrl),
-              ),
-              _InfoRow(
-                title: 'GitHub',
-                value: 'jeffrey/flycode',
-                onTap: () => _launchExternalUrl(context, _githubUrl),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          _SectionLabel(title: l10n.aboutSectionLegalSupport),
-          const SizedBox(height: 14),
           _InfoGroupCard(
             children: [
               _InfoRow(title: l10n.aboutCurrentVersion, value: _appVersion),
               _InfoRow(
-                title: l10n.aboutPrivacyPolicy,
-                onTap: () => _launchExternalUrl(context, _privacyUrl),
+                title: 'GitHub',
+                value: 'jeffy5/flycode',
+                onTap: () => _launchExternalUrl(context, _githubUrl),
               ),
               _InfoRow(
                 title: l10n.aboutOpenSourceLicenses,
@@ -247,24 +227,6 @@ class _InfoGroupCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(tokens.radiusXs),
       ),
       child: Column(children: children),
-    );
-  }
-}
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-        color: context.tokens.mutedForeground,
-        fontSize: 12,
-        fontWeight: FontWeight.w600,
-      ),
     );
   }
 }

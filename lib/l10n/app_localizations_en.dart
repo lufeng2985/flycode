@@ -39,7 +39,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTheme => 'Theme';
 
   @override
-  String get settingsSessionCompletionNotification => 'Session completion notifications';
+  String get settingsSessionCompletionNotification => 'Notification';
 
   @override
   String get settingsSectionConnectionModel => 'Connection & Models';
@@ -69,7 +69,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get themeModeDark => 'Dark';
 
   @override
-  String get sessionCompletionNotificationTitle => 'Session completion notifications';
+  String get sessionCompletionNotificationTitle => 'Notification';
+
+  @override
+  String get sessionCompletionNotificationDescription => 'Choose when to receive notifications after a session is completed.';
 
   @override
   String get sessionCompletionNotificationModeNone => 'Never';

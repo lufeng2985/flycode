@@ -39,7 +39,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsTheme => '色彩主题';
 
   @override
-  String get settingsSessionCompletionNotification => '会话完成通知';
+  String get settingsSessionCompletionNotification => '通知';
 
   @override
   String get settingsSectionConnectionModel => '连接与模型';
@@ -69,7 +69,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get themeModeDark => '深色';
 
   @override
-  String get sessionCompletionNotificationTitle => '会话完成通知';
+  String get sessionCompletionNotificationTitle => '通知';
+
+  @override
+  String get sessionCompletionNotificationDescription => '设置会话完成后何时向你发送通知。';
 
   @override
   String get sessionCompletionNotificationModeNone => '不发送通知';

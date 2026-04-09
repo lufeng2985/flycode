@@ -158,7 +158,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsSessionCompletionNotification.
   ///
   /// In en, this message translates to:
-  /// **'Session completion notifications'**
+  /// **'Notification'**
   String get settingsSessionCompletionNotification;
 
   /// No description provided for @settingsSectionConnectionModel.
@@ -218,8 +218,14 @@ abstract class AppLocalizations {
   /// No description provided for @sessionCompletionNotificationTitle.
   ///
   /// In en, this message translates to:
-  /// **'Session completion notifications'**
+  /// **'Notification'**
   String get sessionCompletionNotificationTitle;
+
+  /// No description provided for @sessionCompletionNotificationDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose when to receive notifications after a session is completed.'**
+  String get sessionCompletionNotificationDescription;
 
   /// No description provided for @sessionCompletionNotificationModeNone.
   ///

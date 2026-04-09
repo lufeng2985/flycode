@@ -12,6 +12,8 @@ class SessionCompletionNotificationPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final selected = ref.watch(sessionCompletionNotificationModeProvider);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.sessionCompletionNotificationTitle)),
@@ -28,12 +30,20 @@ class SessionCompletionNotificationPage extends ConsumerWidget {
               .ensurePermissionPrompted();
         },
         child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           children: [
-            const SizedBox(height: 8),
+            Text(
+              l10n.sessionCompletionNotificationDescription,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
             for (final mode in SessionCompletionNotificationMode.values)
               RadioListTile<SessionCompletionNotificationMode>(
                 value: mode,
                 title: Text(mode.label(l10n)),
+                contentPadding: EdgeInsets.zero,
               ),
           ],
         ),
