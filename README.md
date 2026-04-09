@@ -4,6 +4,9 @@
 
 FlyCode is a Flutter-based mobile client for `opencode`, built to connect to `opencode server` and bring project navigation, session management, and AI coding workflows to Android and iOS.
 
+> Prerequisite: FlyCode requires a running `opencode server` before the app can be used.
+> Official docs: https://opencode.ai/docs/server/
+
 ## Tech Stack
 
 - Flutter / Dart `^3.11.0`
@@ -56,6 +59,22 @@ assets/                       # Fonts, app icon, and static assets
 - Flutter SDK
 - Dart SDK `^3.11.0`
 - Platform-specific build environment for your target device
+- A running `opencode server`
+
+### Quick Start
+
+1. Start `opencode server` first:
+
+```bash
+opencode serve
+```
+
+By default, the server listens on `http://127.0.0.1:4096`.
+
+Server docs:
+
+- https://opencode.ai/docs/server/
+- OpenAPI spec after startup: `http://127.0.0.1:4096/doc`
 
 ### Install Dependencies
 
@@ -165,11 +184,18 @@ Current visual baseline:
 
 ### Server Configuration
 
-The app depends on a reachable `opencode server`. The connection test currently calls:
+The app depends on a reachable `opencode server`, and the server must be started before FlyCode can connect. The connection test currently calls:
 
 ```text
 /global/health
 ```
+
+Quick reference:
+
+- Docs: https://opencode.ai/docs/server/
+- Start command: `opencode serve`
+- Default address: `http://127.0.0.1:4096`
+- OpenAPI spec: `http://127.0.0.1:4096/doc`
 
 Configurable fields:
 

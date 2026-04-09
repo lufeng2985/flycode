@@ -4,6 +4,9 @@
 
 FlyCode 是一个基于 Flutter 构建的移动端 `opencode` 客户端，用于连接 `opencode server`，并将项目浏览、会话管理和 AI 编码工作流带到 Android 与 iOS。
 
+> 前置条件：使用 FlyCode 前，需要先启动 `opencode server`。
+> 官方文档直达：https://opencode.ai/docs/server/
+
 ## 技术栈
 
 - Flutter / Dart `^3.11.0`
@@ -56,6 +59,22 @@ assets/                       # 字体、应用图标与静态资源
 - Flutter SDK
 - Dart SDK `^3.11.0`
 - 目标平台对应的构建环境
+- 一个正在运行的 `opencode server`
+
+### 快速开始
+
+1. 先启动 `opencode server`：
+
+```bash
+opencode serve
+```
+
+默认监听地址为 `http://127.0.0.1:4096`。
+
+服务端资料：
+
+- 官方文档：https://opencode.ai/docs/server/
+- 启动后的 OpenAPI 文档：`http://127.0.0.1:4096/doc`
 
 ### 安装依赖
 
@@ -165,11 +184,18 @@ flutter test
 
 ### 服务端配置
 
-应用依赖一个可访问的 `opencode server`。当前连接测试会访问：
+应用依赖一个可访问的 `opencode server`，并且需要先启动服务后才能连接。当前连接测试会访问：
 
 ```text
 /global/health
 ```
+
+快速参考：
+
+- 官方文档：https://opencode.ai/docs/server/
+- 启动命令：`opencode serve`
+- 默认地址：`http://127.0.0.1:4096`
+- OpenAPI 文档：`http://127.0.0.1:4096/doc`
 
 可配置字段：
 
