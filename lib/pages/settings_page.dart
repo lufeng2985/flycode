@@ -22,7 +22,7 @@ class SettingsPage extends ConsumerWidget {
       sessionCompletionNotificationModeProvider,
     );
     final serverUrl = _serverDisplayText(
-      asyncServerConfig.value?.baseUrl ?? 'http://localhost:4096',
+      asyncServerConfig.value?.baseUrl ?? 'http://127.0.0.1:4096',
     );
     final tokens = context.tokens;
     final contentBottomPadding = MediaQuery.paddingOf(context).bottom + 16;

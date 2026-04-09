@@ -6,12 +6,12 @@ class ServerConfig {
   ServerConfig({required this.baseUrl, this.username, this.password});
 
   factory ServerConfig.defaultValue() {
-    return ServerConfig(baseUrl: 'http://localhost:4096');
+    return ServerConfig(baseUrl: 'http://127.0.0.1:4096');
   }
 
   factory ServerConfig.fromJson(Map<String, dynamic> json) {
     return ServerConfig(
-      baseUrl: json['baseUrl'] as String? ?? 'http://localhost:4096',
+      baseUrl: json['baseUrl'] as String? ?? 'http://127.0.0.1:4096',
       username: json['username'] as String?,
       password: json['password'] as String?,
     );

@@ -102,7 +102,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get serverConfigServerAddress => '服务器地址';
 
   @override
-  String get serverConfigServerAddressHint => 'http://localhost:4096';
+  String get serverConfigServerAddressHint => 'http://127.0.0.1:4096';
 
   @override
   String get serverConfigUsernameOptional => '用户名（可选）';

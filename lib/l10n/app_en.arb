@@ -31,7 +31,7 @@
   "serverConfigTitle": "Server Configuration",
   "serverConfigOnboardingHint": "Please connect to a server on first launch. We recommend testing the connection before saving.",
   "serverConfigServerAddress": "Server URL",
-  "serverConfigServerAddressHint": "http://localhost:4096",
+  "serverConfigServerAddressHint": "http://127.0.0.1:4096",
   "serverConfigUsernameOptional": "Username (optional)",
   "serverConfigPasswordOptional": "Password (optional)",
   "serverConfigPleaseTestBeforeSave": "Please test the connection successfully before saving.",

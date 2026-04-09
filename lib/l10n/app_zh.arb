@@ -31,7 +31,7 @@
   "serverConfigTitle": "服务器配置",
   "serverConfigOnboardingHint": "首次使用请先连接服务器。建议先点击“测试连接”，再保存进入首页。",
   "serverConfigServerAddress": "服务器地址",
-  "serverConfigServerAddressHint": "http://localhost:4096",
+  "serverConfigServerAddressHint": "http://127.0.0.1:4096",
   "serverConfigUsernameOptional": "用户名（可选）",
   "serverConfigPasswordOptional": "密码（可选）",
   "serverConfigPleaseTestBeforeSave": "请先测试连接并成功后再保存",

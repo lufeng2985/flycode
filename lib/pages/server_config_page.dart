@@ -39,7 +39,9 @@ class _ServerConfigPageState extends ConsumerState<ServerConfigPage> {
   void initState() {
     super.initState();
     final config = widget.initialConfig;
-    _baseUrlController = TextEditingController(text: config?.baseUrl ?? '');
+    _baseUrlController = TextEditingController(
+      text: config?.baseUrl ?? ServerConfig.defaultValue().baseUrl,
+    );
     _usernameController = TextEditingController(text: config?.username ?? '');
     _passwordController = TextEditingController(text: config?.password ?? '');
     _baseUrlController.addListener(_onConfigChanged);
