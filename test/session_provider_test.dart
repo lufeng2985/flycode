@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:flycode/providers/current_directory_provider.dart';
 import 'package:flycode/providers/global_event_provider.dart';
 import 'package:flycode/providers/session_provider.dart';
 import 'package:flycode/service/api/api_client.dart';
@@ -16,6 +17,7 @@ import 'package:flycode/service/api/session_api.dart';
 
 const _kSessionId = 'sub-1';
 const _kMessageId = 'msg-1';
+const _kDirectory = '/tmp/project';
 
 class _FakeSessionApi extends SessionApi {
   _FakeSessionApi(this._messagesBySession)
@@ -320,6 +322,7 @@ void main() {
       });
 
       await container.read(sessionMessagesProvider(_kSessionId).future);
+      container.read(currentDirectoryProvider.notifier).set(_kDirectory);
       final sessionState = container
           .listen<AsyncValue<List<msg.MessageWithParts>>>(
             sessionMessagesProvider(_kSessionId),
@@ -337,7 +340,7 @@ void main() {
 
       controller.add(
         GlobalEvent(
-          directory: '',
+          directory: _kDirectory,
           payload: EventMessagePartUpdated(
             type: 'message.part.updated',
             part: _reasoningPart(
@@ -395,6 +398,7 @@ void main() {
       });
 
       await container.read(subSessionMessagesProvider(_kSessionId).future);
+      container.read(currentDirectoryProvider.notifier).set(_kDirectory);
       final subSessionState = container
           .listen<AsyncValue<List<msg.MessageWithParts>>>(
             subSessionMessagesProvider(_kSessionId),
@@ -412,7 +416,7 @@ void main() {
 
       controller.add(
         GlobalEvent(
-          directory: '',
+          directory: _kDirectory,
           payload: EventMessagePartUpdated(
             type: 'message.part.updated',
             part: _reasoningPart(
