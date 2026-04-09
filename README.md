@@ -10,10 +10,10 @@ FlyCode is a mobile client for `opencode`, built for Android and iOS. It lets yo
 > Docs: https://opencode.ai/docs/server/
 
 <p align="center">
-  <img src="./screenshots/screenshot-1.jpg" alt="FlyCode screenshot 1" width="22%" />
-  <img src="./screenshots/screenshot-2.jpg" alt="FlyCode screenshot 2" width="22%" />
-  <img src="./screenshots/screenshot-3.jpg" alt="FlyCode screenshot 3" width="22%" />
-  <img src="./screenshots/screenshot-4.jpg" alt="FlyCode screenshot 4" width="22%" />
+  <img src="./screenshots/screenshot-1.jpg" alt="FlyCode screenshot 1" width="22%" style="margin: 8px;" />
+  <img src="./screenshots/screenshot-2.jpg" alt="FlyCode screenshot 2" width="22%" style="margin: 8px;" />
+  <img src="./screenshots/screenshot-3.jpg" alt="FlyCode screenshot 3" width="22%" style="margin: 8px;" />
+  <img src="./screenshots/screenshot-4.jpg" alt="FlyCode screenshot 4" width="22%" style="margin: 8px;" />
 </p>
 
 ## Features
