@@ -339,7 +339,9 @@ class _MessageListViewState extends State<MessageListView> {
                   borderRadius: BorderRadius.circular(tokens.radiusPill),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.14),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.14),
                       blurRadius: 16,
                       offset: const Offset(0, 6),
                     ),

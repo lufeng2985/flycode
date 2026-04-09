@@ -11,6 +11,7 @@ import '../service/api/models/message.dart'
     hide MessageTokens, MessageCacheTokens;
 import '../service/api/models/provider.dart';
 import '../service/api/models/session.dart';
+import '../theme/app_tokens.dart';
 
 // ---------------------------------------------------------------------------
 // Metrics
@@ -132,25 +133,28 @@ class SessionContextPage extends ConsumerWidget {
     final sessionsAsync = ref.watch(sessionsProvider);
     final providerListAsync = ref.watch(providerListProvider);
     final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final tokens = context.tokens;
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: colorScheme.surface,
         elevation: 0,
         title: Text(
           l10n.sessionContextTitle,
           style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w600,
-            color: Colors.black87,
+            color: colorScheme.onSurface,
           ),
         ),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
           child: Container(
             decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+              border: Border(bottom: BorderSide(color: tokens.border)),
             ),
           ),
         ),
@@ -225,15 +229,19 @@ class _UsageSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final percent = metrics.usagePercent;
+    final colorScheme = Theme.of(context).colorScheme;
+    final tokens = context.tokens;
+    final usageColor = _usageColor(context, percent);
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: tokens.card,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: tokens.border.withValues(alpha: 0.5)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: colorScheme.onSurface.withValues(alpha: 0.08),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -249,10 +257,7 @@ class _UsageSection extends StatelessWidget {
               children: [
                 CustomPaint(
                   size: const Size(160, 160),
-                  painter: _RingPainter(
-                    progress: percent,
-                    color: _usageColor(percent),
-                  ),
+                  painter: _RingPainter(progress: percent, color: usageColor),
                 ),
                 Column(
                   mainAxisSize: MainAxisSize.min,
@@ -262,13 +267,16 @@ class _UsageSection extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 36,
                         fontWeight: FontWeight.bold,
-                        color: _usageColor(percent),
+                        color: usageColor,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       context.l10n.sessionContextUsed,
-                      style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: tokens.mutedForeground,
+                      ),
                     ),
                   ],
                 ),
@@ -307,10 +315,12 @@ class _UsageSection extends StatelessWidget {
     );
   }
 
-  Color _usageColor(double p) {
-    if (p >= 0.9) return Colors.red;
-    if (p >= 0.75) return Colors.orange;
-    return const Color(0xFF4A90D9);
+  Color _usageColor(BuildContext context, double p) {
+    final theme = Theme.of(context);
+    final tokens = context.tokens;
+    if (p >= 0.9) return theme.colorScheme.error;
+    if (p >= 0.75) return tokens.warningForeground;
+    return theme.colorScheme.primary;
   }
 }
 
@@ -322,6 +332,9 @@ class _RingPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    final trackColor = progress > 0.9
+        ? Colors.transparent
+        : color.withValues(alpha: 0.18);
     final cx = size.width / 2;
     final cy = size.height / 2;
     final radius = math.min(cx, cy) - 10;
@@ -331,7 +344,7 @@ class _RingPainter extends CustomPainter {
     final trackPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
-      ..color = Colors.grey[200]!;
+      ..color = trackColor;
     canvas.drawCircle(Offset(cx, cy), radius, trackPaint);
 
     final progressPaint = Paint()
@@ -365,14 +378,17 @@ class _SessionInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final tokens = context.tokens;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: tokens.card,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: tokens.border.withValues(alpha: 0.5)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: colorScheme.onSurface.withValues(alpha: 0.08),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -386,7 +402,7 @@ class _SessionInfoCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w600,
-              color: Colors.black87,
+              color: colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 12),
@@ -432,6 +448,8 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final tokens = context.tokens;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -439,17 +457,17 @@ class _InfoRow extends StatelessWidget {
           width: 80,
           child: Text(
             label,
-            style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+            style: TextStyle(fontSize: 13, color: tokens.mutedForeground),
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w500,
-              color: Colors.black87,
+              color: colorScheme.onSurface,
             ),
             textAlign: TextAlign.right,
           ),
@@ -470,22 +488,24 @@ class _StatCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final tokens = context.tokens;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           value,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: Colors.black87,
+            color: colorScheme.onSurface,
           ),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 4),
         Text(
           label,
-          style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+          style: TextStyle(fontSize: 11, color: tokens.mutedForeground),
           textAlign: TextAlign.center,
         ),
       ],
@@ -496,7 +516,7 @@ class _StatCell extends StatelessWidget {
 class _VerticalDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Container(width: 1, height: 36, color: Colors.grey[200]);
+    return Container(width: 1, height: 36, color: context.tokens.border);
   }
 }
 

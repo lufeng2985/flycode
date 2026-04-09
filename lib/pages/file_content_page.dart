@@ -47,9 +47,12 @@ class FileContentPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final fileName = _fileName(filePath);
     final contentAsync = ref.watch(fileContentProvider(filePath));
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final tokens = context.tokens;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -66,24 +69,31 @@ class FileContentPage extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 11,
-                  color: Colors.grey[500],
+                  color: tokens.mutedForeground,
                   fontWeight: FontWeight.normal,
                 ),
               ),
           ],
         ),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
+        backgroundColor: colorScheme.surface,
+        foregroundColor: colorScheme.onSurface,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Container(color: Colors.grey[100], height: 1),
+          child: Container(
+            color: tokens.border.withValues(alpha: 0.5),
+            height: 1,
+          ),
         ),
         actions: [
           if (contentAsync.hasValue && !contentAsync.value!.isBinary)
             IconButton(
-              icon: Icon(Icons.copy_rounded, size: 18, color: Colors.grey[600]),
+              icon: Icon(
+                Icons.copy_rounded,
+                size: 18,
+                color: tokens.mutedForeground,
+              ),
               tooltip: context.l10n.fileContentCopyTooltip,
               onPressed: () {
                 Clipboard.setData(
@@ -147,11 +157,8 @@ class _SkeletonLoaderState extends State<_SkeletonLoader>
     return AnimatedBuilder(
       animation: _anim,
       builder: (context, _) {
-        final shimmer = Color.lerp(
-          Colors.grey[100]!,
-          Colors.grey[200]!,
-          _anim.value,
-        )!;
+        final tokens = context.tokens;
+        final shimmer = Color.lerp(tokens.accent, tokens.border, _anim.value)!;
         return Column(
           children: List.generate(18, (i) {
             // 随机行宽模拟真实代码行
@@ -172,7 +179,7 @@ class _SkeletonLoaderState extends State<_SkeletonLoader>
                     width: 24,
                     height: 12,
                     decoration: BoxDecoration(
-                      color: Colors.grey[200],
+                      color: tokens.border,
                       borderRadius: BorderRadius.circular(3),
                     ),
                   ),
@@ -211,6 +218,9 @@ class _ErrorView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pagePadding = context.tokens.pageHorizontalPadding;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final tokens = context.tokens;
     return Center(
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: pagePadding, vertical: 24),
@@ -220,7 +230,7 @@ class _ErrorView extends StatelessWidget {
             Icon(
               Icons.error_outline_rounded,
               size: 48,
-              color: Colors.grey[350],
+              color: tokens.errorSoftForeground,
             ),
             const SizedBox(height: 12),
             Text(
@@ -228,14 +238,14 @@ class _ErrorView extends StatelessWidget {
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
-                color: Colors.grey[600],
+                color: colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 6),
             Text(
               '$error',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+              style: TextStyle(fontSize: 12, color: tokens.mutedForeground),
             ),
           ],
         ),
@@ -300,11 +310,12 @@ class _FileInfoBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
-        border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+        color: tokens.accent,
+        border: Border(bottom: BorderSide(color: tokens.border)),
       ),
       child: Row(
         children: [
@@ -313,14 +324,14 @@ class _FileInfoBar extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
               decoration: BoxDecoration(
-                color: Colors.grey[200],
+                color: tokens.border.withValues(alpha: 0.85),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
                 ext,
                 style: TextStyle(
                   fontSize: 11,
-                  color: Colors.grey[600],
+                  color: tokens.accentForeground,
                   fontWeight: FontWeight.w600,
                   fontFamily: 'monospace',
                 ),
@@ -332,20 +343,24 @@ class _FileInfoBar extends StatelessWidget {
           Icon(
             Icons.format_list_numbered_rounded,
             size: 13,
-            color: Colors.grey[400],
+            color: tokens.mutedForeground,
           ),
           const SizedBox(width: 3),
           Text(
             context.l10n.fileContentLines(lineCount),
-            style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+            style: TextStyle(fontSize: 12, color: tokens.mutedForeground),
           ),
           const SizedBox(width: 10),
           // 大小
-          Icon(Icons.data_usage_rounded, size: 13, color: Colors.grey[400]),
+          Icon(
+            Icons.data_usage_rounded,
+            size: 13,
+            color: tokens.mutedForeground,
+          ),
           const SizedBox(width: 3),
           Text(
             _formatBytes(sizeBytes),
-            style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+            style: TextStyle(fontSize: 12, color: tokens.mutedForeground),
           ),
         ],
       ),
@@ -363,6 +378,8 @@ class _BinaryUnsupportedView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final tokens = context.tokens;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -371,20 +388,20 @@ class _BinaryUnsupportedView extends StatelessWidget {
             width: 72,
             height: 72,
             decoration: BoxDecoration(
-              color: Colors.grey[100],
+              color: tokens.accent,
               borderRadius: BorderRadius.circular(18),
             ),
             child: Icon(
               Icons.insert_drive_file_outlined,
               size: 36,
-              color: Colors.grey[400],
+              color: tokens.mutedForeground,
             ),
           ),
           const SizedBox(height: 16),
           Text(
             context.l10n.fileContentPreviewUnsupported,
             style: TextStyle(
-              color: Colors.grey[600],
+              color: colorScheme.onSurface,
               fontSize: 15,
               fontWeight: FontWeight.w500,
             ),
@@ -394,7 +411,7 @@ class _BinaryUnsupportedView extends StatelessWidget {
             mimeType != null
                 ? context.l10n.fileContentBinaryWithMime(mimeType!)
                 : context.l10n.fileContentBinary,
-            style: TextStyle(color: Colors.grey[400], fontSize: 13),
+            style: TextStyle(color: tokens.mutedForeground, fontSize: 13),
           ),
         ],
       ),
@@ -511,38 +528,42 @@ class _CodeLineRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final tokens = context.tokens;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // 行号列
         Container(
           width: gutterWidth,
-          color: const Color(0xFFF8F8F8),
+          color: tokens.accent,
           alignment: Alignment.centerRight,
           padding: const EdgeInsets.only(right: 10),
           child: Text(
             '$lineNumber',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
-              color: Color(0xFFAAAAAA),
+              color: tokens.mutedForeground,
               fontFamily: 'monospace',
               height: 1.0,
             ),
           ),
         ),
         // 分隔线
-        Container(width: 1, color: const Color(0xFFEEEEEE)),
+        Container(width: 1, color: tokens.border),
         // 代码内容
         Expanded(
           child: Container(
-            color: isEven ? Colors.white : const Color(0xFFFAFAFA),
+            color: isEven
+                ? colorScheme.surface
+                : tokens.accent.withValues(alpha: 0.6),
             padding: const EdgeInsets.symmetric(horizontal: 12),
             alignment: Alignment.centerLeft,
             child: Text(
               text,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
-                color: Color(0xFF1A1A1A),
+                color: colorScheme.onSurface,
                 fontFamily: 'monospace',
                 height: 1.0,
               ),

@@ -201,7 +201,7 @@ class _QuestionRequestCardState extends ConsumerState<QuestionRequestCard> {
       key: const Key('question_overlay.surface'),
       color: colorScheme.surface,
       elevation: 14,
-      shadowColor: Colors.black.withValues(alpha: 0.16),
+      shadowColor: colorScheme.onSurface.withValues(alpha: 0.16),
       borderRadius: BorderRadius.circular(28),
       clipBehavior: Clip.antiAlias,
       child: DecoratedBox(
@@ -211,7 +211,7 @@ class _QuestionRequestCardState extends ConsumerState<QuestionRequestCard> {
           border: Border.all(color: tokens.border.withValues(alpha: 0.65)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
+              color: colorScheme.onSurface.withValues(alpha: 0.08),
               blurRadius: 32,
               offset: const Offset(0, 16),
             ),

@@ -82,9 +82,9 @@ class SessionPermissionDock extends ConsumerWidget {
                       : () => decide(PermissionReplyAction.reject),
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size.fromHeight(40),
-                    foregroundColor: const Color(0xFFDC2626),
+                    foregroundColor: colorScheme.error,
                     backgroundColor: colorScheme.surface,
-                    side: const BorderSide(color: Color(0xFFFCA5A5)),
+                    side: BorderSide(color: tokens.errorSoftForeground),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                     ),
@@ -127,9 +127,9 @@ class SessionPermissionDock extends ConsumerWidget {
                       : () => decide(PermissionReplyAction.once),
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size.fromHeight(40),
-                    foregroundColor: const Color(0xFF7C3AED),
+                    foregroundColor: colorScheme.primary,
                     backgroundColor: colorScheme.surface,
-                    side: const BorderSide(color: Color(0xFFC4B5FD)),
+                    side: BorderSide(color: colorScheme.primary),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                     ),

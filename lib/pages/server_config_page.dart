@@ -9,6 +9,7 @@ import '../service/api/project_api.dart';
 import '../service/api/session_api.dart';
 import '../service/api/api_client.dart';
 import '../models/server_config.dart';
+import '../theme/app_tokens.dart';
 
 class ServerConfigPage extends ConsumerStatefulWidget {
   final ServerConfig? initialConfig;
@@ -106,20 +107,22 @@ class _ServerConfigPageState extends ConsumerState<ServerConfigPage> {
       await client.get('/global/health');
 
       if (mounted) {
+        final colorScheme = Theme.of(context).colorScheme;
         setState(() => _testPassed = true);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(context.l10n.serverConfigConnectionSuccess),
-            backgroundColor: Colors.green,
+            backgroundColor: colorScheme.primary,
           ),
         );
       }
     } catch (e) {
       if (mounted) {
+        final tokens = context.tokens;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(_humanizedConnectionError(context, e)),
-            backgroundColor: Colors.red,
+            backgroundColor: tokens.errorSoftForeground,
           ),
         );
       }
@@ -170,6 +173,9 @@ class _ServerConfigPageState extends ConsumerState<ServerConfigPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final tokens = context.tokens;
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -189,19 +195,28 @@ class _ServerConfigPageState extends ConsumerState<ServerConfigPage> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.06),
+                  color: tokens.info.withValues(alpha: 0.6),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
+                  border: Border.all(
+                    color: tokens.infoForeground.withValues(alpha: 0.25),
+                  ),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.info_outline, size: 18, color: Colors.blue),
+                    Icon(
+                      Icons.info_outline,
+                      size: 18,
+                      color: tokens.infoForeground,
+                    ),
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         l10n.serverConfigOnboardingHint,
-                        style: TextStyle(fontSize: 13, color: Colors.black87),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: colorScheme.onSurface,
+                        ),
                       ),
                     ),
                   ],

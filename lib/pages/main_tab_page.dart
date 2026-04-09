@@ -48,7 +48,7 @@ class _MainTabPageState extends State<MainTabPage> {
               border: Border.all(color: tokens.border.withValues(alpha: 0.45)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
+                  color: colorScheme.onSurface.withValues(alpha: 0.08),
                   blurRadius: 18,
                   offset: const Offset(0, 6),
                 ),

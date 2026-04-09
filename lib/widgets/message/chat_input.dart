@@ -1476,7 +1476,7 @@ class _SessionHistorySheet extends ConsumerWidget {
                 width: 44,
                 height: 5,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFD4D4D8),
+                  color: tokens.border,
                   borderRadius: BorderRadius.circular(tokens.radiusPill),
                 ),
               ),
@@ -1958,10 +1958,7 @@ class _AgentSelectionSheet extends StatelessWidget {
                             width: 10,
                             height: 10,
                             decoration: BoxDecoration(
-                              color: _parseColor(
-                                agent.color!,
-                                fallback: tokens.mutedForeground,
-                              ),
+                              color: theme.colorScheme.primary,
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -2014,17 +2011,6 @@ class _AgentSelectionSheet extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  Color _parseColor(String hex, {required Color fallback}) {
-    try {
-      final buffer = StringBuffer();
-      if (hex.length == 7) buffer.write('ff');
-      buffer.write(hex.replaceFirst('#', ''));
-      return Color(int.parse(buffer.toString(), radix: 16));
-    } catch (_) {
-      return fallback;
-    }
   }
 }
 

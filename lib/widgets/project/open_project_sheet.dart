@@ -399,11 +399,12 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
       if (!mounted) return;
       setState(() => _confirming = false);
       final l10n = context.l10n;
+      final tokens = context.tokens;
       final msg = l10n.openProjectErrorOpenFailed(e.toString());
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(msg),
-          backgroundColor: Colors.red[700],
+          backgroundColor: tokens.errorSoftForeground,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -417,13 +418,17 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    final colorScheme = Theme.of(context).colorScheme;
-    final pagePadding = context.tokens.pageHorizontalPadding;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final tokens = context.tokens;
+    final pagePadding = tokens.pageHorizontalPadding;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(tokens.radiusM),
+        ),
       ),
       padding: EdgeInsets.only(bottom: bottomInset),
       child: SafeArea(
@@ -438,7 +443,7 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey[300],
+                  color: tokens.border,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -454,7 +459,7 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
                     style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w600,
-                      color: Colors.black87,
+                      color: colorScheme.onSurface,
                     ),
                   ),
                   const Spacer(),
@@ -481,17 +486,20 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
                 style: const TextStyle(fontSize: 15),
                 decoration: InputDecoration(
                   hintText: context.l10n.openProjectInputHint,
-                  hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+                  hintStyle: TextStyle(
+                    color: tokens.mutedForeground,
+                    fontSize: 14,
+                  ),
                   prefixIcon: Icon(
                     Icons.search_rounded,
-                    color: Colors.grey[400],
+                    color: tokens.mutedForeground,
                     size: 20,
                   ),
                   suffixIcon: _controller.text.isNotEmpty
                       ? IconButton(
                           icon: Icon(
                             Icons.clear_rounded,
-                            color: Colors.grey[400],
+                            color: tokens.mutedForeground,
                             size: 18,
                           ),
                           onPressed: () {
@@ -504,18 +512,18 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
                         )
                       : null,
                   filled: true,
-                  fillColor: Colors.grey[50],
+                  fillColor: tokens.accent,
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 14,
                     vertical: 10,
                   ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: Colors.grey[200]!),
+                    borderSide: BorderSide(color: tokens.border),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: Colors.grey[200]!),
+                    borderSide: BorderSide(color: tokens.border),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -572,14 +580,17 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
             children: [
               Icon(
                 Icons.error_outline_rounded,
-                color: Colors.red[400],
+                color: context.tokens.errorSoftForeground,
                 size: 18,
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   _error!,
-                  style: TextStyle(color: Colors.red[600], fontSize: 13),
+                  style: TextStyle(
+                    color: context.tokens.errorSoftForeground,
+                    fontSize: 13,
+                  ),
                 ),
               ),
             ],
@@ -598,17 +609,23 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
               Icon(
                 Icons.folder_open_rounded,
                 size: 40,
-                color: Colors.grey[300],
+                color: context.tokens.mutedForeground,
               ),
               const SizedBox(height: 12),
               Text(
                 context.l10n.openProjectPlaceholderSearch,
-                style: TextStyle(color: Colors.grey[400], fontSize: 13),
+                style: TextStyle(
+                  color: context.tokens.mutedForeground,
+                  fontSize: 13,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
                 context.l10n.openProjectPlaceholderPathSupport,
-                style: TextStyle(color: Colors.grey[350], fontSize: 12),
+                style: TextStyle(
+                  color: context.tokens.mutedForeground.withValues(alpha: 0.85),
+                  fontSize: 12,
+                ),
               ),
             ],
           ),
@@ -617,7 +634,10 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
         return Center(
           child: Text(
             context.l10n.openProjectNoMatch,
-            style: TextStyle(color: Colors.grey[400], fontSize: 13),
+            style: TextStyle(
+              color: context.tokens.mutedForeground,
+              fontSize: 13,
+            ),
           ),
         );
       }
@@ -665,10 +685,10 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
                           name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
-                            color: Colors.black87,
+                            color: colorScheme.onSurface,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -678,7 +698,7 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 11,
-                            color: Colors.grey[450],
+                            color: context.tokens.mutedForeground,
                           ),
                         ),
                       ],
@@ -687,7 +707,7 @@ class _OpenProjectSheetState extends ConsumerState<_OpenProjectSheet> {
                   Icon(
                     Icons.chevron_right_rounded,
                     size: 18,
-                    color: Colors.grey[350],
+                    color: context.tokens.mutedForeground,
                   ),
                 ],
               ),

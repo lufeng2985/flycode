@@ -566,7 +566,7 @@ class _MiniSwitch extends StatelessWidget {
         height: 24,
         padding: const EdgeInsets.all(2),
         decoration: BoxDecoration(
-          color: value ? theme.colorScheme.primary : const Color(0xFFE4E4E7),
+          color: value ? theme.colorScheme.primary : tokens.border,
           borderRadius: BorderRadius.circular(tokens.radiusPill),
         ),
         child: AnimatedAlign(
@@ -581,7 +581,7 @@ class _MiniSwitch extends StatelessWidget {
               borderRadius: BorderRadius.circular(tokens.radiusPill),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.12),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.12),
                   blurRadius: 2,
                   offset: const Offset(0, 1),
                 ),

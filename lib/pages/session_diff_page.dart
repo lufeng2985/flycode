@@ -21,21 +21,27 @@ class SessionDiffPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final diffsAsync = ref.watch(sessionDiffProvider(sessionID));
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final tokens = context.tokens;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
         title: Text(
           l10n.sessionDiffTitle,
           style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17),
         ),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
+        backgroundColor: colorScheme.surface,
+        foregroundColor: colorScheme.onSurface,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Container(color: Colors.grey[100], height: 1),
+          child: Container(
+            color: tokens.border.withValues(alpha: 0.5),
+            height: 1,
+          ),
         ),
       ),
       body: diffsAsync.when(
@@ -52,7 +58,7 @@ class SessionDiffPage extends ConsumerWidget {
                 Icon(
                   Icons.error_outline_rounded,
                   size: 48,
-                  color: Colors.grey[350],
+                  color: tokens.errorSoftForeground,
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -60,14 +66,14 @@ class SessionDiffPage extends ConsumerWidget {
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
-                    color: Colors.grey[600],
+                    color: colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   '$error',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                  style: TextStyle(fontSize: 12, color: tokens.mutedForeground),
                 ),
               ],
             ),
@@ -83,20 +89,20 @@ class SessionDiffPage extends ConsumerWidget {
                     width: 72,
                     height: 72,
                     decoration: BoxDecoration(
-                      color: Colors.grey[100],
+                      color: tokens.accent,
                       borderRadius: BorderRadius.circular(18),
                     ),
                     child: Icon(
                       Icons.check_circle_outline_rounded,
                       size: 36,
-                      color: Colors.grey[350],
+                      color: colorScheme.primary,
                     ),
                   ),
                   const SizedBox(height: 16),
                   Text(
                     l10n.sessionDiffEmptyTitle,
                     style: TextStyle(
-                      color: Colors.grey[500],
+                      color: colorScheme.onSurface,
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
                     ),
@@ -104,7 +110,10 @@ class SessionDiffPage extends ConsumerWidget {
                   const SizedBox(height: 6),
                   Text(
                     l10n.sessionDiffEmptySubtitle,
-                    style: TextStyle(color: Colors.grey[400], fontSize: 13),
+                    style: TextStyle(
+                      color: tokens.mutedForeground,
+                      fontSize: 13,
+                    ),
                   ),
                 ],
               ),
@@ -129,8 +138,10 @@ class SessionDiffPage extends ConsumerWidget {
                     horizontal: 0,
                   ),
                   itemCount: diffs.length,
-                  separatorBuilder: (context, index) =>
-                      Divider(height: 1, color: Colors.grey[100]),
+                  separatorBuilder: (context, index) => Divider(
+                    height: 1,
+                    color: tokens.border.withValues(alpha: 0.35),
+                  ),
                   itemBuilder: (context, index) =>
                       _FileDiffTile(diff: diffs[index]),
                 ),
@@ -160,35 +171,40 @@ class _SummaryBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
-        border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+        color: tokens.accent,
+        border: Border(bottom: BorderSide(color: tokens.border)),
       ),
       child: Row(
         children: [
-          Icon(Icons.description_outlined, size: 14, color: Colors.grey[500]),
+          Icon(
+            Icons.description_outlined,
+            size: 14,
+            color: tokens.mutedForeground,
+          ),
           const SizedBox(width: 4),
           Text(
             context.l10n.sessionDiffFilesCount(fileCount),
-            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            style: TextStyle(fontSize: 12, color: tokens.mutedForeground),
           ),
           const SizedBox(width: 12),
           Text(
             '+$additions',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
-              color: Color(0xFF2E7D32),
+              color: tokens.successForeground,
               fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(width: 6),
           Text(
             '-$deletions',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
-              color: Color(0xFFC62828),
+              color: tokens.errorSoftForeground,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -215,6 +231,8 @@ class _FileDiffTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final tokens = context.tokens;
     final fileName = _fileName(diff.file);
     final isNewFile = diff.before.isEmpty && diff.after.isNotEmpty;
     final isDeletedFile = diff.before.isNotEmpty && diff.after.isEmpty;
@@ -229,23 +247,23 @@ class _FileDiffTile extends StatelessWidget {
           width: 32,
           height: 32,
           decoration: BoxDecoration(
-            color: _iconBgColor(isNewFile, isDeletedFile),
+            color: _iconBgColor(context, isNewFile, isDeletedFile),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
             _fileIcon(isNewFile, isDeletedFile),
             size: 16,
-            color: _iconColor(isNewFile, isDeletedFile),
+            color: _iconColor(context, isNewFile, isDeletedFile),
           ),
         ),
         title: Text(
           fileName,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w500,
-            color: Colors.black87,
+            color: colorScheme.onSurface,
           ),
         ),
         subtitle: diff.file != fileName
@@ -253,7 +271,7 @@ class _FileDiffTile extends StatelessWidget {
                 diff.file,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 11, color: Colors.grey[450]),
+                style: TextStyle(fontSize: 11, color: tokens.mutedForeground),
               )
             : null,
         trailing: Row(
@@ -262,9 +280,9 @@ class _FileDiffTile extends StatelessWidget {
             if (diff.additions > 0)
               Text(
                 '+${diff.additions}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: Color(0xFF2E7D32),
+                  color: tokens.successForeground,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -273,9 +291,9 @@ class _FileDiffTile extends StatelessWidget {
             if (diff.deletions > 0)
               Text(
                 '-${diff.deletions}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: Color(0xFFC62828),
+                  color: tokens.errorSoftForeground,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -289,19 +307,23 @@ class _FileDiffTile extends StatelessWidget {
                   width: 28,
                   height: 28,
                   decoration: BoxDecoration(
-                    color: Colors.grey[100],
+                    color: tokens.accent,
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Icon(
                     Icons.visibility_outlined,
                     size: 15,
-                    color: Colors.grey[500],
+                    color: tokens.mutedForeground,
                   ),
                 ),
               ),
             ),
             const SizedBox(width: 4),
-            Icon(Icons.expand_more_rounded, size: 18, color: Colors.grey[400]),
+            Icon(
+              Icons.expand_more_rounded,
+              size: 18,
+              color: tokens.mutedForeground,
+            ),
           ],
         ),
         expandedAlignment: Alignment.topLeft,
@@ -324,10 +346,11 @@ class _FileDiffTile extends StatelessWidget {
     );
   }
 
-  Color _iconBgColor(bool isNew, bool isDeleted) {
-    if (isNew) return const Color(0xFFE8F5E9);
-    if (isDeleted) return const Color(0xFFFFEBEE);
-    return Colors.grey[100]!;
+  Color _iconBgColor(BuildContext context, bool isNew, bool isDeleted) {
+    final tokens = context.tokens;
+    if (isNew) return tokens.success.withValues(alpha: 0.7);
+    if (isDeleted) return tokens.errorSoft.withValues(alpha: 0.7);
+    return tokens.accent;
   }
 
   IconData _fileIcon(bool isNew, bool isDeleted) {
@@ -336,9 +359,10 @@ class _FileDiffTile extends StatelessWidget {
     return Icons.insert_drive_file_outlined;
   }
 
-  Color _iconColor(bool isNew, bool isDeleted) {
-    if (isNew) return const Color(0xFF2E7D32);
-    if (isDeleted) return const Color(0xFFC62828);
-    return Colors.grey[500]!;
+  Color _iconColor(BuildContext context, bool isNew, bool isDeleted) {
+    final tokens = context.tokens;
+    if (isNew) return tokens.successForeground;
+    if (isDeleted) return tokens.errorSoftForeground;
+    return tokens.mutedForeground;
   }
 }

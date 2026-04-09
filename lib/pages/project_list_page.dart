@@ -21,19 +21,6 @@ String _projectDisplayName(Project project) {
   return parts.lastWhere((p) => p.isNotEmpty, orElse: () => worktree);
 }
 
-Color? _parseColor(String? colorStr) {
-  if (colorStr == null || colorStr.isEmpty) return null;
-  if (colorStr.startsWith('#')) {
-    final hex = colorStr.substring(1);
-    if (hex.length == 6) {
-      return Color(int.parse('FF$hex', radix: 16));
-    } else if (hex.length == 8) {
-      return Color(int.parse(hex, radix: 16));
-    }
-  }
-  return null;
-}
-
 String _formatUpdatedTime(BuildContext context, int timestampMs) {
   final l10n = context.l10n;
   final dt = DateTime.fromMillisecondsSinceEpoch(timestampMs);
@@ -397,9 +384,7 @@ class ProjectListPage extends ConsumerWidget {
                           context,
                           project.time.updated,
                         );
-                        final iconColor =
-                            _parseColor(project.icon?.color) ??
-                            colorScheme.primary;
+                        final iconColor = colorScheme.primary;
                         final iconText = displayName.trim().isEmpty
                             ? '?'
                             : displayName.trim().substring(0, 1).toUpperCase();

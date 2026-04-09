@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../l10n/l10n.dart';
 import '../providers/session_provider.dart';
+import '../theme/app_tokens.dart';
 import '../widgets/message/message_error_state.dart';
 import '../widgets/message/message_list.dart';
 
@@ -19,11 +20,14 @@ class SubSessionPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final messagesAsync = ref.watch(subSessionMessagesProvider(sessionID));
     final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final tokens = context.tokens;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F4F7),
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: colorScheme.surface,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -37,7 +41,9 @@ class SubSessionPage extends ConsumerWidget {
           preferredSize: const Size.fromHeight(1),
           child: Container(
             decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+              border: Border(
+                bottom: BorderSide(color: tokens.border.withValues(alpha: 0.5)),
+              ),
             ),
           ),
         ),
