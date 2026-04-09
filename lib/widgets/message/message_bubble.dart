@@ -259,18 +259,7 @@ class _MessageBubbleState extends ConsumerState<MessageBubble> {
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: widget.messageWithParts.parts
-                      .asMap()
-                      .entries
-                      .map(
-                        (entry) => MessagePart(
-                          key: _partKey(entry.value, entry.key),
-                          part: entry.value,
-                          isUser: true,
-                          onNavigateToSubSession: widget.onNavigateToSubSession,
-                        ),
-                      )
-                      .toList(),
+                  children: _buildUserPartWidgets(),
                 ),
               ),
               const SizedBox(height: 6),
@@ -288,6 +277,46 @@ class _MessageBubbleState extends ConsumerState<MessageBubble> {
       ),
     );
   }
+
+  List<Widget> _buildUserPartWidgets() {
+    final widgets = <Widget>[];
+    final parts = widget.messageWithParts.parts;
+    var index = 0;
+
+    while (index < parts.length) {
+      final part = parts[index];
+      if (_isImageFilePart(part)) {
+        final galleryParts = <FilePart>[];
+        final startIndex = index;
+        while (index < parts.length && _isImageFilePart(parts[index])) {
+          galleryParts.add(parts[index] as FilePart);
+          index += 1;
+        }
+        widgets.add(
+          MessageImageGallery(
+            key: ValueKey('$_messageId/image-gallery-$startIndex'),
+            images: galleryParts,
+          ),
+        );
+        continue;
+      }
+
+      widgets.add(
+        MessagePart(
+          key: _partKey(part, index),
+          part: part,
+          isUser: true,
+          onNavigateToSubSession: widget.onNavigateToSubSession,
+        ),
+      );
+      index += 1;
+    }
+
+    return widgets;
+  }
+
+  bool _isImageFilePart(Object part) =>
+      part is FilePart && part.mime.startsWith('image/');
 
   // ─── Assistant content (no bubble) ────────────────────────────────────────
 

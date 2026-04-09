@@ -62,6 +62,9 @@ class MessagePart extends StatelessWidget {
   }
 }
 
+const double kMessageImageThumbnailSize = 64;
+const Key kMessageImageGalleryKey = ValueKey('message-image-gallery');
+
 class _TypewriterMarkdownText extends StatefulWidget {
   final String text;
   final bool animate;
@@ -648,8 +651,9 @@ class _CompactionDivider extends StatelessWidget {
 
 class _ImagePartWidget extends StatefulWidget {
   final String url;
+  final double size;
 
-  const _ImagePartWidget({required this.url});
+  const _ImagePartWidget({required this.url, this.size = 200});
 
   @override
   State<_ImagePartWidget> createState() => _ImagePartWidgetState();
@@ -727,16 +731,53 @@ class _ImagePartWidgetState extends State<_ImagePartWidget> {
         borderRadius: BorderRadius.circular(6),
         child: Image(
           image: _imageProvider,
-          width: 200,
-          height: 200,
+          width: widget.size,
+          height: widget.size,
           fit: BoxFit.cover,
           gaplessPlayback: true,
           errorBuilder: (context, error, stackTrace) => Container(
-            width: 200,
-            height: 200,
+            width: widget.size,
+            height: widget.size,
             color: tokens.accent,
             child: Icon(Icons.broken_image, color: tokens.mutedForeground),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class MessageImageGallery extends StatelessWidget {
+  final List<FilePart> images;
+
+  const MessageImageGallery({super.key, required this.images});
+
+  @override
+  Widget build(BuildContext context) {
+    if (images.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: SingleChildScrollView(
+        key: kMessageImageGalleryKey,
+        scrollDirection: Axis.horizontal,
+        clipBehavior: Clip.hardEdge,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var index = 0; index < images.length; index++) ...[
+              if (index > 0) const SizedBox(width: 4),
+              RepaintBoundary(
+                key: ValueKey(images[index].id),
+                child: _ImagePartWidget(
+                  url: images[index].url,
+                  size: kMessageImageThumbnailSize,
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );
