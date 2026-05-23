@@ -264,7 +264,7 @@ void main() {
         isA<ApiException>()
             .having((e) => e.kind, 'kind', ApiExceptionKind.unknown)
             .having((e) => e.statusCode, 'statusCode', 500)
-            .having((e) => e.message, 'message', 'Unexpected network error')
+            .having((e) => e.message, 'message', startsWith('Unexpected network error:'))
             .having((e) => e.retryable, 'retryable', isFalse)
             .having((e) => e.cause, 'cause', isA<StateError>()),
       );
