@@ -160,10 +160,21 @@ class ApiClient {
   }
 
   Future<dynamic> _executeRequest(
-    Future<http.Response> Function() request,
-  ) async {
+    String method,
+    Uri uri, {
+    Map<String, String>? headers,
+    Object? body,
+  }) async {
     try {
-      final response = await request().timeout(_requestTimeout);
+      final httpRequest = http.Request(method, uri);
+      if (headers != null) httpRequest.headers.addAll(headers);
+      if (body != null) {
+        httpRequest.body = jsonEncode(body);
+      }
+      final streamedResponse = await _client
+          .send(httpRequest)
+          .timeout(_requestTimeout);
+      final response = await http.Response.fromStream(streamedResponse);
       return _handleResponse(response);
     } on ApiException {
       rethrow;
@@ -188,6 +199,22 @@ class ApiClient {
         message: error.message,
         cause: error,
       );
+    } on FormatException catch (error) {
+      // The http package enforces strict RFC 7230 header validation.
+      // OpenCode server may send non-ASCII characters (e.g. Chinese path
+      // names in response headers) which cause FormatException on Android.
+      // Retry with dart:io HttpClient which may handle these more leniently.
+      try {
+        return await _rawRequest(method, uri,
+            headers: headers, body: body);
+      } catch (rawError) {
+        throw ApiException(
+          statusCode: _unknownStatusCode,
+          kind: ApiExceptionKind.unknown,
+          message: 'Invalid HTTP response headers: ${error.message}',
+          cause: error,
+        );
+      }
     } catch (error) {
       throw ApiException(
         statusCode: _unknownStatusCode,
@@ -195,6 +222,84 @@ class ApiClient {
         message: 'Unexpected network error: $error',
         cause: error,
       );
+    }
+  }
+
+  Future<dynamic> _rawRequest(
+    String method,
+    Uri uri, {
+    Map<String, String>? headers,
+    Object? body,
+  }) async {
+    // Use raw TCP socket to bypass ALL HTTP-level header validation.
+    // This works around FormatException from the http package or dart:io
+    // HttpClient when the server sends non-ASCII values in response headers
+    // (e.g. Chinese path names on Windows).
+    const defaultPort = 80;
+    final host = uri.host;
+    final port = uri.port != 0 ? uri.port : defaultPort;
+    final path = uri.path + (uri.query.isNotEmpty ? '?${uri.query}' : '');
+    final encodedBody =
+        body != null ? utf8.encode(jsonEncode(body)) : null;
+
+    final socket = await Socket.connect(host, port,
+        timeout: _requestTimeout);
+    try {
+      // Build raw HTTP request
+      final requestBuffer = StringBuffer();
+      requestBuffer.writeln('$method $path HTTP/1.1');
+      requestBuffer.writeln('Host: $host:$port');
+      requestBuffer.writeln('Connection: close');
+      if (headers != null) {
+        headers.forEach((k, v) => requestBuffer.writeln('$k: $v'));
+      }
+      if (encodedBody != null) {
+        requestBuffer.writeln('Content-Length: ${encodedBody.length}');
+      }
+      requestBuffer.writeln('');
+      socket.write(requestBuffer.toString());
+      if (encodedBody != null) {
+        socket.add(encodedBody);
+      }
+      await socket.flush();
+
+      // Read raw response
+      final completer = Completer<List<int>>();
+      final chunks = <List<int>>[];
+      socket.listen(
+        (data) => chunks.add(data),
+        onDone: () => completer.complete(chunks.expand((c) => c).toList()),
+        onError: (e) => completer.completeError(e),
+        cancelOnError: false,
+      );
+      final rawBytes = await completer.future;
+
+      // Parse status line and headers manually (leniently)
+      final responseStr = utf8.decode(rawBytes);
+      final headerEnd = responseStr.indexOf('\r\n\r\n');
+      if (headerEnd == -1) {
+        throw FormatException('No HTTP header terminator found');
+      }
+
+      final headerLines = responseStr.substring(0, headerEnd).split('\r\n');
+      final statusLine = headerLines.isNotEmpty ? headerLines[0] : '';
+      final statusParts = statusLine.split(' ');
+      final statusCode =
+          statusParts.length >= 2 ? int.tryParse(statusParts[1]) ?? 500 : 500;
+
+      // Collect body (after headers)
+      final bodyStart = headerEnd + 4;
+      final responseBody = responseStr.substring(bodyStart);
+
+      // Create http.Response without going through header validation
+      final response = http.Response(
+        responseBody,
+        statusCode,
+        headers: const {},
+      );
+      return _handleResponse(response);
+    } finally {
+      socket.close();
     }
   }
 
@@ -206,12 +311,8 @@ class ApiClient {
     _ensureOpen();
     final headers = _getHeaders();
     if (extraHeaders != null) headers.addAll(extraHeaders);
-    return _executeRequest(
-      () => _client.get(
-        _getUri(path, queryParameters: queryParameters),
-        headers: headers,
-      ),
-    );
+    final uri = _getUri(path, queryParameters: queryParameters);
+    return _executeRequest('GET', uri, headers: headers);
   }
 
   Future<dynamic> post(
@@ -223,13 +324,8 @@ class ApiClient {
     _ensureOpen();
     final headers = _getHeaders();
     if (extraHeaders != null) headers.addAll(extraHeaders);
-    return _executeRequest(
-      () => _client.post(
-        _getUri(path, queryParameters: queryParameters),
-        headers: headers,
-        body: body != null ? jsonEncode(body) : null,
-      ),
-    );
+    final uri = _getUri(path, queryParameters: queryParameters);
+    return _executeRequest('POST', uri, headers: headers, body: body);
   }
 
   Future<dynamic> patch(
@@ -241,13 +337,8 @@ class ApiClient {
     _ensureOpen();
     final headers = _getHeaders();
     if (extraHeaders != null) headers.addAll(extraHeaders);
-    return _executeRequest(
-      () => _client.patch(
-        _getUri(path, queryParameters: queryParameters),
-        headers: headers,
-        body: body != null ? jsonEncode(body) : null,
-      ),
-    );
+    final uri = _getUri(path, queryParameters: queryParameters);
+    return _executeRequest('PATCH', uri, headers: headers, body: body);
   }
 
   Future<dynamic> delete(
@@ -258,12 +349,8 @@ class ApiClient {
     _ensureOpen();
     final headers = _getHeaders();
     if (extraHeaders != null) headers.addAll(extraHeaders);
-    return _executeRequest(
-      () => _client.delete(
-        _getUri(path, queryParameters: queryParameters),
-        headers: headers,
-      ),
-    );
+    final uri = _getUri(path, queryParameters: queryParameters);
+    return _executeRequest('DELETE', uri, headers: headers);
   }
 
   Stream<String> streamGet(
