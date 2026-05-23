@@ -49,28 +49,8 @@ jobs:
       - name: ✅ Run tests
         run: flutter test --coverage
 
-      - name: 🔐 Generate Android signing files
-        working-directory: android
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
-        run: |
-          test -n "$ANDROID_KEYSTORE_BASE64"
-          test -n "$ANDROID_KEY_ALIAS"
-          test -n "$ANDROID_KEY_PASSWORD"
-          test -n "$ANDROID_STORE_PASSWORD"
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > app/upload-keystore.jks
-          cat > key.properties <<EOF
-          storePassword=$ANDROID_STORE_PASSWORD
-          keyPassword=$ANDROID_KEY_PASSWORD
-          keyAlias=$ANDROID_KEY_ALIAS
-          storeFile=upload-keystore.jks
-          EOF
-
-      - name: 🏗️ Build APKs
-        run: flutter build apk --release --split-per-abi
+      - name: 🏗️ Build debug APK (unsigned)
+        run: flutter build apk --debug
 
       - name: 📦 Prepare artifacts
         run: |
