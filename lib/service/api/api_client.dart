@@ -46,7 +46,7 @@ class ApiException implements Exception {
   }
 
   @override
-  String toString() => 'ApiException: $statusCode $kind $name - $message';
+  String toString() => 'ApiException: $statusCode $kind $name - $message (cause: $cause)';
 }
 
 @Riverpod(keepAlive: true)
@@ -192,7 +192,7 @@ class ApiClient {
       throw ApiException(
         statusCode: _unknownStatusCode,
         kind: ApiExceptionKind.unknown,
-        message: 'Unexpected network error',
+        message: 'Unexpected network error: $error',
         cause: error,
       );
     }
