@@ -1,3 +1,7 @@
+## v1.0.1-patched
+
+- Add debug logging to catch-all for troubleshooting flycode send issue
+
 # Changelog
 
 ## v1.0.0 - 2026-04-09
