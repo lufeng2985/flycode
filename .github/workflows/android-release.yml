@@ -60,7 +60,7 @@ jobs:
           mkdir -p artifacts
           cp build/app/outputs/flutter-apk/*.apk artifacts/
 
-      - name: 📝 Extract release notes from CHANGELOG
+      - name: 📝 Prepare release notes
         env:
           TAG: ${{ github.ref_name }}
         run: |
@@ -71,11 +71,17 @@ jobs:
           ' CHANGELOG.md > release_notes.md
 
           if [ ! -s release_notes.md ]; then
-            echo "::error::No changelog entry found for ${TAG} in CHANGELOG.md"
-            exit 1
+            echo "Pre-built debug APK for $TAG" > release_notes.md
           fi
 
-      - name: 🏷️ Create or update Release
+      - name: ⬆️ Upload APK as build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: flycode-debug-apk
+          path: artifacts/*.apk
+          
+      - name: 🏷️ Create or update Release (tag only)
+        if: startsWith(github.ref, 'refs/tags/')
         uses: ncipollo/release-action@v1.16.0
         with:
           tag: ${{ github.ref_name }}
